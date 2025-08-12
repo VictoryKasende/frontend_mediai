@@ -1,0 +1,277 @@
+/* Base styles for Mediai application - Polices médicales professionnelles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Source+Sans+Pro:wght@300;400;600;700&family=Lato:wght@300;400;700&display=swap');
+
+/* Palette de couleurs Mediai */
+:root {
+  --primary-blue: #23A7F6;       /* Bleu clair - principal pour accents, boutons, logo */
+  --secondary-blue: #2194F3;     /* Dégradé bleu - second ton pour effets/degradés */
+  --dark-blue: #10243A;          /* Bleu foncé - fond principal, navbars */
+  --light-gray: #EDEFF1;         /* Gris très clair - arrières-plans secondaires */
+  --medium-gray: #757A84;        /* Gris moyen - texte secondaire, icônes */
+  --white: #FFFFFF;              /* Blanc - fonds, typographie sur fond bleu */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', 'Source Sans Pro', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--light-gray);
+  color: var(--dark-blue);
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+/* Polices spécialisées pour le médical */
+.font-medical {
+  font-family: 'Inter', 'Source Sans Pro', system-ui, sans-serif;
+}
+
+.font-heading {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+
+.font-body {
+  font-family: 'Source Sans Pro', system-ui, sans-serif;
+  line-height: 1.7;
+}
+
+.font-mono {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', monospace;
+}
+
+/* Amélioration de l'accessibilité */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+}
+
+/* Force les bordures du focus sur les inputs */
+input:focus {
+  border-color: var(--primary-blue) !important;
+}
+
+textarea:focus {
+  border-color: var(--primary-blue) !important;
+}
+
+/* Styles pour les boutons radio */
+input[type="radio"] {
+  accent-color: var(--primary-blue);
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--medium-gray);
+  border-radius: 50%;
+  background-color: var(--white);
+}
+
+input[type="radio"]:focus {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+  border-color: var(--primary-blue);
+}
+
+input[type="radio"]:checked {
+  background-color: var(--primary-blue);
+  border-color: var(--primary-blue);
+  background-image: radial-gradient(circle, var(--white) 25%, var(--primary-blue) 25%);
+}
+
+/* Styles pour les checkboxes */
+input[type="checkbox"] {
+  accent-color: var(--primary-blue);
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--medium-gray);
+  border-radius: 0.25rem;
+  background-color: var(--white);
+}
+
+input[type="checkbox"]:focus {
+  outline: 2px solid var(--primary-blue);
+  outline-offset: 2px;
+  border-color: var(--primary-blue);
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--primary-blue);
+  border-color: var(--primary-blue);
+  background-image: url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='m13.854 3.646-7.5 7.5a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6 10.293l7.146-7.147a.5.5 0 0 1 .708.708z'/%3e%3c/svg%3e");
+}
+
+/* Classes utilitaires personnalisées Mediai */
+.bg-primary { background-color: var(--primary-blue); }
+.bg-secondary { background-color: var(--secondary-blue); }
+.bg-dark { background-color: var(--dark-blue); }
+.bg-light { background-color: var(--light-gray); }
+.bg-medium { background-color: var(--medium-gray); }
+
+.text-primary { color: var(--primary-blue); }
+.text-secondary { color: var(--secondary-blue); }
+.text-dark { color: var(--dark-blue); }
+.text-light { color: var(--light-gray); }
+.text-medium { color: var(--medium-gray); }
+.text-white { color: var(--white); }
+
+.border-primary { border-color: var(--primary-blue); }
+.border-secondary { border-color: var(--secondary-blue); }
+.border-dark { border-color: var(--dark-blue); }
+.border-light { border-color: var(--light-gray); }
+.border-medium { border-color: var(--medium-gray); }
+
+.hover\:bg-primary:hover { background-color: var(--primary-blue); }
+.hover\:bg-secondary:hover { background-color: var(--secondary-blue); }
+.hover\:text-primary:hover { color: var(--primary-blue); }
+
+/* Dégradés personnalisés */
+.gradient-mediai {
+  background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+} 
+
+.gradient-mediai-dark {
+  background: linear-gradient(135deg, var(--secondary-blue), var(--dark-blue));
+}
+
+/* Styles personnalisés pour PhoneInput */
+.phone-input-container {
+  position: relative;
+}
+
+.phone-input-container .PhoneInputCountry {
+  border: 1px solid var(--medium-gray);
+  border-radius: 0.5rem 0 0 0.5rem;
+  padding: 0.5rem;
+  background: var(--white);
+  border-right: none;
+  display: flex;
+  align-items: center;
+  min-width: 60px;
+}
+
+.phone-input-container .PhoneInputCountryIcon {
+  width: 1.25rem;
+  height: 1rem;
+  margin-right: 0.25rem;
+}
+
+.phone-input-container .PhoneInputCountrySelect {
+  border: none;
+  background: transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.phone-input-container .PhoneInputInput {
+  border-radius: 0 0.5rem 0.5rem 0 !important;
+  border-left: none !important;
+}
+
+.phone-input-container:focus-within .PhoneInputCountry {
+  border-color: var(--primary-blue);
+}
+
+.phone-input-container.error .PhoneInputCountry {
+  border-color: var(--medium-gray);
+}
+
+.phone-input-container.error:focus-within .PhoneInputCountry {
+  border-color: var(--medium-gray);
+}
+
+select:focus {
+  outline: none;
+  border-color: var(--primary-blue) !important;
+}
+
+/* Classes de typographie médicale */
+.text-medical-title {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 700;
+  color: var(--dark-blue);
+  letter-spacing: -0.025em;
+}
+
+.text-medical-subtitle {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 600;
+  color: var(--dark-blue);
+  letter-spacing: -0.015em;
+}
+
+.text-medical-body {
+  font-family: 'Source Sans Pro', system-ui, sans-serif;
+  font-weight: 400;
+  color: var(--medium-gray);
+  line-height: 1.7;
+}
+
+.text-medical-caption {
+  font-family: 'Source Sans Pro', system-ui, sans-serif;
+  font-weight: 400;
+  color: var(--medium-gray);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+/* Classes utilitaires personnalisées */
+.text-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Styles pour les scrollbars personnalisées */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--light-gray);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--medium-gray);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--dark-blue);
+}
+
+/* Animations personnalisées */
+@keyframes pulse-medical {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-pulse-medical {
+  animation: pulse-medical 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Styles pour les badges médicaux */
+.badge-medical {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
