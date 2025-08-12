@@ -3,6 +3,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
+import Input from '../../components/Input';
 import FicheConsultationForm from './FicheConsultationForm';
 import ConsultationsList from './ConsultationsList';
 import ConsultationDetails from './ConsultationDetails';
@@ -15,6 +16,11 @@ const PatientDashboard = () => {
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedConsultation, setSelectedConsultation] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  
+  // États pour la section médecins
+  const [searchTerm, setSearchTerm] = useState('');
+  const [specialiteFilter, setSpecialiteFilter] = useState('all');
+  const [disponibiliteFilter, setDisponibiliteFilter] = useState('all');
 
   const menuItems = [
     {
@@ -209,16 +215,304 @@ const PatientDashboard = () => {
     </div>
   );
 
-  const renderMedecins = () => (
-    <div className="max-w-3xl mx-auto">
-      <div className="bg-white rounded-xl p-8 shadow-sm border border-light">
-        <h2 className="text-medical-subtitle text-2xl mb-6">Médecins disponibles</h2>
-        <p className="text-medical-body">
-          Fonctionnalité en cours de développement...
-        </p>
+  const renderMedecins = () => {
+    // Liste des médecins disponibles
+    const medecins = [
+      {
+        id: 1,
+        nom: 'Dr. Martin Dubois',
+        specialite: 'Cardiologie',
+        experience: '15 ans',
+        disponible: true,
+        prochainCreneau: '2025-08-15',
+        photo: null,
+        description: 'Spécialiste en cardiologie interventionnelle et échographie cardiaque',
+        horaires: 'Lun-Ven: 8h-17h',
+        localisation: 'Clinique du Cœur, Kinshasa',
+        tarif: '50 USD'
+      },
+      {
+        id: 2,
+        nom: 'Dr. Sophie Laurent',
+        specialite: 'Médecine générale',
+        experience: '12 ans',
+        disponible: true,
+        prochainCreneau: '2025-08-13',
+        photo: null,
+        description: 'Médecin généraliste, consultations adultes et pédiatriques',
+        horaires: 'Lun-Sam: 7h-19h',
+        localisation: 'Centre Médical Central, Gombe',
+        tarif: '30 USD'
+      },
+      {
+        id: 3,
+        nom: 'Dr. Jean Moreau',
+        specialite: 'Neurologie',
+        experience: '20 ans',
+        disponible: false,
+        prochainCreneau: '2025-08-20',
+        photo: null,
+        description: 'Neurologue spécialisé en troubles neurologiques et migraines',
+        horaires: 'Mar-Jeu: 9h-16h',
+        localisation: 'Hôpital Neurologique, Lingwala',
+        tarif: '70 USD'
+      },
+      {
+        id: 4,
+        nom: 'Dr. Marie Durand',
+        specialite: 'Dermatologie',
+        experience: '8 ans',
+        disponible: true,
+        prochainCreneau: '2025-08-14',
+        photo: null,
+        description: 'Dermatologue, traitement des affections cutanées et esthétique',
+        horaires: 'Lun-Ven: 9h-18h',
+        localisation: 'Cabinet Derma Plus, Bandalungwa',
+        tarif: '45 USD'
+      },
+      {
+        id: 5,
+        nom: 'Dr. Pierre Martin',
+        specialite: 'Pédiatrie',
+        experience: '18 ans',
+        disponible: true,
+        prochainCreneau: '2025-08-13',
+        photo: null,
+        description: 'Pédiatre spécialisé en soins infantiles et vaccination',
+        horaires: 'Lun-Sam: 8h-17h',
+        localisation: 'Clinique Pédiatrique, Kalamu',
+        tarif: '35 USD'
+      },
+      {
+        id: 6,
+        nom: 'Dr. Claire Bernard',
+        specialite: 'Gynécologie',
+        experience: '14 ans',
+        disponible: true,
+        prochainCreneau: '2025-08-16',
+        photo: null,
+        description: 'Gynécologue-obstétricienne, suivi de grossesse et santé féminine',
+        horaires: 'Mar-Sam: 8h-16h',
+        localisation: 'Maternité Sainte-Marie, Ngaliema',
+        tarif: '55 USD'
+      }
+    ];
+
+    const specialites = [...new Set(medecins.map(m => m.specialite))];
+
+    const filteredMedecins = medecins.filter(medecin => {
+      const matchesSearch = medecin.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           medecin.specialite.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           medecin.localisation.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesSpecialite = specialiteFilter === 'all' || medecin.specialite === specialiteFilter;
+      const matchesDisponibilite = disponibiliteFilter === 'all' || 
+                                   (disponibiliteFilter === 'disponible' && medecin.disponible) ||
+                                   (disponibiliteFilter === 'indisponible' && !medecin.disponible);
+      
+      return matchesSearch && matchesSpecialite && matchesDisponibilite;
+    });
+
+    const handlePrendreRdv = (medecin) => {
+      alert(`Rendez-vous avec ${medecin.nom} - Fonctionnalité en développement`);
+    };
+
+    return (
+      <div className="space-y-4 lg:space-y-6">
+        {/* Header avec recherche et filtres */}
+        <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+          <div className="mb-4 lg:mb-6">
+            <h2 className="text-medical-subtitle text-lg sm:text-xl lg:text-2xl mb-2">
+              Médecins disponibles
+            </h2>
+            <p className="text-medical-body text-sm lg:text-base text-medium">
+              Trouvez et prenez rendez-vous avec nos médecins spécialistes
+            </p>
+          </div>
+
+          {/* Filtres */}
+          <div className="space-y-4">
+            <Input
+              placeholder="Rechercher par nom, spécialité ou localisation..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full"
+            />
+
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+              <div className="relative flex-1">
+                <select
+                  value={specialiteFilter}
+                  onChange={(e) => setSpecialiteFilter(e.target.value)}
+                  className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 text-xs lg:text-sm cursor-pointer hover:border-primary"
+                >
+                  <option value="all">Toutes les spécialités</option>
+                  {specialites.map(specialite => (
+                    <option key={specialite} value={specialite}>{specialite}</option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+
+              <div className="relative flex-1">
+                <select
+                  value={disponibiliteFilter}
+                  onChange={(e) => setDisponibiliteFilter(e.target.value)}
+                  className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 text-xs lg:text-sm cursor-pointer hover:border-primary"
+                >
+                  <option value="all">Tous les médecins</option>
+                  <option value="disponible">Disponibles</option>
+                  <option value="indisponible">Indisponibles</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Statistiques */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+          <div className="bg-white rounded-lg p-3 lg:p-4 shadow-sm border border-light">
+            <div className="text-center">
+              <div className="inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium bg-blue-100 text-blue-800">
+                {medecins.length}
+              </div>
+              <p className="text-xs lg:text-sm text-medium mt-1">Total médecins</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-3 lg:p-4 shadow-sm border border-light">
+            <div className="text-center">
+              <div className="inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium bg-green-100 text-green-800">
+                {medecins.filter(m => m.disponible).length}
+              </div>
+              <p className="text-xs lg:text-sm text-medium mt-1">Disponibles</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-3 lg:p-4 shadow-sm border border-light">
+            <div className="text-center">
+              <div className="inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium bg-purple-100 text-purple-800">
+                {specialites.length}
+              </div>
+              <p className="text-xs lg:text-sm text-medium mt-1">Spécialités</p>
+            </div>
+          </div>
+          <div className="bg-white rounded-lg p-3 lg:p-4 shadow-sm border border-light">
+            <div className="text-center">
+              <div className="inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs lg:text-sm font-medium bg-orange-100 text-orange-800">
+                {medecins.filter(m => m.disponible).length}
+              </div>
+              <p className="text-xs lg:text-sm text-medium mt-1">RDV possibles</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Liste des médecins */}
+        <div className="space-y-3 lg:space-y-4">
+          {filteredMedecins.length === 0 ? (
+            <div className="bg-white rounded-xl p-6 lg:p-8 shadow-sm border border-light text-center">
+              <MedicalIcons.Doctor className="w-10 h-10 lg:w-12 lg:h-12 text-medium mx-auto mb-3 lg:mb-4" />
+              <h3 className="text-medical-subtitle text-lg lg:text-xl mb-2">Aucun médecin trouvé</h3>
+              <p className="text-medical-body text-sm lg:text-base">
+                Essayez de modifier vos critères de recherche.
+              </p>
+            </div>
+          ) : (
+            filteredMedecins.map((medecin) => (
+              <div key={medecin.id} className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light hover:shadow-md transition-shadow">
+                <div className="flex flex-col gap-4">
+                  {/* Header du médecin */}
+                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+                    <div className="flex items-start space-x-3 lg:space-x-4 flex-1">
+                      <div className="w-12 h-12 lg:w-16 lg:h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0">
+                        <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h3 className="text-medical-subtitle text-base lg:text-lg mb-1">
+                          {medecin.nom}
+                        </h3>
+                        <p className="text-primary text-sm lg:text-base font-medium mb-1">
+                          {medecin.specialite}
+                        </p>
+                        <p className="text-xs lg:text-sm text-medium">
+                          {medecin.experience} d'expérience
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex sm:flex-col sm:items-end gap-2">
+                      <span className={`inline-flex items-center px-2 lg:px-3 py-1 rounded-full text-xs font-medium ${
+                        medecin.disponible 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {medecin.disponible ? 'Disponible' : 'Indisponible'}
+                      </span>
+                      <p className="text-xs lg:text-sm text-medium">
+                        Prochain: {new Date(medecin.prochainCreneau).toLocaleDateString('fr-FR')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Description */}
+                  <div>
+                    <p className="text-medical-body text-sm lg:text-base">
+                      {medecin.description}
+                    </p>
+                  </div>
+
+                  {/* Informations pratiques */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                    <div className="flex items-center space-x-2">
+                      <MedicalIcons.Clock className="w-4 h-4 text-medium" />
+                      <span className="text-xs lg:text-sm text-dark">{medecin.horaires}</span>
+                    </div>
+                    
+                    <div className="flex items-center space-x-2">
+                      <MedicalIcons.Location className="w-4 h-4 text-medium" />
+                      <span className="text-xs lg:text-sm text-dark truncate">{medecin.localisation}</span>
+                    </div>
+
+                    <div className="flex items-center space-x-2">
+                      <MedicalIcons.Settings className="w-4 h-4 text-medium" />
+                      <span className="text-xs lg:text-sm text-dark font-medium">{medecin.tarif}</span>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2 border-t border-light">
+                    <Button
+                      onClick={() => handlePrendreRdv(medecin)}
+                      disabled={!medecin.disponible}
+                      className="flex items-center justify-center space-x-2 flex-1 text-xs lg:text-sm"
+                    >
+                      <MedicalIcons.Calendar className="w-4 h-4" />
+                      <span>Prendre RDV</span>
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      className="flex items-center justify-center space-x-2 flex-1 text-xs lg:text-sm"
+                    >
+                      <MedicalIcons.Message className="w-4 h-4" />
+                      <span>Contacter</span>
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   // Pour les vues full-screen (formulaire et détails)
   if (activeView === 'nouvelle-fiche' || activeView === 'consultation-details') {
@@ -232,8 +526,14 @@ const PatientDashboard = () => {
         <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6">
           <div className="flex justify-between items-center h-14 sm:h-16">
             <div className="flex items-center space-x-2 sm:space-x-4">
-              <Logo size="sm" className="sm:hidden" />
-              <Logo size="md" className="hidden sm:block" />
+              {/* Logo responsive */}
+              <div className="sm:hidden">
+                <Logo size="sm" />
+              </div>
+              <div className="hidden sm:block">
+                <Logo size="md" />
+              </div>
+              
               <div className="hidden sm:block">
                 <h1 className="text-medical-title text-lg sm:text-xl">Espace Patient</h1>
                 <p className="text-medical-caption text-xs sm:text-sm">Gestion de vos consultations médicales</p>
@@ -361,32 +661,7 @@ const PatientDashboard = () => {
               })}
             </nav>
           </div>
-
-          {/* Mobile Navigation Tabs */}
-          <div className="lg:hidden">
-            <div className="flex overflow-x-auto space-x-2 pb-2">
-              {menuItems.map((item) => {
-                const IconComponent = item.icon;
-                const isActive = activeView === item.id;
-                
-                return (
-                  <button
-                    key={item.id}
-                    onClick={() => setActiveView(item.id)}
-                    className={`flex-shrink-0 flex flex-col items-center space-y-1 px-3 py-2 rounded-lg transition-colors ${
-                      isActive
-                        ? 'bg-primary text-white'
-                        : 'text-dark hover:bg-white hover:shadow-sm'
-                    }`}
-                  >
-                    <IconComponent className="w-5 h-5" />
-                    <span className="text-xs font-medium whitespace-nowrap">{item.label}</span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
+          
           {/* Main Content */}
           <div className="flex-1 min-w-0">
             {renderContent()}

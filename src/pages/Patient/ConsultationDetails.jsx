@@ -59,65 +59,65 @@ const ConsultationDetails = ({ consultation, onBack }) => {
   };
 
   const renderFicheTab = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 lg:space-y-6">
       {/* Informations générales */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-        <h3 className="text-medical-subtitle text-xl mb-4">Informations générales</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+        <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Informations générales</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
           <div>
-            <label className="block text-sm font-medium text-medium mb-1">Numéro de dossier</label>
-            <p className="text-dark">{consultation.numero_dossier}</p>
+            <label className="block text-xs lg:text-sm font-medium text-medium mb-1">Numéro de dossier</label>
+            <p className="text-dark text-sm lg:text-base">{consultation.numero_dossier}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-medium mb-1">Date de soumission</label>
-            <p className="text-dark">{new Date(consultation.date_soumission).toLocaleDateString('fr-FR')}</p>
+            <label className="block text-xs lg:text-sm font-medium text-medium mb-1">Date de soumission</label>
+            <p className="text-dark text-sm lg:text-base">{new Date(consultation.date_soumission).toLocaleDateString('fr-FR')}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-medium mb-1">Date de consultation</label>
-            <p className="text-dark">{new Date(consultation.date_consultation).toLocaleDateString('fr-FR')}</p>
+            <label className="block text-xs lg:text-sm font-medium text-medium mb-1">Date de consultation</label>
+            <p className="text-dark text-sm lg:text-base">{new Date(consultation.date_consultation).toLocaleDateString('fr-FR')}</p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-medium mb-1">Heure</label>
-            <p className="text-dark">{consultation.heure_debut}</p>
+            <label className="block text-xs lg:text-sm font-medium text-medium mb-1">Heure</label>
+            <p className="text-dark text-sm lg:text-base">{consultation.heure_debut}</p>
           </div>
         </div>
       </div>
 
       {/* Médecin sélectionné */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-        <h3 className="text-medical-subtitle text-xl mb-4">Médecin consulté</h3>
-        <div className="flex items-center space-x-4">
-          <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
-            <MedicalIcons.Doctor className="w-8 h-8 text-primary" />
+      <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+        <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Médecin consulté</h3>
+        <div className="flex items-center space-x-3 lg:space-x-4">
+          <div className="w-12 h-12 lg:w-16 lg:h-16 bg-blue-100 rounded-full flex items-center justify-center">
+            <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
           </div>
           <div>
-            <h4 className="text-medical-subtitle text-lg">{consultation.medecin.nom}</h4>
-            <p className="text-primary">{consultation.medecin.specialite}</p>
+            <h4 className="text-medical-subtitle text-base lg:text-lg">{consultation.medecin.nom}</h4>
+            <p className="text-primary text-sm lg:text-base">{consultation.medecin.specialite}</p>
           </div>
         </div>
       </div>
 
       {/* Motif de consultation */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-        <h3 className="text-medical-subtitle text-xl mb-4">Motif de consultation</h3>
-        <p className="text-medical-body">{consultation.motif_consultation}</p>
+      <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+        <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Motif de consultation</h3>
+        <p className="text-medical-body text-sm lg:text-base">{consultation.motif_consultation}</p>
       </div>
 
       {/* Actions */}
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-        <h3 className="text-medical-subtitle text-xl mb-4">Actions disponibles</h3>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" size="sm">
-            <MedicalIcons.Download className="w-4 h-4 mr-2" />
-            Télécharger la fiche
+      <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+        <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Actions disponibles</h3>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <Button variant="outline" size="sm" className="flex items-center justify-center space-x-2">
+            <MedicalIcons.Download className="w-4 h-4" />
+            <span>Télécharger la fiche</span>
           </Button>
-          <Button variant="outline" size="sm">
-            <MedicalIcons.Print className="w-4 h-4 mr-2" />
-            Imprimer
+          <Button variant="outline" size="sm" className="flex items-center justify-center space-x-2">
+            <MedicalIcons.Print className="w-4 h-4" />
+            <span>Imprimer</span>
           </Button>
-          <Button variant="outline" size="sm">
-            <MedicalIcons.Edit className="w-4 h-4 mr-2" />
-            Modifier
+          <Button variant="outline" size="sm" className="flex items-center justify-center space-x-2">
+            <MedicalIcons.Edit className="w-4 h-4" />
+            <span>Modifier</span>
           </Button>
         </div>
       </div>
@@ -127,13 +127,13 @@ const ConsultationDetails = ({ consultation, onBack }) => {
   const renderReponseTab = () => {
     if (!consultation.reponse_medecin) {
       return (
-        <div className="bg-white rounded-xl p-8 shadow-sm border border-light text-center">
-          <StatusIcons.Clock className="w-12 h-12 text-yellow-500 mx-auto mb-4" />
-          <h3 className="text-medical-subtitle text-xl mb-2">En attente de réponse</h3>
-          <p className="text-medical-body mb-4">
+        <div className="bg-white rounded-xl p-6 lg:p-8 shadow-sm border border-light text-center">
+          <StatusIcons.Clock className="w-10 h-10 lg:w-12 lg:h-12 text-yellow-500 mx-auto mb-3 lg:mb-4" />
+          <h3 className="text-medical-subtitle text-lg lg:text-xl mb-2">En attente de réponse</h3>
+          <p className="text-medical-body text-sm lg:text-base mb-4">
             Le médecin n'a pas encore répondu à votre fiche de consultation.
           </p>
-          <p className="text-medical-caption">
+          <p className="text-medical-caption text-xs lg:text-sm">
             Vous recevrez une notification dès que la réponse sera disponible.
           </p>
         </div>
@@ -184,20 +184,20 @@ const ConsultationDetails = ({ consultation, onBack }) => {
     }
 
     return (
-      <div className="space-y-6">
+      <div className="space-y-4 lg:space-y-6">
         {/* Diagnostic */}
         {reponse.diagnostic && (
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-            <h3 className="text-medical-subtitle text-xl mb-4">Diagnostic</h3>
-            <p className="text-medical-body">{reponse.diagnostic}</p>
+          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Diagnostic</h3>
+            <p className="text-medical-body text-sm lg:text-base">{reponse.diagnostic}</p>
           </div>
         )}
 
         {/* Recommandations */}
         {reponse.recommandations && (
-          <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-            <h3 className="text-medical-subtitle text-xl mb-4">Recommandations</h3>
-            <p className="text-medical-body">{reponse.recommandations}</p>
+          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Recommandations</h3>
+            <p className="text-medical-body text-sm lg:text-base">{reponse.recommandations}</p>
           </div>
         )}
 
@@ -221,20 +221,20 @@ const ConsultationDetails = ({ consultation, onBack }) => {
         )}
 
         {/* Actions */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-          <h3 className="text-medical-subtitle text-xl mb-4">Actions</h3>
-          <div className="flex flex-wrap gap-3">
-            <Button>
-              <MedicalIcons.Download className="w-4 h-4 mr-2" />
-              Télécharger l'ordonnance
+        <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+          <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Actions</h3>
+          <div className="flex flex-col sm:flex-row gap-3">
+            <Button className="flex items-center justify-center space-x-2">
+              <MedicalIcons.Download className="w-4 h-4" />
+              <span>Télécharger l'ordonnance</span>
             </Button>
-            <Button variant="outline">
-              <MedicalIcons.Message className="w-4 h-4 mr-2" />
-              Contacter le médecin
+            <Button variant="outline" className="flex items-center justify-center space-x-2">
+              <MedicalIcons.Message className="w-4 h-4" />
+              <span>Contacter le médecin</span>
             </Button>
-            <Button variant="outline">
-              <MedicalIcons.Calendar className="w-4 h-4 mr-2" />
-              Prendre un nouveau RDV
+            <Button variant="outline" className="flex items-center justify-center space-x-2">
+              <MedicalIcons.Calendar className="w-4 h-4" />
+              <span>Nouveau RDV</span>
             </Button>
           </div>
         </div>
@@ -248,56 +248,46 @@ const ConsultationDetails = ({ consultation, onBack }) => {
         date: consultation.date_soumission,
         action: 'Fiche soumise',
         description: 'Votre fiche de consultation a été envoyée au médecin',
-        icone: MedicalIcons.Document,
-        couleur: 'text-blue-600'
-      }
+        statut: 'termine'
+      },
+      {
+        date: consultation.date_consultation,
+        action: 'RDV programmé',
+        description: `Rendez-vous fixé le ${new Date(consultation.date_consultation).toLocaleDateString('fr-FR')} à ${consultation.heure_debut}`,
+        statut: consultation.statut === 'confirmee' ? 'en_cours' : consultation.statut
+      },
+      ...(consultation.reponse_medecin ? [{
+        date: consultation.reponse_medecin.date,
+        action: 'Réponse du médecin',
+        description: 'Le médecin a répondu à votre consultation',
+        statut: 'termine'
+      }] : [])
     ];
 
-    if (consultation.reponse_medecin) {
-      historique.push({
-        date: consultation.reponse_medecin.date,
-        action: consultation.statut === 'annulee' ? 'Consultation annulée' : 'Réponse du médecin',
-        description: consultation.statut === 'annulee' 
-          ? `Consultation annulée: ${consultation.reponse_medecin.motif_annulation}`
-          : 'Le médecin a répondu à votre fiche de consultation',
-        icone: consultation.statut === 'annulee' ? StatusIcons.Error : MedicalIcons.Doctor,
-        couleur: consultation.statut === 'annulee' ? 'text-red-600' : 'text-green-600'
-      });
-    }
-
-    if (consultation.statut === 'terminee') {
-      historique.push({
-        date: consultation.date_consultation,
-        action: 'Consultation terminée',
-        description: 'La consultation s\'est déroulée avec succès',
-        icone: StatusIcons.Success,
-        couleur: 'text-green-600'
-      });
-    }
-
     return (
-      <div className="bg-white rounded-xl p-6 shadow-sm border border-light">
-        <h3 className="text-medical-subtitle text-xl mb-6">Historique de la consultation</h3>
-        <div className="space-y-6">
-          {historique.map((event, index) => {
-            const IconComponent = event.icone;
-            return (
-              <div key={index} className="flex space-x-4">
-                <div className={`flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center ${event.couleur}`}>
-                  <IconComponent className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center justify-between">
-                    <h4 className="text-medical-subtitle">{event.action}</h4>
-                    <span className="text-medical-caption">
-                      {new Date(event.date).toLocaleDateString('fr-FR')}
-                    </span>
-                  </div>
-                  <p className="text-medical-body mt-1">{event.description}</p>
-                </div>
+      <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
+        <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 lg:mb-6">Historique de la consultation</h3>
+        <div className="space-y-4 lg:space-y-6">
+          {historique.map((item, index) => (
+            <div key={index} className="flex items-start space-x-3 lg:space-x-4">
+              <div className="flex-shrink-0">
+                <div className={`w-3 h-3 rounded-full mt-1 ${
+                  item.statut === 'termine' ? 'bg-green-500' :
+                  item.statut === 'en_cours' ? 'bg-blue-500' :
+                  'bg-gray-300'
+                }`} />
               </div>
-            );
-          })}
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-0">
+                  <h4 className="text-sm lg:text-base font-medium text-dark">{item.action}</h4>
+                  <span className="text-xs lg:text-sm text-medium">
+                    {new Date(item.date).toLocaleDateString('fr-FR')}
+                  </span>
+                </div>
+                <p className="text-xs lg:text-sm text-medium mt-1">{item.description}</p>
+              </div>
+            </div>
+          ))}
         </div>
       </div>
     );
@@ -307,63 +297,65 @@ const ConsultationDetails = ({ consultation, onBack }) => {
     <div className="min-h-screen bg-light">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-light">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Logo size="md" />
-              <div>
-                <h1 className="text-medical-title text-xl">Détails de la consultation</h1>
-                <p className="text-medical-caption">
+        <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={onBack}
+                className="flex items-center space-x-1 sm:space-x-2"
+              >
+                <NavigationIcons.Back className="w-4 h-4" />
+                <span className="hidden sm:inline">Retour</span>
+              </Button>
+              
+              <div className="min-w-0 flex-1">
+                <h1 className="text-medical-title text-base sm:text-lg lg:text-xl truncate">Détails de la consultation</h1>
+                <p className="text-medical-caption text-xs sm:text-sm truncate">
                   {consultation.numero_dossier} - {consultation.medecin.nom}
                 </p>
               </div>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${getStatusColor(consultation.statut)}`}>
+            
+            <div className="flex items-center space-x-2">
+              <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(consultation.statut)}`}>
                 {getStatusLabel(consultation.statut)}
               </span>
-              <button
-                onClick={onBack}
-                className="flex items-center space-x-2 text-medium hover:text-dark transition-colors"
-              >
-                <NavigationIcons.ArrowLeft className="w-5 h-5" />
-                <span>Retour</span>
-              </button>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 lg:py-6">
         {/* Tabs Navigation */}
-        <div className="bg-white rounded-xl shadow-sm border border-light mb-6">
-          <div className="border-b border-light">
-            <nav className="flex space-x-8 px-6">
-              {tabs.map((tab) => {
-                const IconComponent = tab.icon;
-                const isActive = activeTab === tab.id;
-                
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center space-x-2 py-4 border-b-2 font-medium text-sm transition-colors ${
-                      isActive
-                        ? 'border-primary text-primary'
-                        : 'border-transparent text-medium hover:text-dark hover:border-gray-300'
-                    }`}
-                  >
-                    <IconComponent className="w-5 h-5" />
-                    <span>{tab.label}</span>
-                  </button>
-                );
-              })}
-            </nav>
-          </div>
+        <div className="bg-white rounded-xl p-1 shadow-sm border border-light mb-4 lg:mb-6">
+          <nav className="flex space-x-1">
+            {tabs.map((tab) => {
+              const IconComponent = tab.icon;
+              const isActive = activeTab === tab.id;
+              
+              return (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-4 py-2 sm:py-3 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
+                    isActive
+                      ? 'bg-primary text-white'
+                      : 'text-medium hover:text-dark hover:bg-light'
+                  }`}
+                >
+                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden text-xs">{tab.label.split(' ')[0]}</span>
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
         {/* Tab Content */}
-        <div>
+        <div className="space-y-4 lg:space-y-6">
           {activeTab === 'fiche' && renderFicheTab()}
           {activeTab === 'reponse' && renderReponseTab()}
           {activeTab === 'historique' && renderHistoriqueTab()}

@@ -142,6 +142,7 @@ export const NavigationIcons = {
   Location: MapPin,
   ArrowLeft: ArrowLeft,
   ArrowRight: ArrowRight,
+  Back: ArrowLeft,
 };
 
 // Icônes pour l'authentification

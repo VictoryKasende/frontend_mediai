@@ -211,10 +211,10 @@ const FicheConsultationForm = ({ onBack }) => {
   };
 
   const renderContactAdresse = () => (
-    <div className="space-y-6">
-      <div className="bg-light rounded-lg p-4 mb-6">
-        <h3 className="text-medical-subtitle text-lg mb-4">Adresse personnelle</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Adresse personnelle</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Input
             label="Avenue/Rue"
             value={formData.avenue}
@@ -236,8 +236,8 @@ const FicheConsultationForm = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="bg-light rounded-lg p-4">
-        <h3 className="text-medical-subtitle text-lg mb-4">Personne à contacter en cas d'urgence</h3>
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Personne à contacter en cas d'urgence</h3>
         <div className="space-y-4">
           <Input
             label="Nom complet *"
@@ -246,7 +246,7 @@ const FicheConsultationForm = ({ onBack }) => {
             placeholder="Nom de la personne à contacter"
             required
           />
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
             <PhoneInput
               label="Téléphone *"
               value={formData.contact_telephone}
@@ -267,14 +267,14 @@ const FicheConsultationForm = ({ onBack }) => {
   );
 
   const renderChoixMedecin = () => (
-    <div className="space-y-6">
-      <div className="bg-light rounded-lg p-4">
-        <h3 className="text-medical-subtitle text-lg mb-4">Sélectionnez un médecin</h3>
-        <p className="text-medical-body mb-6">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Sélectionnez un médecin</h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6">
           Choisissez le médecin que vous souhaitez consulter. Vous pouvez rechercher par spécialité ou par nom.
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           {[
             { id: 1, nom: 'Dr. Martin Dubois', specialite: 'Cardiologie', disponible: true },
             { id: 2, nom: 'Dr. Sophie Laurent', specialite: 'Médecine générale', disponible: true },
@@ -285,7 +285,7 @@ const FicheConsultationForm = ({ onBack }) => {
           ].map((medecin) => (
             <div
               key={medecin.id}
-              className={`border rounded-lg p-4 cursor-pointer transition-all ${
+              className={`border rounded-lg p-3 lg:p-4 cursor-pointer transition-all ${
                 formData.medecin_id === medecin.id.toString()
                   ? 'border-primary bg-blue-50'
                   : medecin.disponible
@@ -299,14 +299,14 @@ const FicheConsultationForm = ({ onBack }) => {
                 }
               }}
             >
-              <div className="flex items-center space-x-3 mb-2">
-                <MedicalIcons.Doctor className="w-8 h-8 text-primary" />
-                <div className="flex-1">
-                  <h4 className="font-medium text-dark">{medecin.nom}</h4>
-                  <p className="text-sm text-medium">{medecin.specialite}</p>
+              <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
+                <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-primary flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-medium text-dark text-sm lg:text-base truncate">{medecin.nom}</h4>
+                  <p className="text-xs lg:text-sm text-medium truncate">{medecin.specialite}</p>
                 </div>
                 {formData.medecin_id === medecin.id.toString() && (
-                  <MedicalIcons.Check className="w-5 h-5 text-primary" />
+                  <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-primary flex-shrink-0" />
                 )}
               </div>
               <div className="flex justify-between items-center">
@@ -318,7 +318,7 @@ const FicheConsultationForm = ({ onBack }) => {
                   {medecin.disponible ? 'Disponible' : 'Indisponible'}
                 </span>
                 {medecin.disponible && (
-                  <span className="text-xs text-medium">Cliquez pour sélectionner</span>
+                  <span className="text-xs text-medium hidden sm:inline">Cliquez pour sélectionner</span>
                 )}
               </div>
             </div>
@@ -326,10 +326,10 @@ const FicheConsultationForm = ({ onBack }) => {
         </div>
 
         {formData.medecin_id && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-green-50 border border-green-200 rounded-lg">
             <div className="flex items-center space-x-2">
-              <MedicalIcons.Check className="w-5 h-5 text-green-600" />
-              <span className="text-green-800 font-medium">
+              <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
+              <span className="text-green-800 font-medium text-sm lg:text-base">
                 Médecin sélectionné : {formData.medecin_nom}
               </span>
             </div>
@@ -340,14 +340,14 @@ const FicheConsultationForm = ({ onBack }) => {
   );
 
   const renderSignesVitaux = () => (
-    <div className="space-y-6">
-      <div className="bg-light rounded-lg p-4 mb-6">
-        <h3 className="text-medical-subtitle text-lg mb-4">Signes vitaux</h3>
-        <p className="text-medical-body mb-4">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Signes vitaux</h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4">
           Remplissez les signes vitaux que vous connaissez. Laissez vide si vous ne connaissez pas la valeur.
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Input
             label="Température (°C)"
             type="number"
@@ -404,89 +404,92 @@ const FicheConsultationForm = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="bg-light rounded-lg p-4">
-        <h3 className="text-medical-subtitle text-lg mb-4">Personnes présentes lors de la consultation</h3>
-        <div className="space-y-3">
-          <label className="flex items-center space-x-3">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Personnes présentes lors de la consultation</h3>
+        <div className="space-y-3 lg:space-y-4">
+          <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.patient}
               onChange={(e) => handleInputChange('patient', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Patient présent</span>
+            <span className="text-dark text-sm lg:text-base">Patient présent</span>
           </label>
           
           <div className="space-y-2">
-            <label className="flex items-center space-x-3">
+            <label className="flex items-center space-x-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.proche}
                 onChange={(e) => handleInputChange('proche', e.target.checked)}
-                className="text-primary"
+                className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
               />
-              <span className="text-dark">Proche présent</span>
+              <span className="text-dark text-sm lg:text-base">Proche présent</span>
             </label>
             {formData.proche && (
-              <Input
-                label="Lien avec le patient"
-                value={formData.proche_lien}
-                onChange={(e) => handleInputChange('proche_lien', e.target.value)}
-                placeholder="ex: époux/épouse, parent, enfant..."
-                className="ml-6"
-              />
+              <div className="ml-7">
+                <Input
+                  label="Lien avec le patient"
+                  value={formData.proche_lien}
+                  onChange={(e) => handleInputChange('proche_lien', e.target.value)}
+                  placeholder="ex: époux/épouse, parent, enfant..."
+                />
+              </div>
             )}
           </div>
 
           <div className="space-y-2">
-            <label className="flex items-center space-x-3">
+            <label className="flex items-center space-x-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.soignant}
                 onChange={(e) => handleInputChange('soignant', e.target.checked)}
-                className="text-primary"
+                className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
               />
-              <span className="text-dark">Soignant présent</span>
+              <span className="text-dark text-sm lg:text-base">Soignant présent</span>
             </label>
             {formData.soignant && (
-              <Input
-                label="Rôle du soignant"
-                value={formData.soignant_role}
-                onChange={(e) => handleInputChange('soignant_role', e.target.value)}
-                placeholder="ex: infirmier, aide-soignant..."
-                className="ml-6"
-              />
+              <div className="ml-7">
+                <Input
+                  label="Rôle du soignant"
+                  value={formData.soignant_role}
+                  onChange={(e) => handleInputChange('soignant_role', e.target.value)}
+                  placeholder="ex: infirmier, aide-soignant..."
+                />
+              </div>
             )}
           </div>
 
-          <label className="flex items-center space-x-3">
+          <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.medecin}
               onChange={(e) => handleInputChange('medecin', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Médecin présent</span>
+            <span className="text-dark text-sm lg:text-base">Médecin présent</span>
           </label>
 
           <div className="space-y-2">
-            <label className="flex items-center space-x-3">
+            <label className="flex items-center space-x-3 cursor-pointer">
               <input
                 type="checkbox"
                 checked={formData.autre}
                 onChange={(e) => handleInputChange('autre', e.target.checked)}
-                className="text-primary"
+                className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
               />
-              <span className="text-dark">Autre personne présente</span>
+              <span className="text-dark text-sm lg:text-base">Autre personne présente</span>
             </label>
             {formData.autre && (
-              <Input
-                label="Précisions"
-                value={formData.autre_precisions}
-                onChange={(e) => handleInputChange('autre_precisions', e.target.value)}
-                placeholder="Précisez qui d'autre est présent..."
-                className="ml-6"
-              />
+              <div className="ml-7">
+                <Input
+                  label="Précisions"
+                  value={formData.autre_precisions}
+                  onChange={(e) => handleInputChange('autre_precisions', e.target.value)}
+                  placeholder="Précisez qui d'autre est présent..."
+                />
+              </div>
             )}
           </div>
         </div>
@@ -495,12 +498,12 @@ const FicheConsultationForm = ({ onBack }) => {
   );
 
   const renderMotifConsultation = () => (
-    <div className="space-y-6">
-      <div className="bg-light rounded-lg p-4">
-        <h3 className="text-medical-subtitle text-lg mb-4">Motif de la consultation</h3>
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Motif de la consultation</h3>
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-dark mb-2">
+            <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
               Motif principal de consultation *
             </label>
             <textarea
@@ -508,13 +511,13 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('motif_consultation', e.target.value)}
               placeholder="Décrivez brièvement pourquoi vous consultez aujourd'hui..."
               rows={4}
-              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 resize-none text-xs lg:text-sm"
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-dark mb-2">
+            <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
               Histoire de la maladie actuelle
             </label>
             <textarea
@@ -522,7 +525,7 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('histoire_maladie', e.target.value)}
               placeholder="Décrivez l'évolution de vos symptômes : quand ont-ils commencé, comment ont-ils évolué, qu'est-ce qui les améliore ou les aggrave..."
               rows={6}
-              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 resize-none text-xs lg:text-sm"
             />
           </div>
         </div>
@@ -531,67 +534,67 @@ const FicheConsultationForm = ({ onBack }) => {
   );
 
   const renderMedicaments = () => (
-    <div className="space-y-6">
-      <div className="bg-light rounded-lg p-4">
-        <h3 className="text-medical-subtitle text-lg mb-4">Prise de médicaments</h3>
-        <p className="text-medical-body mb-4">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Prise de médicaments</h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4">
           Indiquez où vous prenez habituellement vos médicaments :
         </p>
         
-        <div className="space-y-3 mb-6">
-          <label className="flex items-center space-x-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4 mb-4 lg:mb-6">
+          <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.maison_medicaments}
               onChange={(e) => handleInputChange('maison_medicaments', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">À la maison</span>
+            <span className="text-dark text-sm lg:text-base">À la maison</span>
           </label>
           
-          <label className="flex items-center space-x-3">
+          <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.pharmacie_medicaments}
               onChange={(e) => handleInputChange('pharmacie_medicaments', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">À la pharmacie</span>
+            <span className="text-dark text-sm lg:text-base">À la pharmacie</span>
           </label>
           
-          <label className="flex items-center space-x-3">
+          <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.centre_sante_medicaments}
               onChange={(e) => handleInputChange('centre_sante_medicaments', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Au centre de santé</span>
+            <span className="text-dark text-sm lg:text-base">Au centre de santé</span>
           </label>
           
-          <label className="flex items-center space-x-3">
+          <label className="flex items-center space-x-3 cursor-pointer">
             <input
               type="checkbox"
               checked={formData.hopital_medicaments}
               onChange={(e) => handleInputChange('hopital_medicaments', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">À l'hôpital</span>
+            <span className="text-dark text-sm lg:text-base">À l'hôpital</span>
           </label>
           
-          <label className="flex items-center space-x-3">
+          <label className="flex items-center space-x-3 cursor-pointer sm:col-span-2">
             <input
               type="checkbox"
               checked={formData.medicaments_non_pris}
               onChange={(e) => handleInputChange('medicaments_non_pris', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Je ne prends pas de médicaments</span>
+            <span className="text-dark text-sm lg:text-base">Je ne prends pas de médicaments</span>
           </label>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-dark mb-2">
+          <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
             Détails sur les médicaments
           </label>
           <textarea
@@ -599,7 +602,7 @@ const FicheConsultationForm = ({ onBack }) => {
             onChange={(e) => handleInputChange('details_medicaments', e.target.value)}
             placeholder="Listez les médicaments que vous prenez actuellement (nom, dosage, fréquence) ou toute information pertinente..."
             rows={4}
-            className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 resize-none text-xs lg:text-sm"
           />
         </div>
       </div>
@@ -607,76 +610,76 @@ const FicheConsultationForm = ({ onBack }) => {
   );
 
   const renderSymptomes = () => (
-    <div className="space-y-6">
-      <div className="bg-light rounded-lg p-4">
-        <h3 className="text-medical-subtitle text-lg mb-4">Symptômes actuels</h3>
-        <p className="text-medical-body mb-4">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Symptômes actuels</h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4">
           Cochez les symptômes que vous ressentez actuellement :
         </p>
         
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.cephalees}
               onChange={(e) => handleInputChange('cephalees', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
             <div>
-              <span className="text-dark font-medium">Céphalées</span>
-              <p className="text-sm text-medium">Maux de tête</p>
+              <span className="text-dark font-medium text-sm lg:text-base">Céphalées</span>
+              <p className="text-xs lg:text-sm text-medium">Maux de tête</p>
             </div>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.vertiges}
               onChange={(e) => handleInputChange('vertiges', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
             <div>
-              <span className="text-dark font-medium">Vertiges</span>
-              <p className="text-sm text-medium">Sensation de rotation</p>
+              <span className="text-dark font-medium text-sm lg:text-base">Vertiges</span>
+              <p className="text-xs lg:text-sm text-medium">Sensation de rotation</p>
             </div>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.palpitations}
               onChange={(e) => handleInputChange('palpitations', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
             <div>
-              <span className="text-dark font-medium">Palpitations</span>
-              <p className="text-sm text-medium">Battements cardiaques rapides</p>
+              <span className="text-dark font-medium text-sm lg:text-base">Palpitations</span>
+              <p className="text-xs lg:text-sm text-medium">Battements cardiaques rapides</p>
             </div>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.troubles_visuels}
               onChange={(e) => handleInputChange('troubles_visuels', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
             <div>
-              <span className="text-dark font-medium">Troubles visuels</span>
-              <p className="text-sm text-medium">Vision floue, double...</p>
+              <span className="text-dark font-medium text-sm lg:text-base">Troubles visuels</span>
+              <p className="text-xs lg:text-sm text-medium">Vision floue, double...</p>
             </div>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer sm:col-span-2">
             <input
               type="checkbox"
               checked={formData.nycturie}
               onChange={(e) => handleInputChange('nycturie', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
             <div>
-              <span className="text-dark font-medium">Nycturie</span>
-              <p className="text-sm text-medium">Urination nocturne fréquente</p>
+              <span className="text-dark font-medium text-sm lg:text-base">Nycturie</span>
+              <p className="text-xs lg:text-sm text-medium">Urination nocturne fréquente</p>
             </div>
           </label>
         </div>
@@ -685,112 +688,133 @@ const FicheConsultationForm = ({ onBack }) => {
   );
 
   const renderAntecedents = () => (
-    <div className="space-y-6">
-      <div className="bg-light rounded-lg p-4 mb-6">
-        <h3 className="text-medical-subtitle text-lg mb-4">Antécédents médicaux personnels</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Antécédents médicaux personnels</h3>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.hypertendu}
               onChange={(e) => handleInputChange('hypertendu', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Hypertension artérielle</span>
+            <span className="text-dark text-sm lg:text-base">Hypertension artérielle</span>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.diabetique}
               onChange={(e) => handleInputChange('diabetique', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Diabète</span>
+            <span className="text-dark text-sm lg:text-base">Diabète</span>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.epileptique}
               onChange={(e) => handleInputChange('epileptique', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Épilepsie</span>
+            <span className="text-dark text-sm lg:text-base">Épilepsie</span>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.trouble_comportement}
               onChange={(e) => handleInputChange('trouble_comportement', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Troubles du comportement</span>
+            <span className="text-dark text-sm lg:text-base">Troubles du comportement</span>
           </label>
           
-          <label className="flex items-center space-x-3 p-3 border border-medium rounded-lg hover:bg-white transition-colors">
+          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
               type="checkbox"
               checked={formData.gastritique}
               onChange={(e) => handleInputChange('gastritique', e.target.checked)}
-              className="text-primary"
+              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark">Gastrite</span>
+            <span className="text-dark text-sm lg:text-base">Gastrite</span>
           </label>
         </div>
       </div>
 
-      <div className="bg-light rounded-lg p-4 mb-6">
-        <h3 className="text-medical-subtitle text-lg mb-4">Habitudes de vie</h3>
+      <div className="bg-light rounded-lg p-4 lg:p-6">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Habitudes de vie</h3>
         <div className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-2">Tabac</label>
-              <select
-                value={formData.tabac}
-                onChange={(e) => handleInputChange('tabac', e.target.value)}
-                className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
-              >
-                <option value="non">Non</option>
-                <option value="rarement">Rarement</option>
-                <option value="souvent">Souvent</option>
-                <option value="tres_souvent">Très souvent</option>
-              </select>
+              <label className="block text-xs lg:text-sm font-medium text-dark mb-2">Tabac</label>
+              <div className="relative">
+                <select
+                  value={formData.tabac}
+                  onChange={(e) => handleInputChange('tabac', e.target.value)}
+                  className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 text-xs lg:text-sm text-dark cursor-pointer hover:border-primary"
+                >
+                  <option value="non">Non</option>
+                  <option value="rarement">Rarement</option>
+                  <option value="souvent">Souvent</option>
+                  <option value="tres_souvent">Très souvent</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-dark mb-2">Alcool</label>
-              <select
-                value={formData.alcool}
-                onChange={(e) => handleInputChange('alcool', e.target.value)}
-                className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
-              >
-                <option value="non">Non</option>
-                <option value="rarement">Rarement</option>
-                <option value="souvent">Souvent</option>
-                <option value="tres_souvent">Très souvent</option>
-              </select>
+              <label className="block text-xs lg:text-sm font-medium text-dark mb-2">Alcool</label>
+              <div className="relative">
+                <select
+                  value={formData.alcool}
+                  onChange={(e) => handleInputChange('alcool', e.target.value)}
+                  className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 text-xs lg:text-sm text-dark cursor-pointer hover:border-primary"
+                >
+                  <option value="non">Non</option>
+                  <option value="rarement">Rarement</option>
+                  <option value="souvent">Souvent</option>
+                  <option value="tres_souvent">Très souvent</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-dark mb-2">Activité physique</label>
-              <select
-                value={formData.activite_physique}
-                onChange={(e) => handleInputChange('activite_physique', e.target.value)}
-                className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
-              >
-                <option value="non">Jamais</option>
-                <option value="rarement">Rarement</option>
-                <option value="souvent">Souvent</option>
-                <option value="tres_souvent">Très souvent</option>
-              </select>
+              <label className="block text-xs lg:text-sm font-medium text-dark mb-2">Activité physique</label>
+              <div className="relative">
+                <select
+                  value={formData.activite_physique}
+                  onChange={(e) => handleInputChange('activite_physique', e.target.value)}
+                  className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 text-xs lg:text-sm text-dark cursor-pointer hover:border-primary"
+                >
+                  <option value="non">Jamais</option>
+                  <option value="rarement">Rarement</option>
+                  <option value="souvent">Souvent</option>
+                  <option value="tres_souvent">Très souvent</option>
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                  <svg className="w-4 h-4 text-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
             <div>
-              <label className="block text-sm font-medium text-dark mb-2">
+              <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
                 Détails activité physique
               </label>
               <textarea
@@ -1072,8 +1096,8 @@ const FicheConsultationForm = ({ onBack }) => {
   );
   // Informations personnelles (étape 1)
   const renderInformationsPersonnelles = () => (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+    <div className="space-y-4 lg:space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
         <Input
           label="Nom *"
           value={formData.nom}
@@ -1096,7 +1120,7 @@ const FicheConsultationForm = ({ onBack }) => {
         />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
         <Input
           label="Date de naissance *"
           type="date"
@@ -1115,37 +1139,37 @@ const FicheConsultationForm = ({ onBack }) => {
           required
         />
         <div>
-          <label className="block text-sm font-medium text-dark mb-2">
+          <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
             Sexe *
           </label>
           <div className="space-y-2">
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="radio"
                 name="sexe"
                 value="M"
                 checked={formData.sexe === 'M'}
                 onChange={(e) => handleInputChange('sexe', e.target.value)}
-                className="text-primary"
+                className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 cursor-pointer"
               />
-              <span className="text-sm text-dark">Masculin</span>
+              <span className="text-xs lg:text-sm text-dark">Masculin</span>
             </label>
-            <label className="flex items-center space-x-2">
+            <label className="flex items-center space-x-2 cursor-pointer">
               <input
                 type="radio"
                 name="sexe"
                 value="F"
                 checked={formData.sexe === 'F'}
                 onChange={(e) => handleInputChange('sexe', e.target.value)}
-                className="text-primary"
+                className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 cursor-pointer"
               />
-              <span className="text-sm text-dark">Féminin</span>
+              <span className="text-xs lg:text-sm text-dark">Féminin</span>
             </label>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
         <PhoneInput
           label="Numéro de téléphone *"
           value={formData.telephone}
@@ -1154,19 +1178,26 @@ const FicheConsultationForm = ({ onBack }) => {
           required
         />
         <div>
-          <label className="block text-sm font-medium text-dark mb-2">
+          <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
             État civil
           </label>
-          <select
-            value={formData.etat_civil}
-            onChange={(e) => handleInputChange('etat_civil', e.target.value)}
-            className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
-          >
-            <option value="Célibataire">Célibataire</option>
-            <option value="Marié(e)">Marié(e)</option>
-            <option value="Divorcé(e)">Divorcé(e)</option>
-            <option value="Veuf(ve)">Veuf(ve)</option>
-          </select>
+          <div className="relative">
+            <select
+              value={formData.etat_civil}
+              onChange={(e) => handleInputChange('etat_civil', e.target.value)}
+              className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 text-xs lg:text-sm text-dark cursor-pointer hover:border-primary"
+            >
+              <option value="Célibataire">Célibataire</option>
+              <option value="Marié(e)">Marié(e)</option>
+              <option value="Divorcé(e)">Divorcé(e)</option>
+              <option value="Veuf(ve)">Veuf(ve)</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+              <svg className="w-4 h-4 text-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1182,32 +1213,32 @@ const FicheConsultationForm = ({ onBack }) => {
     <div className="min-h-screen bg-light">
       {/* Header */}
       <header className="bg-white shadow-sm border-b border-light">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <Logo size="md" />
-              <div>
-                <h1 className="text-medical-title text-xl">Fiche de consultation</h1>
-                <p className="text-medical-caption">
+        <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
+          <div className="flex items-center justify-between h-14 sm:h-16">
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              <Logo size="sm" />
+              <div className="min-w-0 flex-1">
+                <h1 className="text-medical-title text-base sm:text-lg lg:text-xl truncate">Fiche de consultation</h1>
+                <p className="text-medical-caption text-xs sm:text-sm truncate">
                   Étape {currentStep} sur {steps.length}: {steps[currentStep - 1]?.title}
                 </p>
               </div>
             </div>
             <button
               onClick={onBack}
-              className="flex items-center space-x-2 text-medium hover:text-dark"
+              className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 text-sm border border-medium rounded-lg hover:border-primary transition-colors"
             >
-              <NavigationIcons.ArrowLeft className="w-5 h-5" />
-              <span>Retour</span>
+              <NavigationIcons.ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden sm:inline">Retour</span>
             </button>
           </div>
         </div>
       </header>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 lg:py-6">
         {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-4">
+        <div className="mb-4 lg:mb-6">
+          <div className="hidden sm:flex items-center justify-between mb-4">
             {steps.map((step, index) => {
               const IconComponent = step.icon;
               const isActive = currentStep === step.id;
@@ -1216,7 +1247,7 @@ const FicheConsultationForm = ({ onBack }) => {
               return (
                 <div key={step.id} className="flex flex-col items-center">
                   <div
-                    className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                    className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
                       isActive
                         ? 'border-primary bg-primary text-white'
                         : isCompleted
@@ -1224,9 +1255,9 @@ const FicheConsultationForm = ({ onBack }) => {
                         : 'border-medium bg-white text-medium'
                     }`}
                   >
-                    <IconComponent className="w-5 h-5" />
+                    <IconComponent className="w-4 h-4 lg:w-5 lg:h-5" />
                   </div>
-                  <div className="mt-2 text-xs text-center max-w-20">
+                  <div className="mt-1 lg:mt-2 text-xs text-center max-w-16 lg:max-w-20">
                     <span className={`font-medium ${isActive ? 'text-primary' : 'text-medium'}`}>
                       {step.title}
                     </span>
@@ -1235,6 +1266,16 @@ const FicheConsultationForm = ({ onBack }) => {
               );
             })}
           </div>
+          
+          {/* Mobile progress indicator */}
+          <div className="sm:hidden mb-4">
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-medium">Étape {currentStep}</span>
+              <span className="text-medium truncate flex-1 text-center">{steps[currentStep - 1]?.title}</span>
+              <span className="text-medium">{currentStep}/{steps.length}</span>
+            </div>
+          </div>
+          
           <div className="w-full bg-light rounded-full h-2">
             <div
               className="bg-primary h-2 rounded-full transition-all duration-300"
@@ -1244,20 +1285,20 @@ const FicheConsultationForm = ({ onBack }) => {
         </div>
 
         {/* Form Content */}
-        <div className="bg-white rounded-xl shadow-sm border border-light p-8">
-          <h2 className="text-medical-subtitle text-2xl mb-6">
+        <div className="bg-white rounded-xl shadow-sm border border-light p-4 lg:p-6 xl:p-8">
+          <h2 className="text-medical-subtitle text-lg sm:text-xl lg:text-2xl mb-4 lg:mb-6">
             {steps[currentStep - 1]?.title}
           </h2>
           
           {renderStepContent()}
           
           {/* Navigation Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t border-light">
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-light">
             <Button
               variant="outline"
               onClick={handlePrevious}
               disabled={currentStep === 1}
-              className="flex items-center space-x-2"
+              className="flex items-center justify-center space-x-2 w-full sm:w-auto"
             >
               <NavigationIcons.ArrowLeft className="w-4 h-4" />
               <span>Précédent</span>
@@ -1266,7 +1307,7 @@ const FicheConsultationForm = ({ onBack }) => {
             {currentStep === steps.length ? (
               <Button
                 onClick={handleSubmit}
-                className="flex items-center space-x-2"
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto"
               >
                 <MedicalIcons.Check className="w-4 h-4" />
                 <span>Soumettre la fiche</span>
@@ -1274,7 +1315,7 @@ const FicheConsultationForm = ({ onBack }) => {
             ) : (
               <Button
                 onClick={handleNext}
-                className="flex items-center space-x-2"
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto"
               >
                 <span>Suivant</span>
                 <NavigationIcons.ArrowRight className="w-4 h-4" />
