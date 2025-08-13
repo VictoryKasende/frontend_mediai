@@ -212,8 +212,8 @@ const FicheConsultationForm = ({ onBack }) => {
 
   const renderContactAdresse = () => (
     <div className="space-y-4 lg:space-y-6">
-      <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Adresse personnelle</h3>
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Adresse personnelle</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Input
             label="Avenue/Rue"
@@ -236,8 +236,8 @@ const FicheConsultationForm = ({ onBack }) => {
         </div>
       </div>
 
-      <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Personne à contacter en cas d'urgence</h3>
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Personne à contacter en cas d'urgence</h3>
         <div className="space-y-4">
           <Input
             label="Nom complet *"
@@ -268,9 +268,9 @@ const FicheConsultationForm = ({ onBack }) => {
 
   const renderChoixMedecin = () => (
     <div className="space-y-4 lg:space-y-6">
-      <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Sélectionnez un médecin</h3>
-        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6">
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Sélectionnez un médecin</h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6 text-mediai-medium">
           Choisissez le médecin que vous souhaitez consulter. Vous pouvez rechercher par spécialité ou par nom.
         </p>
         
@@ -285,12 +285,12 @@ const FicheConsultationForm = ({ onBack }) => {
           ].map((medecin) => (
             <div
               key={medecin.id}
-              className={`border rounded-lg p-3 lg:p-4 cursor-pointer transition-all ${
+              className={`border-2 rounded-xl p-3 lg:p-4 cursor-pointer transition-all duration-300 hover:shadow-md ${
                 formData.medecin_id === medecin.id.toString()
-                  ? 'border-primary bg-blue-50'
+                  ? 'border-mediai-primary bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg'
                   : medecin.disponible
-                  ? 'border-medium hover:border-primary'
-                  : 'border-light bg-gray-50 cursor-not-allowed'
+                  ? 'border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light'
+                  : 'border-gray-200 bg-gray-50 cursor-not-allowed'
               }`}
               onClick={() => {
                 if (medecin.disponible) {
@@ -300,13 +300,13 @@ const FicheConsultationForm = ({ onBack }) => {
               }}
             >
               <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
-                <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-primary flex-shrink-0" />
+                <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-mediai-primary flex-shrink-0" />
                 <div className="flex-1 min-w-0">
                   <h4 className="font-medium text-dark text-sm lg:text-base truncate">{medecin.nom}</h4>
                   <p className="text-xs lg:text-sm text-medium truncate">{medecin.specialite}</p>
                 </div>
                 {formData.medecin_id === medecin.id.toString() && (
-                  <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-primary flex-shrink-0" />
+                  <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-mediai-primary flex-shrink-0" />
                 )}
               </div>
               <div className="flex justify-between items-center">
@@ -326,7 +326,7 @@ const FicheConsultationForm = ({ onBack }) => {
         </div>
 
         {formData.medecin_id && (
-          <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-green-50 border border-green-200 rounded-lg">
+          <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-sm">
             <div className="flex items-center space-x-2">
               <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
               <span className="text-green-800 font-medium text-sm lg:text-base">
@@ -1210,23 +1210,23 @@ const FicheConsultationForm = ({ onBack }) => {
     </div>
   );
   return (
-    <div className="min-h-screen bg-light">
+    <div className="min-h-screen bg-light animate-fadeIn">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b border-light">
+      <header className="bg-gradient-to-r from-white to-blue-50 shadow-sm border-b border-mediai-primary">
         <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
           <div className="flex items-center justify-between h-14 sm:h-16">
             <div className="flex items-center space-x-2 sm:space-x-4">
               <Logo size="sm" />
               <div className="min-w-0 flex-1">
-                <h1 className="text-medical-title text-base sm:text-lg lg:text-xl truncate">Fiche de consultation</h1>
-                <p className="text-medical-caption text-xs sm:text-sm truncate">
+                <h1 className="text-medical-title text-base sm:text-lg lg:text-xl truncate font-bold text-mediai-dark">Fiche de consultation</h1>
+                <p className="text-medical-caption text-xs sm:text-sm truncate text-mediai-medium">
                   Étape {currentStep} sur {steps.length}: {steps[currentStep - 1]?.title}
                 </p>
               </div>
             </div>
             <button
               onClick={onBack}
-              className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 text-sm border border-medium rounded-lg hover:border-primary transition-colors"
+              className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 text-sm border-2 border-mediai-medium rounded-lg hover:border-mediai-primary hover:bg-mediai-light transition-all duration-300"
             >
               <NavigationIcons.ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Retour</span>
@@ -1247,18 +1247,18 @@ const FicheConsultationForm = ({ onBack }) => {
               return (
                 <div key={step.id} className="flex flex-col items-center">
                   <div
-                    className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 transition-colors ${
+                    className={`w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center border-2 transition-all duration-300 ${
                       isActive
-                        ? 'border-primary bg-primary text-white'
+                        ? 'border-mediai-primary gradient-primary text-white shadow-lg'
                         : isCompleted
-                        ? 'border-primary bg-primary text-white'
-                        : 'border-medium bg-white text-medium'
+                        ? 'border-mediai-primary gradient-primary text-white shadow-lg'
+                        : 'border-mediai-medium bg-white text-mediai-medium hover:border-mediai-primary hover:bg-mediai-light'
                     }`}
                   >
                     <IconComponent className="w-4 h-4 lg:w-5 lg:h-5" />
                   </div>
                   <div className="mt-1 lg:mt-2 text-xs text-center max-w-16 lg:max-w-20">
-                    <span className={`font-medium ${isActive ? 'text-primary' : 'text-medium'}`}>
+                    <span className={`font-medium ${isActive ? 'text-mediai-primary' : 'text-mediai-medium'}`}>
                       {step.title}
                     </span>
                   </div>
@@ -1278,27 +1278,27 @@ const FicheConsultationForm = ({ onBack }) => {
           
           <div className="w-full bg-light rounded-full h-2">
             <div
-              className="bg-primary h-2 rounded-full transition-all duration-300"
+              className="gradient-primary h-2 rounded-full transition-all duration-300"
               style={{ width: `${(currentStep / steps.length) * 100}%` }}
             ></div>
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="bg-white rounded-xl shadow-sm border border-light p-4 lg:p-6 xl:p-8">
-          <h2 className="text-medical-subtitle text-lg sm:text-xl lg:text-2xl mb-4 lg:mb-6">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6 xl:p-8 hover:shadow-lg transition-all duration-300">
+          <h2 className="text-medical-subtitle text-lg sm:text-xl lg:text-2xl mb-4 lg:mb-6 font-bold text-mediai-dark">
             {steps[currentStep - 1]?.title}
           </h2>
           
           {renderStepContent()}
           
           {/* Navigation Buttons */}
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-light">
+          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-mediai-light">
             <Button
               variant="outline"
               onClick={handlePrevious}
               disabled={currentStep === 1}
-              className="flex items-center justify-center space-x-2 w-full sm:w-auto"
+              className="flex items-center justify-center space-x-2 w-full sm:w-auto border-2 border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light transition-all duration-300"
             >
               <NavigationIcons.ArrowLeft className="w-4 h-4" />
               <span>Précédent</span>
@@ -1307,7 +1307,7 @@ const FicheConsultationForm = ({ onBack }) => {
             {currentStep === steps.length ? (
               <Button
                 onClick={handleSubmit}
-                className="flex items-center justify-center space-x-2 w-full sm:w-auto"
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg"
               >
                 <MedicalIcons.Check className="w-4 h-4" />
                 <span>Soumettre la fiche</span>
@@ -1315,7 +1315,7 @@ const FicheConsultationForm = ({ onBack }) => {
             ) : (
               <Button
                 onClick={handleNext}
-                className="flex items-center justify-center space-x-2 w-full sm:w-auto"
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg"
               >
                 <span>Suivant</span>
                 <NavigationIcons.ArrowRight className="w-4 h-4" />
