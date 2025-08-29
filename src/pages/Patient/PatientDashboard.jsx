@@ -5,11 +5,9 @@ import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalI
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-
-// Import dynamique des composants pour éviter les problèmes circulaires
-const FicheConsultationForm = React.lazy(() => import('./FicheConsultationForm'));
-const ConsultationsList = React.lazy(() => import('./ConsultationsList'));
-const ConsultationDetails = React.lazy(() => import('./ConsultationDetails'));
+import FicheConsultationForm from './FicheConsultationForm';
+import ConsultationsList from './ConsultationsList';
+import ConsultationDetails from './ConsultationDetails';
 
 /**
  * Tableau de bord Patient - Point d'entrée pour les fonctionnalités patient
@@ -96,31 +94,23 @@ const PatientDashboard = () => {
   const renderContent = () => {
     switch (activeView) {
       case 'nouvelle-fiche':
-        return (
-          <React.Suspense fallback={<div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mediai-primary"></div></div>}>
-            <FicheConsultationForm onBack={() => setActiveView('dashboard')} />
-          </React.Suspense>
-        );
+        return <FicheConsultationForm onBack={() => setActiveView('dashboard')} />;
       case 'mes-consultations':
         return (
-          <React.Suspense fallback={<div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mediai-primary"></div></div>}>
-            <ConsultationsList
-              onBack={() => setActiveView('dashboard')}
-              onViewDetails={(consultation) => {
-                setSelectedConsultation(consultation);
-                setActiveView('consultation-details');
-              }}
-            />
-          </React.Suspense>
+          <ConsultationsList
+            onBack={() => setActiveView('dashboard')}
+            onViewDetails={(consultation) => {
+              setSelectedConsultation(consultation);
+              setActiveView('consultation-details');
+            }}
+          />
         );
       case 'consultation-details':
         return (
-          <React.Suspense fallback={<div className="flex justify-center p-8"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-mediai-primary"></div></div>}>
-            <ConsultationDetails
-              consultation={selectedConsultation}
-              onBack={() => setActiveView('mes-consultations')}
-            />
-          </React.Suspense>
+          <ConsultationDetails
+            consultation={selectedConsultation}
+            onBack={() => setActiveView('mes-consultations')}
+          />
         );
       case 'medecins':
         return renderMedecins();
