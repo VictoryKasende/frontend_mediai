@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
+import { Icon, ActionIcons } from './Icons';
 
 /**
- * Composant Modal réutilisable
+ * Composant Modal réutilisable avec design Mediai
  * @param {boolean} isOpen - État ouvert/fermé de la modal
  * @param {function} onClose - Fonction de fermeture
  * @param {string} title - Titre de la modal
  * @param {string} size - Taille de la modal (sm, md, lg, xl)
  * @param {boolean} closeOnOverlayClick - Fermer en cliquant sur l'overlay
+ * @param {string} type - Type de modal (default, success, error, warning, info)
  * @param {React.ReactNode} children - Contenu de la modal
+ * @param {React.ReactNode} footer - Contenu du footer (boutons d'action)
  */
 const Modal = ({
   isOpen,
@@ -15,7 +18,9 @@ const Modal = ({
   title,
   size = 'md',
   closeOnOverlayClick = true,
-  children
+  type = 'default',
+  children,
+  footer
 }) => {
   // Fermer la modal avec la touche Escape
   useEffect(() => {
@@ -45,6 +50,37 @@ const Modal = ({
     xl: 'max-w-4xl'
   };
 
+  // Configuration des types de modal
+  const typeConfig = {
+    default: {
+      headerBg: 'bg-white',
+      headerBorder: 'border-border-primary',
+      titleColor: 'text-content-primary'
+    },
+    success: {
+      headerBg: 'bg-success/5',
+      headerBorder: 'border-success/20',
+      titleColor: 'text-success'
+    },
+    error: {
+      headerBg: 'bg-danger/5',
+      headerBorder: 'border-danger/20',
+      titleColor: 'text-danger'
+    },
+    warning: {
+      headerBg: 'bg-warning/5',
+      headerBorder: 'border-warning/20',
+      titleColor: 'text-warning'
+    },
+    info: {
+      headerBg: 'bg-mediai-primary/5',
+      headerBorder: 'border-mediai-primary/20',
+      titleColor: 'text-mediai-primary'
+    }
+  };
+
+  const config = typeConfig[type] || typeConfig.default;
+
   // Ne pas rendre si la modal n'est pas ouverte
   if (!isOpen) return null;
 
@@ -53,7 +89,7 @@ const Modal = ({
       <div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
         {/* Overlay */}
         <div
-          className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
           onClick={closeOnOverlayClick ? onClose : undefined}
         ></div>
 
@@ -62,42 +98,38 @@ const Modal = ({
 
         {/* Modal */}
         <div
-          className={`inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle w-full ${sizeClasses[size] || sizeClasses.md}`}
+          className={`inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle w-full border border-border-primary ${sizeClasses[size] || sizeClasses.md}`}
         >
           {/* Header */}
           {title && (
-            <div className="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4 border-b border-gray-200">
+            <div className={`${config.headerBg} px-6 pt-6 pb-4 border-b ${config.headerBorder}`}>
               <div className="flex items-center justify-between">
-                <h3 className="text-lg leading-6 font-medium text-gray-900">
+                <h3 className={`text-xl font-heading font-semibold ${config.titleColor}`}>
                   {title}
                 </h3>
                 <button
                   onClick={onClose}
-                  className="rounded-md bg-white text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="rounded-lg p-1 text-content-tertiary hover:text-content-primary hover:bg-surface-muted focus:outline-none focus:ring-2 focus:ring-mediai-primary transition-colors"
+                  title="Fermer"
                 >
                   <span className="sr-only">Fermer</span>
-                  <svg
-                    className="h-6 w-6"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M6 18L18 6M6 6l12 12"
-                    />
-                  </svg>
+                  <Icon icon={ActionIcons.Close} size="w-5 h-5" />
                 </button>
               </div>
             </div>
           )}
 
           {/* Contenu */}
-          <div className="bg-white px-4 pt-5 pb-4 sm:p-6">
+          <div className="bg-white px-6 py-6">
             {children}
           </div>
+
+          {/* Footer */}
+          {footer && (
+            <div className="bg-surface-muted px-6 py-4 border-t border-border-primary">
+              {footer}
+            </div>
+          )}
         </div>
       </div>
     </div>

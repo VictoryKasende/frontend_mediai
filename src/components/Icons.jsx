@@ -44,6 +44,10 @@ import {
   XMarkIcon,
   MagnifyingGlassIcon,
   AdjustmentsHorizontalIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  Squares2X2Icon,
+  ListBulletIcon,
 } from '@heroicons/react/24/outline';
 
 import {
@@ -85,6 +89,9 @@ import {
   Clock,
   ChevronRight,
   ChevronDown,
+  ChevronLeft,
+  Grid3x3,
+  List,
   Plus,
   Menu,
   LogOut,
@@ -143,6 +150,11 @@ export const NavigationIcons = {
   ArrowLeft: ArrowLeft,
   ArrowRight: ArrowRight,
   Back: ArrowLeft,
+  ChevronLeft: ChevronLeft,
+  ChevronRight: ChevronRight,
+  Grid: Grid3x3,
+  List: List,
+  Calendar: CalendarDaysIcon,
 };
 
 // Icônes pour l'authentification
@@ -172,6 +184,8 @@ export const MedicalIcons = {
   Nurse: Users,
   Patient: User,
   Profile: UserCheck,
+  User: User,
+  UserFemale: Users,
   
   // Spécialités
   Heart: Heart,
@@ -215,7 +229,12 @@ export const MedicalIcons = {
   Download: Download,
   Print: Printer,
   Message: MessageCircle,
-  Settings: Settings
+  Settings: Settings,
+  
+  // Ajouts pour le dashboard médecin
+  Process: RefreshCw,
+  Signature: Edit,
+  Send: Send
 };
 
 // Icônes pour les statuts et états
@@ -266,6 +285,7 @@ export const ActionIcons = {
   Right: ChevronRight,
   Menu: Menu,
   Close: X,
+  Email: Mail,
 };
 
 // Composant Icon générique

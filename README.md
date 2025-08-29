@@ -1,95 +1,94 @@
-# 🏥 Mediai - Plateforme Médicale
+# 🏥 Mediai - Plateforme Médicale en Ligne
 
-Mediai est une plateforme médicale en ligne moderne développée avec React.js et Vite. Elle propose une solution complète pour la gestion des consultations médicales, la communication patient-médecin et l'administration de données de santé.
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](https://github.com/VictoryKasende/frontend_mediai)
+[![React](https://img.shields.io/badge/React-18.0+-61DAFB.svg)](https://reactjs.org/)
+[![Vite](https://img.shields.io/badge/Vite-4.0+-646CFF.svg)](https://vitejs.dev/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.0+-38B2AC.svg)](https://tailwindcss.com/)
 
-## 🚀 Fonctionnalités principales
+## 📋 À propos du projet
 
-### 🔐 Module Authentification
-- Connexion et inscription sécurisées
-- Gestion des rôles utilisateur (administrateur, médecin, patient, professionnel)
-- Récupération de mot de passe
-- Persistance de session
+**Mediai** est une plateforme médicale moderne développée avec React.js et Vite, conçue pour faciliter la gestion des consultations médicales en ligne. Elle connecte patients et professionnels de santé à travers une interface intuitive et sécurisée.
 
-### 💬 Module Chat
-- Messagerie en temps réel entre utilisateurs
-- Chat avec IA médicale assistante
-- Support des fichiers et médias
-- Indicateurs de statut en ligne
-- Historique des conversations
+### ✨ Fonctionnalités principales
 
-### 🩺 Module Consultation
-- Prise de rendez-vous en ligne
-- Gestion des fiches médicales
-- Téléconsultations
-- Historique des consultations
-- Prescriptions et diagnostics
+- 🔐 **Authentification sécurisée** - Gestion des rôles (administrateur, médecin, patient, profils)
+- 💬 **Chat en temps réel** - Messagerie entre utilisateurs et IA médicale
+- 📋 **Gestion des consultations** - Rendez-vous et fiches médicales
+- 📊 **Tableaux de bord** - Statistiques et suivi de l'activité adaptés par rôle
 
-### 📊 Module Tableau de bord
-- Statistiques personnalisées par rôle
-- Suivi de l'activité
-- Raccourcis vers les actions principales
-- Prochains rendez-vous
-- Notifications importantes
+## 🚀 Technologies utilisées
 
-## 🛠️ Technologies utilisées
-
-- **Frontend** : React.js 18 avec Vite
-- **Styling** : Tailwind CSS (via CDN)
-- **Routing** : React Router DOM v6
-- **State Management** : Context API React
-- **API Client** : Axios
+- **Frontend** : React.js 18+ avec Vite
+- **Styling** : Tailwind CSS (CDN)
+- **Routing** : React Router DOM
+- **État global** : Context API React
+- **Requêtes API** : Axios
 - **Authentification** : JWT avec localStorage
-- **Icons** : Emojis natifs pour une interface moderne
 
 ## 📁 Structure du projet
 
 ```
-mediai-frontend/
-├── public/
-│   └── index.html
-├── src/
-│   ├── components/            # Composants réutilisables
-│   │   ├── Button.jsx
-│   │   ├── Input.jsx
-│   │   ├── Modal.jsx
-│   │   ├── Layout.jsx
-│   │   └── index.js
-│   ├── contexts/              # Contextes React
-│   │   └── AuthContext.jsx
-│   ├── pages/                 # Pages principales
-│   │   ├── Auth/
-│   │   │   ├── Login.jsx
-│   │   │   └── Register.jsx
-│   │   ├── Chat/
-│   │   │   └── ChatPage.jsx
-│   │   ├── Consultation/
-│   │   │   └── ConsultationPage.jsx
-│   │   └── Dashboard/
-│   │       └── DashboardPage.jsx
-│   ├── services/              # Services API
-│   │   └── api.js
-│   ├── routes/                # Configuration des routes
-│   │   └── routes.jsx
-│   ├── App.jsx
-│   ├── main.jsx
-│   └── index.css
-├── .github/
-│   └── copilot-instructions.md
-├── package.json
-├── vite.config.js
-└── README.md
+src/
+├── components/         # Composants réutilisables
+│   ├── Button.jsx
+│   ├── Input.jsx
+│   ├── Modal.jsx
+│   ├── Logo.jsx
+│   └── Icons.jsx
+├── contexts/          # Contextes React
+│   ├── AuthContext.jsx
+│   └── NotificationContext.jsx
+├── pages/             # Pages principales
+│   ├── Auth/          # Authentification
+│   ├── Chat/          # Messagerie
+│   ├── Consultation/  # Consultations
+│   ├── Dashboard/     # Tableaux de bord
+│   ├── Patient/       # Interface patient
+│   └── Doctor/        # Interface médecin
+├── services/          # Services API
+│   └── api.js
+├── routes/            # Configuration des routes
+├── App.jsx            # Composant principal
+└── main.jsx           # Point d'entrée
 ```
 
-## 🚦 Installation et lancement
+## 🎨 Design System
+
+### Palette de couleurs Mediai
+- **Primary** : `#2563eb` (Bleu médical)
+- **Secondary** : `#7c3aed` (Violet médical)
+- **Dark** : `#1e293b` (Gris foncé)
+- **Success** : `#10b981` (Vert)
+- **Warning** : `#f59e0b` (Orange)
+- **Danger** : `#ef4444` (Rouge)
+
+### Typographie
+- **Heading** : Police pour les titres
+- **Body** : Police pour le contenu
+- **Medical** : Police spécialisée médicale
+- **Mono** : Police monospace pour les données
+
+## 👥 Rôles utilisateur
+
+| Rôle | Code | Description |
+|------|------|-------------|
+| **Administrateur** | `administrator` | Accès complet à la plateforme |
+| **Médecin** | `medecin` | Gestion des patients et consultations |
+| **Patient** | `patient` | Accès aux consultations et chat |
+| **Profil** | `profil` | Professionnel de santé |
+
+## 🛠️ Installation et développement
 
 ### Prérequis
-- Node.js >= 18.0.0
-- npm >= 8.0.0
+- Node.js 16+ 
+- npm ou yarn
 
 ### Installation
 ```bash
 # Cloner le projet
-git clone [URL_DU_REPO]
+git clone https://github.com/VictoryKasende/frontend_mediai.git
+
+# Accéder au dossier
 cd frontend_mediai
 
 # Installer les dépendances
@@ -99,109 +98,123 @@ npm install
 npm run dev
 ```
 
-L'application sera accessible sur `http://localhost:5173`
-
 ### Scripts disponibles
 ```bash
-npm run dev      # Serveur de développement
-npm run build    # Build de production
-npm run preview  # Aperçu du build de production
-npm run lint     # Vérification ESLint
+npm run dev        # Démarrer le serveur de développement
+npm run build      # Construire pour la production
+npm run preview    # Prévisualiser la build de production
+npm run lint       # Vérifier le code avec ESLint
 ```
 
-## 👥 Rôles utilisateur
+## 🏗️ Architecture des modules
 
-### 🔧 Administrateur (`administrator`)
-- Accès complet à la plateforme
-- Gestion des utilisateurs
-- Statistiques globales
-- Configuration système
+### 🔐 Module Authentification
+- Gestion de session avec localStorage
+- Déconnexion automatique sur erreur 401
+- Validation des formulaires côté client
+- Protection des routes par rôle
 
-### 👨‍⚕️ Médecin (`medecin`)
-- Gestion des patients
-- Consultations et téléconsultations
-- Prescriptions et diagnostics
-- Planning des rendez-vous
+### 💬 Module Chat
+- Messagerie en temps réel
+- Support de différents types de messages
+- Indicateurs de statut en ligne
+- Scroll automatique vers nouveaux messages
 
-### 🙋‍♂️ Patient (`patient`)
-- Prise de rendez-vous
-- Chat avec médecins et IA
-- Accès aux dossiers médicaux
-- Suivi des prescriptions
+### 📋 Module Consultations
+- Statuts : confirmée, en attente, terminée, annulée
+- CRUD complet des rendez-vous
+- Historique des consultations
+- Fiches médicales détaillées
 
-### 👩‍⚕️ Professionnel (`profil`)
-- Accès spécialisé selon le domaine
-- Collaboration avec médecins
-- Suivi des patients
+### 📊 Module Dashboard
+- Statistiques adaptées par rôle
+- Graphiques et métriques
+- Raccourcis vers actions principales
+- Interface responsive
 
-## 🔑 Comptes de démonstration
+## 🎯 Bonnes pratiques
 
-Pour tester l'application, utilisez ces comptes :
+### Sécurité
+- ✅ Validation des entrées utilisateur
+- ✅ Nettoyage des données avant affichage
+- ✅ Gestion des erreurs d'authentification
+- ✅ Pas d'exposition d'informations sensibles
 
+### Performance
+- ✅ Lazy loading des composants
+- ✅ Mémorisation avec useMemo/useCallback
+- ✅ Optimisation des re-rendus avec React.memo
+
+### Accessibilité
+- ✅ Labels appropriés pour les formulaires
+- ✅ Navigation au clavier
+- ✅ Contrastes respectés
+- ✅ Attributs ARIA
+
+### UX/UI
+- ✅ Feedback visuel pour les actions
+- ✅ États de chargement
+- ✅ Messages d'erreur clairs
+- ✅ Cohérence visuelle
+
+## 📱 Responsive Design
+
+La plateforme est entièrement responsive et optimisée pour :
+- 📱 **Mobile** : 320px - 768px
+- 📱 **Tablette** : 768px - 1024px
+- 💻 **Desktop** : 1024px+
+
+## 🔧 Configuration
+
+### Variables d'environnement
+```env
+VITE_API_URL=http://localhost:3000
+VITE_APP_NAME=Mediai
+VITE_JWT_SECRET=your-secret-key
 ```
-Médecin : medecin@mediai.com / password123
-Patient : patient@mediai.com / password123
-Admin : admin@mediai.com / password123
-```
 
-## 🎨 Design System
-
-### Couleurs principales
-- **Primaire** : Bleu médical (`#3b82f6`)
-- **Succès** : Vert (`#10b981`)
-- **Attention** : Jaune (`#f59e0b`)
-- **Erreur** : Rouge (`#ef4444`)
-- **Neutre** : Grises (`#6b7280`, `#374151`)
-
-### Composants réutilisables
-- **Button** : Boutons avec variantes (primary, secondary, danger, etc.)
-- **Input** : Champs de formulaire avec validation
-- **Modal** : Fenêtres modales responsives
-- **Layout** : Structure de page avec navigation
-
-## 🔒 Sécurité
-
-- Validation côté client et serveur
-- Authentification JWT
-- Protection des routes sensibles
-- Gestion des erreurs d'authentification
-- Nettoyage des données utilisateur
-
-## 🌐 Responsive Design
-
-L'interface est entièrement responsive et optimisée pour :
-- 📱 Mobile (≥ 320px)
-- 📱 Tablette (≥ 768px)
-- 💻 Desktop (≥ 1024px)
-- 🖥️ Large Desktop (≥ 1280px)
-
-## 🚀 Prochaines fonctionnalités
-
-- [ ] Notifications en temps réel
-- [ ] Système de paiement intégré
-- [ ] Géolocalisation des cabinets
-- [ ] Application mobile (React Native)
-- [ ] Intégration calendrier externe
-- [ ] Rapports médicaux avancés
+### Tailwind CSS
+Le projet utilise Tailwind CSS via CDN pour un développement rapide et une cohérence de design.
 
 ## 🤝 Contribution
 
 1. Fork le projet
-2. Créer une branche feature (`git checkout -b feature/nouvelle-fonctionnalite`)
-3. Commit les modifications (`git commit -m 'Ajout nouvelle fonctionnalité'`)
-4. Push vers la branche (`git push origin feature/nouvelle-fonctionnalite`)
+2. Créer une branche pour votre fonctionnalité (`git checkout -b feature/AmazingFeature`)
+3. Commit vos changements (`git commit -m 'Add some AmazingFeature'`)
+4. Push vers la branche (`git push origin feature/AmazingFeature`)
 5. Ouvrir une Pull Request
 
-## 📝 Licence
+## 📝 Conventions de code
+
+### Composants React
+- Utiliser les fonctions (function components)
+- Déstructurer les props dans les paramètres
+- Documenter avec JSDoc
+- Préfixer les hooks personnalisés par "use"
+
+### Styling
+- Utiliser exclusivement Tailwind CSS
+- Approche mobile-first
+- Classes utilitaires privilégiées
+- Éviter les styles inline
+
+## 🐛 Rapporter un bug
+
+Utilisez les [Issues GitHub](https://github.com/VictoryKasende/frontend_mediai/issues) pour signaler des bugs ou proposer des améliorations.
+
+## 📄 Licence
 
 Ce projet est sous licence MIT. Voir le fichier `LICENSE` pour plus de détails.
 
-## 👨‍💻 Équipe de développement
+## 👨‍💻 Auteur
 
-- **Frontend** : React.js avec Vite
-- **Design** : Tailwind CSS
-- **Architecture** : SPA (Single Page Application)
+**Victory Kasende**
+- GitHub: [@VictoryKasende](https://github.com/VictoryKasende)
+- Email: victory.kasende@example.com
 
 ---
 
-🏥 **Mediai** - Votre santé, notre priorité
+<div align="center">
+  <p>Fait avec ❤️ pour améliorer l'accès aux soins de santé</p>
+  <p><strong>Mediai</strong> - Connecter, Soigner, Innover</p>
+</div>

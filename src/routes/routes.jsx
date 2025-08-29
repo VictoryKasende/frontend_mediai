@@ -6,11 +6,9 @@ import { useAuth } from '../contexts/AuthContext';
 import Login from '../pages/Auth/Login';
 import Register from '../pages/Auth/Register';
 import ForgotPassword from '../pages/Auth/ForgotPassword';
-import DashboardPage from '../pages/Dashboard/DashboardPage';
-import ChatPage from '../pages/Chat/ChatPage';
-import ConsultationPage from '../pages/Consultation/ConsultationPage';
+import DoctorChatIa from '../pages/Doctor/DoctorChatIa';
 import PatientDashboard from '../pages/Patient/PatientDashboard';
-import TestPage from '../pages/TestPage';
+import DoctorDashboard from '../pages/Doctor/DoctorDashboard';
 
 // Layout principal
 import Layout from '../components/Layout';
@@ -39,7 +37,10 @@ const PublicRoute = ({ children }) => {
     if (user?.role === 'patient') {
       return <Navigate to="/patient" replace />;
     }
-    return <Navigate to="/dashboard" replace />;
+    if (user?.role === 'medecin' || user?.role === 'doctor') {
+      return <Navigate to="/doctor" replace />;
+    }
+    return <Navigate to="/doctor" replace />;
   }
   
   return children;
@@ -87,7 +88,10 @@ const RoleBasedRedirect = () => {
   }
   
   // Pour les autres rôles (médecin, administrateur, profil)
-  return <Navigate to="/dashboard" replace />;
+  if (user?.role === 'medecin' || user?.role === 'doctor') {
+    return <Navigate to="/doctor" replace />;
+  }
+  return <Navigate to="/doctor" replace />;
 };
 
 /**
@@ -140,12 +144,12 @@ export const router = createBrowserRouter([
     ]
   },
   
-  // Routes protégées - Dashboard
+  // Routes protégées - Doctor Dashboard (route par défaut)
   {
     path: '/dashboard',
     element: (
       <ProtectedRoute>
-        <DashboardPage />
+        <DoctorDashboard />
       </ProtectedRoute>
     )
   },
@@ -158,7 +162,7 @@ export const router = createBrowserRouter([
         path: '',
         element: (
           <ProtectedRoute>
-            <ChatPage />
+            <DoctorChatIa />
           </ProtectedRoute>
         )
       },
@@ -166,14 +170,14 @@ export const router = createBrowserRouter([
         path: ':chatId',
         element: (
           <ProtectedRoute>
-            <ChatPage />
+            <DoctorChatIa />
           </ProtectedRoute>
         )
       }
     ]
   },
-  
-  // Routes protégées - Consultation
+
+  // Routes protégées - Consultation (redirection vers dashboard)
   {
     path: '/consultation',
     children: [
@@ -181,7 +185,7 @@ export const router = createBrowserRouter([
         path: '',
         element: (
           <ProtectedRoute>
-            <ConsultationPage />
+            <DoctorDashboard />
           </ProtectedRoute>
         )
       },
@@ -189,7 +193,7 @@ export const router = createBrowserRouter([
         path: ':consultationId',
         element: (
           <ProtectedRoute>
-            <ConsultationPage />
+            <DoctorDashboard />
           </ProtectedRoute>
         )
       }
@@ -205,17 +209,27 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
+
+  // Routes protégées - Doctor Dashboard
+  {
+    path: '/doctor',
+    element: (
+      <ProtectedRoute>
+        <DoctorDashboard />
+      </ProtectedRoute>
+    )
+  },
   
   // Route de démonstration pour tester le dashboard patient (sans authentification)
   {
     path: '/demo/patient',
     element: <PatientDashboard />
   },
-  
-  // Page de test pour naviguer facilement
+
+  // Route de démonstration pour tester le dashboard médecin (sans authentification)
   {
-    path: '/test',
-    element: <TestPage />
+    path: '/demo/doctor',
+    element: <DoctorDashboard />
   },
   
   // Routes d'administration (réservées aux administrateurs)
@@ -323,11 +337,12 @@ export const navigationUtils = {
       case 'administrator':
         return '/admin';
       case 'medecin':
-        return '/dashboard';
+      case 'doctor':
+        return '/doctor';
       case 'patient':
-        return '/chat';
+        return '/patient';
       default:
-        return '/dashboard';
+        return '/doctor';
     }
   }
 };

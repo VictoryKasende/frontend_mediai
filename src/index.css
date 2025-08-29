@@ -8,7 +8,19 @@
   --dark-blue: #10243A;          /* Bleu foncé - fond principal, navbars */
   --light-gray: #EDEFF1;         /* Gris très clair - arrières-plans secondaires */
   --medium-gray: #757A84;        /* Gris moyen - texte secondaire, icônes */
+  --dark-gray: #4A5568;          /* Gris foncé - texte principal alternatif */
   --white: #FFFFFF;              /* Blanc - fonds, typographie sur fond bleu */
+  
+  /* Couleurs d'état médicales */
+  --success-green: #10b981;      /* Vert - succès, confirmé, disponible */
+  --warning-orange: #f59e0b;     /* Orange - attention, en attente */
+  --danger-red: #ef4444;         /* Rouge - erreur, urgent, annulé */
+  --info-cyan: #06b6d4;          /* Cyan - information, notification */
+  
+  /* Couleurs complémentaires */
+  --border-light: #e2e8f0;       /* Bordures légères */
+  --shadow-color: rgba(16, 36, 58, 0.1);  /* Ombres */
+  --overlay-bg: rgba(16, 36, 58, 0.5);    /* Arrière-plan modal */
 }
 
 * {
@@ -40,9 +52,21 @@ body {
   letter-spacing: -0.025em;
 }
 
+.font-subheading {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  letter-spacing: -0.015em;
+}
+
 .font-body {
   font-family: 'Source Sans Pro', system-ui, sans-serif;
   line-height: 1.7;
+}
+
+.font-body-medium {
+  font-family: 'Source Sans Pro', system-ui, sans-serif;
+  font-weight: 500;
+  line-height: 1.6;
 }
 
 .font-mono {
@@ -279,19 +303,31 @@ input[type="checkbox"]:checked {
 .bg-dark { background-color: var(--dark-blue); }
 .bg-light { background-color: var(--light-gray); }
 .bg-medium { background-color: var(--medium-gray); }
+.bg-success { background-color: var(--success-green); }
+.bg-warning { background-color: var(--warning-orange); }
+.bg-danger { background-color: var(--danger-red); }
+.bg-info { background-color: var(--info-cyan); }
 
 .text-primary { color: var(--primary-blue); }
 .text-secondary { color: var(--secondary-blue); }
 .text-dark { color: var(--dark-blue); }
+.text-dark-gray { color: var(--dark-gray); }
 .text-light { color: var(--light-gray); }
 .text-medium { color: var(--medium-gray); }
 .text-white { color: var(--white); }
+.text-success { color: var(--success-green); }
+.text-warning { color: var(--warning-orange); }
+.text-danger { color: var(--danger-red); }
+.text-info { color: var(--info-cyan); }
 
 .border-primary { border-color: var(--primary-blue); }
 .border-secondary { border-color: var(--secondary-blue); }
 .border-dark { border-color: var(--dark-blue); }
-.border-light { border-color: var(--light-gray); }
+.border-light { border-color: var(--border-light); }
 .border-medium { border-color: var(--medium-gray); }
+.border-success { border-color: var(--success-green); }
+.border-warning { border-color: var(--warning-orange); }
+.border-danger { border-color: var(--danger-red); }
 
 .hover\:bg-primary:hover { background-color: var(--primary-blue); }
 .hover\:bg-secondary:hover { background-color: var(--secondary-blue); }
@@ -373,11 +409,25 @@ select:focus {
   letter-spacing: -0.015em;
 }
 
+.text-medical-heading {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-weight: 500;
+  color: var(--dark-gray);
+  letter-spacing: -0.01em;
+}
+
 .text-medical-body {
   font-family: 'Source Sans Pro', system-ui, sans-serif;
   font-weight: 400;
-  color: var(--medium-gray);
+  color: var(--dark-gray);
   line-height: 1.7;
+}
+
+.text-medical-body-secondary {
+  font-family: 'Source Sans Pro', system-ui, sans-serif;
+  font-weight: 400;
+  color: var(--medium-gray);
+  line-height: 1.6;
 }
 
 .text-medical-caption {
@@ -386,6 +436,14 @@ select:focus {
   color: var(--medium-gray);
   font-size: 0.875rem;
   line-height: 1.5;
+}
+
+.text-medical-small {
+  font-family: 'Source Sans Pro', system-ui, sans-serif;
+  font-weight: 400;
+  color: var(--medium-gray);
+  font-size: 0.75rem;
+  line-height: 1.4;
 }
 
 /* Classes utilitaires personnalisées */

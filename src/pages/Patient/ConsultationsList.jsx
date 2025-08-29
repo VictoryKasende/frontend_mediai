@@ -168,29 +168,7 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
 
   return (
     <div className="min-h-screen bg-light animate-fadeIn">
-      {/* Header */}
-      <header className="bg-gradient-to-r from-white to-blue-50 shadow-sm border-b border-mediai-primary">
-        <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8">
-          <div className="flex items-center justify-between h-14 sm:h-16">
-            <div className="flex items-center space-x-2 sm:space-x-4">
-              <Logo size="sm" />
-              <div className="min-w-0 flex-1">
-                <h1 className="text-medical-title text-base sm:text-lg lg:text-xl truncate font-bold text-mediai-dark">Mes consultations</h1>
-                <p className="text-medical-caption text-xs sm:text-sm truncate text-mediai-medium">
-                  Gestion et suivi de vos consultations médicales
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onBack}
-              className="flex items-center space-x-1 sm:space-x-2 px-3 sm:px-4 py-2 text-sm border-2 border-mediai-medium rounded-lg hover:border-mediai-primary hover:bg-mediai-light transition-all duration-300"
-            >
-              <NavigationIcons.ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="hidden sm:inline">Retour</span>
-            </button>
-          </div>
-        </div>
-      </header>
+      {/* Header intentionally removed; this view is embedded within the patient shell */}
 
       <div className="max-w-full mx-auto px-3 sm:px-4 lg:px-6 xl:px-8 py-4 lg:py-8">
         {/* Filtres et recherche */}
