@@ -11,7 +11,7 @@ import PatientDashboard from '../pages/Patient/PatientDashboard';
 import DoctorDashboard from '../pages/Doctor/DoctorDashboard';
 
 // Layout principal
-import Layout from '../components/Layout';
+// import Layout from '../components/Layout';
 
 /**
  * Composant pour protéger les routes authentifiées
@@ -23,7 +23,7 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/auth/login" replace />;
   }
   
-  return <Layout>{children}</Layout>;
+  return children;
 };
 
 /**
@@ -144,7 +144,69 @@ export const router = createBrowserRouter([
     ]
   },
   
-  // Routes protégées - Doctor Dashboard (route par défaut)
+  // Routes du doctor
+  {
+    path: '/doctor',
+    children: [
+      {
+        path: '',
+        element: (
+          <ProtectedRoute>
+            <DoctorDashboard />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'dashboard',
+        element: (
+          <ProtectedRoute>
+            <DoctorDashboard />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'chat',
+        element: (
+          <ProtectedRoute>
+            <DoctorChatIa />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'consultation',
+        element: (
+          <ProtectedRoute>
+            <DoctorDashboard />
+          </ProtectedRoute>
+        )
+      }
+    ]
+  },
+
+  // Routes du patient
+  {
+    path: '/patient',
+    children: [
+      {
+        path: '',
+        element: (
+          <ProtectedRoute>
+            <PatientDashboard />
+          </ProtectedRoute>
+        )
+      },
+      {
+        path: 'dashboard',
+        element: (
+          <ProtectedRoute>
+            <PatientDashboard />
+          </ProtectedRoute>
+        )
+      }
+    ]
+  },
+
+  // Routes de compatibilité (redirections)
   {
     path: '/dashboard',
     element: (
@@ -153,8 +215,6 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
-  
-  // Routes protégées - Chat
   {
     path: '/chat',
     element: (
@@ -163,8 +223,6 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
-
-  // Routes protégées - Consultation
   {
     path: '/consultation',
     element: (
@@ -173,34 +231,12 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     )
   },
-  
-  // Routes protégées - Patient Dashboard
-  {
-    path: '/patient',
-    element: (
-      <ProtectedRoute>
-        <PatientDashboard />
-      </ProtectedRoute>
-    )
-  },
 
-  // Routes protégées - Doctor Dashboard
-  {
-    path: '/doctor',
-    element: (
-      <ProtectedRoute>
-        <DoctorDashboard />
-      </ProtectedRoute>
-    )
-  },
-  
-  // Route de démonstration pour tester le dashboard patient (sans authentification)
+  // Routes de démonstration (sans authentification)
   {
     path: '/demo/patient',
     element: <PatientDashboard />
   },
-
-  // Route de démonstration pour tester le dashboard médecin (sans authentification)
   {
     path: '/demo/doctor',
     element: <DoctorDashboard />
