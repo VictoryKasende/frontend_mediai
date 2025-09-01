@@ -59,7 +59,6 @@ const DoctorDashboard = () => {
     { id: 'patients', label: 'Patients', icon: StatusIcons.Star, description: 'Gestion des dossiers patients', color: 'text-mediai-secondary' }
   ];
 
-  // Cartes de statistiques médicales avec design professionnel
   const StatCard = ({ title, value, icon, variant = 'primary' }) => {
     const getVariantStyles = (variant) => {
       switch(variant) {
@@ -105,19 +104,19 @@ const DoctorDashboard = () => {
     
     return (
       <div className={`${styles.bg} overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift`}>
-        <div className="p-6">
+        <div className="p-3 sm:p-4 lg:p-6">
           <div className="flex items-center">
             <div className="flex-shrink-0">
-              <div className={`w-14 h-14 rounded-xl flex items-center justify-center ${styles.iconBg} shadow-md`}>
-                <MedicalIcon icon={icon} size="w-7 h-7" className={styles.iconColor} />
+              <div className={`w-10 h-10 sm:w-12 sm:h-12 lg:w-14 lg:h-14 rounded-xl flex items-center justify-center ${styles.iconBg} shadow-md`}>
+                <MedicalIcon icon={icon} size="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" className={styles.iconColor} />
               </div>
             </div>
-            <div className="ml-6 w-0 flex-1">
+            <div className="ml-3 sm:ml-4 lg:ml-6 w-0 flex-1">
               <dl>
-                <dt className={`text-sm font-semibold ${styles.textColor} truncate font-medical tracking-wide uppercase`}>{title}</dt>
-                <dd className={`text-3xl font-bold ${styles.valueColor} font-mono tracking-tight`}>
+                <dt className={`text-xs sm:text-sm font-semibold ${styles.textColor} truncate font-medical tracking-wide uppercase`}>{title}</dt>
+                <dd className={`text-xl sm:text-2xl lg:text-3xl font-bold ${styles.valueColor} font-mono tracking-tight`}>
                   {isLoading ? (
-                    <div className="animate-pulse h-9 bg-white/20 rounded-lg w-20"></div>
+                    <div className="animate-pulse h-6 sm:h-8 lg:h-9 bg-white/20 rounded-lg w-12 sm:w-16 lg:w-20"></div>
                   ) : (
                     <span className="tabular-nums">{value}</span>
                   )}
@@ -469,42 +468,42 @@ const DoctorDashboard = () => {
   );
 
   const renderOverview = () => (
-    <div className="space-y-8">
-      {/* Header professionnel */}
+    <div className="space-y-6 lg:space-y-8">
+      {/* Header professionnel responsive */}
       <div className="bg-mediai-dark shadow-2xl rounded-2xl overflow-hidden">
-        <div className="px-8 py-10 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center space-x-4 mb-4">
-                <div className="w-16 h-16 bg-mediai-primary rounded-xl flex items-center justify-center shadow-lg">
-                  <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-8 h-8" className="text-white" />
+        <div className="px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10 text-white">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            <div className="flex-1">
+              <div className="flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4 mb-4">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 bg-mediai-primary rounded-xl flex items-center justify-center shadow-lg">
+                  <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-6 h-6 sm:w-7 sm:h-7 lg:w-8 lg:h-8" className="text-white" />
                 </div>
                 <div>
-                  <h1 className="text-4xl font-bold text-white tracking-tight font-heading">
+                  <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white tracking-tight font-heading">
                     Espace Médecin
                   </h1>
-                  <p className="text-white/70 text-lg font-body-medium">
+                  <p className="text-white/70 text-sm sm:text-base lg:text-lg font-body-medium">
                     Dr. {user?.name || 'Médecin'} • Plateforme Mediai
                   </p>
                 </div>
               </div>
-              <p className="text-white/60 max-w-2xl leading-relaxed font-body">
+              <p className="text-white/60 max-w-2xl leading-relaxed font-body text-sm sm:text-base">
                 Gérez vos consultations, rendez-vous et interactions avec l'IA médicale en toute simplicité. 
                 Votre hub professionnel pour une médecine moderne et efficace.
               </p>
             </div>
-            <div className="hidden lg:flex items-center space-x-4">
-              <div className="text-right">
-                <p className="text-2xl font-bold text-mediai-primary">{new Date().toLocaleDateString('fr-FR')}</p>
-                <p className="text-white/70 font-body">Aujourd'hui</p>
+            <div className="flex sm:hidden lg:flex items-center justify-center sm:justify-end space-x-4">
+              <div className="text-center sm:text-right">
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-mediai-primary">{new Date().toLocaleDateString('fr-FR')}</p>
+                <p className="text-white/70 font-body text-sm">Aujourd'hui</p>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Statistiques avec design moderne */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      {/* Statistiques avec design moderne responsive */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
         <StatCard
           title="Consultations en cours"
           value={stats.consultationsEnCours}
@@ -531,19 +530,19 @@ const DoctorDashboard = () => {
         />
       </div>
 
-      {/* Contenu principal avec design amélioré */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      {/* Contenu principal avec design amélioré et responsive */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 lg:gap-8">
         {/* Activités récentes */}
         <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-          <div className="bg-light px-8 py-6 border-b border-border-light">
+          <div className="bg-light px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border-light">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-mediai-primary rounded-xl flex items-center justify-center mr-4">
-                <Icon icon={MedicalIcons.Activity} size="w-5 h-5" className="text-white" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-mediai-primary rounded-xl flex items-center justify-center mr-3 sm:mr-4">
+                <Icon icon={MedicalIcons.Activity} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
               </div>
-              <h2 className="text-xl font-bold text-mediai-dark font-heading">Activités récentes</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Activités récentes</h2>
             </div>
           </div>
-          <div className="p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {isLoading ? (
               <div className="space-y-6">
                 {[1, 2, 3].map((i) => (
@@ -557,20 +556,20 @@ const DoctorDashboard = () => {
                 ))}
               </div>
             ) : (
-              <ul className="space-y-6">
+              <ul className="space-y-4 sm:space-y-6">
                 {recentActivities.map((activity) => (
-                  <li key={activity.id} className="flex space-x-4 items-start">
+                  <li key={activity.id} className="flex space-x-3 sm:space-x-4 items-start">
                     <div className="flex-shrink-0">
-                      <div className={`w-12 h-12 rounded-xl flex items-center justify-center shadow-md ${
+                      <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-md ${
                         activity.variant === 'primary' ? 'bg-mediai-primary' :
                         activity.variant === 'success' ? 'bg-success' :
                         activity.variant === 'warning' ? 'bg-warning' : 'bg-mediai-secondary'
                       }`}>
-                        <MedicalIcon icon={activity.icon} size="w-6 h-6" className="text-white" />
+                        <MedicalIcon icon={activity.icon} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                       </div>
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-semibold text-mediai-dark leading-relaxed font-body">
+                      <p className="text-xs sm:text-sm font-semibold text-mediai-dark leading-relaxed font-body">
                         {activity.message}
                       </p>
                       <p className="text-xs text-mediai-medium font-medium mt-1 font-body">{activity.time}</p>
@@ -584,47 +583,47 @@ const DoctorDashboard = () => {
 
         {/* Actions rapides médicales avec design moderne */}
         <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-          <div className="bg-light px-8 py-6 border-b border-border-light">
+          <div className="bg-light px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border-light">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-mediai-secondary rounded-xl flex items-center justify-center mr-4">
-                <Icon icon={ActionIcons.Settings} size="w-5 h-5" className="text-white" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-mediai-secondary rounded-xl flex items-center justify-center mr-3 sm:mr-4">
+                <Icon icon={ActionIcons.Settings} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
               </div>
-              <h2 className="text-xl font-bold text-mediai-dark font-heading">Actions rapides</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Actions rapides</h2>
             </div>
           </div>
-          <div className="p-8">
-            <div className="grid grid-cols-2 gap-4">
+          <div className="p-4 sm:p-6 lg:p-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
               <button 
                 onClick={() => setActiveView('consultations')}
-                className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
-                <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-6 h-6" className="text-white" />
+                className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-primary rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                 </div>
-                <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Consultations</span>
+                <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Consultations</span>
               </button>
               <button 
                 onClick={() => setActiveView('rendez-vous')}
-                className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
-                <div className="w-12 h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MedicalIcon icon={MedicalIcons.Appointment} size="w-6 h-6" className="text-white" />
+                className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <MedicalIcon icon={MedicalIcons.Appointment} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                 </div>
-                <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Rendez-vous</span>
+                <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Rendez-vous</span>
               </button>
               <button 
                 onClick={() => setActiveView('chat-ia')}
-                className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
-                <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MedicalIcon icon={NavigationIcons.Chat} size="w-6 h-6" className="text-white" />
+                className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-primary rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <MedicalIcon icon={NavigationIcons.Chat} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                 </div>
-                <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Chat IA</span>
+                <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Chat IA</span>
               </button>
               <button 
                 onClick={() => setActiveView('patients')}
-                className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
-                <div className="w-12 h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
+                className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <MedicalIcon icon={StatusIcons.Star} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                 </div>
-                <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Patients</span>
+                <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Patients</span>
               </button>
             </div>
           </div>
@@ -633,20 +632,20 @@ const DoctorDashboard = () => {
 
       {/* Consultations du jour avec design amélioré */}
       <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-        <div className="bg-light px-8 py-6 border-b border-border-light">
+        <div className="bg-light px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border-light">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="w-10 h-10 bg-mediai-dark rounded-xl flex items-center justify-center mr-4">
-                <Icon icon={MedicalIcons.Appointment} size="w-5 h-5" className="text-white" />
+              <div className="w-8 h-8 sm:w-10 sm:h-10 bg-mediai-dark rounded-xl flex items-center justify-center mr-3 sm:mr-4">
+                <Icon icon={MedicalIcons.Appointment} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
               </div>
-              <h2 className="text-xl font-bold text-mediai-dark font-heading">Consultations du jour</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Consultations du jour</h2>
             </div>
-            <button className="text-sm font-semibold text-mediai-primary hover:text-mediai-secondary transition-colors font-body">
+            <button className="text-xs sm:text-sm font-semibold text-mediai-primary hover:text-mediai-secondary transition-colors font-body">
               Voir toutes →
             </button>
           </div>
         </div>
-        <div className="p-8">
+        <div className="p-4 sm:p-6 lg:p-8">
           {isLoading ? (
             <div className="animate-pulse space-y-6">
               {[1, 2, 3].map((i) => (
@@ -654,21 +653,21 @@ const DoctorDashboard = () => {
               ))}
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {todayConsultations.map((consultation) => (
-                <div key={consultation.id} className="flex items-center justify-between p-6 border border-border-light rounded-xl hover:bg-light transition-all duration-300 hover-lift">
-                  <div className="flex items-center space-x-6">
-                    <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center shadow-sm">
-                      <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
+                <div key={consultation.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border border-border-light rounded-xl hover:bg-light transition-all duration-300 hover-lift space-y-3 sm:space-y-0">
+                  <div className="flex items-center space-x-3 sm:space-x-6">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-primary rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
+                      <MedicalIcon icon={StatusIcons.Star} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                     </div>
-                    <div>
-                      <p className="font-bold text-mediai-dark text-lg font-heading">{consultation.patient}</p>
-                      <p className="text-sm text-mediai-medium font-body">{consultation.motif}</p>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-bold text-mediai-dark text-base sm:text-lg font-heading truncate">{consultation.patient}</p>
+                      <p className="text-xs sm:text-sm text-mediai-medium font-body line-clamp-2 sm:line-clamp-1">{consultation.motif}</p>
                     </div>
                   </div>
-                  <div className="flex items-center space-x-4">
-                    <span className="text-lg font-bold text-mediai-primary font-mono">{consultation.heure}</span>
-                    <span className={`px-4 py-2 rounded-full text-xs font-bold uppercase tracking-wide ${
+                  <div className="flex items-center justify-between sm:justify-end space-x-3 sm:space-x-4">
+                    <span className="text-base sm:text-lg font-bold text-mediai-primary font-mono">{consultation.heure}</span>
+                    <span className={`px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs font-bold uppercase tracking-wide ${
                       consultation.statut === 'confirmé' ? 'bg-success text-white' :
                       consultation.statut === 'en_cours' ? 'bg-mediai-primary text-white' :
                       consultation.statut === 'terminé' ? 'bg-medium text-white' :
@@ -678,7 +677,7 @@ const DoctorDashboard = () => {
                     </span>
                     <button 
                       onClick={() => openChat(consultation.chatId, consultation)}
-                      className="px-4 py-2 gradient-mediai text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-300">
+                      className="px-3 py-1 sm:px-4 sm:py-2 gradient-mediai text-white text-xs sm:text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-300">
                       Chat IA
                     </button>
                   </div>
@@ -696,18 +695,18 @@ const DoctorDashboard = () => {
       {/* Navbar professionnelle */}
       <nav className="bg-white shadow-lg border-b border-border-light sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+          <div className="flex justify-between items-center h-14 sm:h-16">
             {/* Logo et titre */}
-            <div className="flex items-center space-x-4">
-              <Logo size="sm" className="h-10 w-auto" />
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <Logo size="sm" className="h-8 sm:h-10 w-auto" />
               <div className="hidden sm:block">
-                <h1 className="text-xl font-bold text-mediai-dark font-heading">Mediai</h1>
+                <h1 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Mediai</h1>
                 <p className="text-xs text-mediai-medium font-body">Espace Médecin</p>
               </div>
             </div>
 
-            {/* Navigation principale */}
-            <div className="hidden md:flex items-center space-x-1">
+            {/* Navigation principale - Desktop */}
+            <div className="hidden lg:flex items-center space-x-1">
               {menuItems.map((item) => {
                 const IconComponent = item.icon;
                 const isActive = activeView === item.id;
@@ -715,7 +714,7 @@ const DoctorDashboard = () => {
                   <button
                     key={item.id}
                     onClick={() => setActiveView(item.id)}
-                    className={`flex items-center space-x-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-300 font-body ${
+                    className={`flex items-center space-x-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all duration-300 font-body ${
                       isActive
                         ? 'gradient-mediai text-white shadow-lg transform scale-105'
                         : `text-mediai-medium hover:text-mediai-dark hover:bg-light ${item.color}`
@@ -726,29 +725,29 @@ const DoctorDashboard = () => {
                       size="w-4 h-4" 
                       className={isActive ? 'text-white' : item.color}
                     />
-                    <span>{item.label}</span>
+                    <span className="hidden xl:inline">{item.label}</span>
                   </button>
                 );
               })}
             </div>
 
             {/* Actions utilisateur */}
-            <div className="flex items-center space-x-3">
-              <div className="hidden sm:flex items-center space-x-3">
+            <div className="flex items-center space-x-2 sm:space-x-3">
+              <div className="hidden md:flex items-center space-x-3">
                 <div className="text-right">
                   <p className="text-sm font-bold text-mediai-dark font-heading">Dr. {user?.name || 'Médecin'}</p>
                   <p className="text-xs text-mediai-medium font-body">Médecin</p>
                 </div>
-                <div className="w-10 h-10 gradient-mediai rounded-xl flex items-center justify-center shadow-lg">
-                  <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-5 h-5" className="text-white" />
+                <div className="w-8 h-8 sm:w-10 sm:h-10 gradient-mediai rounded-xl flex items-center justify-center shadow-lg">
+                  <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
                 </div>
               </div>
               
-              <div className="flex items-center space-x-2">
+              <div className="flex items-center space-x-1 sm:space-x-2">
                 <button 
                   onClick={() => navigate('/settings')}
                   className="p-2 text-mediai-medium hover:text-mediai-dark hover:bg-light rounded-lg transition-colors">
-                  <Icon icon={ActionIcons.Settings} size="w-5 h-5" />
+                  <Icon icon={ActionIcons.Settings} size="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button 
                   onClick={logout}
@@ -762,25 +761,25 @@ const DoctorDashboard = () => {
       </nav>
 
       {/* Contenu principal */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 pb-20 lg:pb-8">
         {activeView === 'overview' ? (
           renderOverview()
         ) : (
-          <div className="space-y-8">
+          <div className="space-y-6 sm:space-y-8">
             {/* Header de section */}
             <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-              <div className="bg-mediai-dark px-8 py-6 text-white">
-                <div className="flex items-center space-x-4">
+              <div className="bg-mediai-dark px-4 sm:px-6 lg:px-8 py-4 sm:py-6 text-white">
+                <div className="flex items-center space-x-3 sm:space-x-4">
                   {(() => {
                     const activeItem = menuItems.find(item => item.id === activeView);
                     return (
                       <>
-                        <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                          <MedicalIcon icon={activeItem?.icon} size="w-6 h-6" className="text-white" />
+                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                          <MedicalIcon icon={activeItem?.icon} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                         </div>
                         <div>
-                          <h1 className="text-2xl font-bold font-heading">{activeItem?.label}</h1>
-                          <p className="text-white/70 font-body">{activeItem?.description}</p>
+                          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold font-heading">{activeItem?.label}</h1>
+                          <p className="text-white/70 font-body text-sm sm:text-base">{activeItem?.description}</p>
                         </div>
                       </>
                     );
@@ -791,7 +790,7 @@ const DoctorDashboard = () => {
 
             {/* Contenu de la section */}
             <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-              <div className="px-8 py-12">
+              <div className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
                 {activeView === 'consultations' && renderConsultations()}
                 {activeView === 'rendez-vous' && renderRendezVous()}
                 {activeView === 'chat-ia' && renderChatIA()}
@@ -800,6 +799,34 @@ const DoctorDashboard = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Navigation mobile en bas */}
+      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border-light shadow-2xl z-50">
+        <div className="grid grid-cols-5 gap-1">
+          {menuItems.map((item) => {
+            const IconComponent = item.icon;
+            const isActive = activeView === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveView(item.id)}
+                className={`flex flex-col items-center justify-center py-2 px-1 transition-all duration-300 ${
+                  isActive
+                    ? 'bg-mediai-primary text-white'
+                    : 'text-mediai-medium hover:text-mediai-dark hover:bg-light'
+                }`}
+              >
+                <MedicalIcon 
+                  icon={IconComponent} 
+                  size="w-5 h-5" 
+                  className={isActive ? 'text-white' : item.color}
+                />
+                <span className="text-xs font-medium mt-1 truncate">{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* Chat Modal avec design amélioré */}

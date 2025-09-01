@@ -266,15 +266,15 @@ const DoctorAppointments = () => {
   }
 
   return (
-    <div className="p-6 space-y-6 animate-fadeIn">
+    <div className="p-3 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 animate-fadeIn">
       {/* En-tête avec statistiques */}
-      <div className="bg-white rounded-xl shadow-sm border border-mediai-light p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="bg-white rounded-xl shadow-sm border border-mediai-light p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 sm:mb-6 space-y-3 sm:space-y-0">
           <div>
-            <h2 className="text-2xl font-heading text-mediai-dark mb-2">
+            <h2 className="text-xl sm:text-2xl font-heading text-mediai-dark mb-1 sm:mb-2">
               Gestion des Rendez-vous
             </h2>
-            <p className="text-mediai-medium font-body">
+            <p className="text-mediai-medium font-body text-sm sm:text-base">
               Planning du {new Date().toLocaleDateString('fr-FR', { 
                 weekday: 'long', 
                 year: 'numeric', 

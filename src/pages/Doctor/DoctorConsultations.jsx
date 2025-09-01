@@ -303,13 +303,13 @@ const DoctorConsultations = () => {
   };
 
   const renderConsultationsList = () => (
-    <div className="space-y-6">
+    <div className="space-y-4 sm:space-y-6">
       {/* Header avec recherche et filtres */}
-      <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
+      <div className="bg-white rounded-2xl shadow-xl border border-border-light p-4 sm:p-6">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
           <div>
-            <h2 className="text-2xl font-bold text-mediai-dark font-heading">Gestion des consultations</h2>
-            <p className="text-mediai-medium font-body mt-1">
+            <h2 className="text-xl sm:text-2xl font-bold text-mediai-dark font-heading">Gestion des consultations</h2>
+            <p className="text-mediai-medium font-body mt-1 text-sm sm:text-base">
               {filteredConsultations.length} consultation(s) • Dr. {user?.name}
             </p>
           </div>
@@ -318,18 +318,18 @@ const DoctorConsultations = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Rechercher une consultation..."
+                placeholder="Rechercher..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 pr-4 py-3 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body w-full sm:w-80"
+                className="pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body w-full sm:w-80 text-sm sm:text-base"
               />
-              <Icon icon={NavigationIcons.Search} size="w-5 h-5" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-mediai-medium" />
+              <Icon icon={NavigationIcons.Search} size="w-4 h-4 sm:w-5 sm:h-5" className="absolute left-2 sm:left-3 top-1/2 transform -translate-y-1/2 text-mediai-medium" />
             </div>
             
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-4 py-3 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark font-body"
+              className="px-3 sm:px-4 py-2 sm:py-3 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark font-body text-sm sm:text-base"
             >
               <option value="all">Tous les statuts</option>
               <option value="en_attente">En attente</option>
@@ -343,22 +343,22 @@ const DoctorConsultations = () => {
 
       {/* Liste des consultations */}
       <div className="bg-white rounded-2xl shadow-xl border border-border-light overflow-hidden">
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="animate-pulse">
-                  <div className="h-24 bg-medium rounded-xl"></div>
+                  <div className="h-20 sm:h-24 bg-medium rounded-xl"></div>
                 </div>
               ))}
             </div>
           ) : filteredConsultations.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-20 h-20 bg-light rounded-2xl flex items-center justify-center mx-auto mb-6">
-                <MedicalIcon icon={MedicalIcons.Document} size="w-10 h-10" className="text-mediai-medium" />
+            <div className="text-center py-12 sm:py-16">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-light rounded-2xl flex items-center justify-center mx-auto mb-4 sm:mb-6">
+                <MedicalIcon icon={MedicalIcons.Document} size="w-8 h-8 sm:w-10 sm:h-10" className="text-mediai-medium" />
               </div>
-              <h3 className="text-xl font-bold text-mediai-dark mb-2 font-heading">Aucune consultation trouvée</h3>
-              <p className="text-mediai-medium font-body">
+              <h3 className="text-lg sm:text-xl font-bold text-mediai-dark mb-2 font-heading">Aucune consultation trouvée</h3>
+              <p className="text-mediai-medium font-body text-sm sm:text-base">
                 {searchTerm || filterStatus !== 'all' 
                   ? 'Aucune consultation ne correspond à vos critères de recherche.'
                   : 'Aucune consultation disponible pour le moment.'
@@ -366,7 +366,7 @@ const DoctorConsultations = () => {
               </p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3 sm:space-y-4">
               {filteredConsultations.map((consultation) => (
                 <div 
                   key={consultation.id}
@@ -934,7 +934,7 @@ const DoctorConsultations = () => {
   );
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-6 sm:space-y-8">
       {activeView === 'list' && renderConsultationsList()}
       {activeView === 'detail' && renderConsultationDetail()}
       {activeView === 'form' && renderConsultationForm()}

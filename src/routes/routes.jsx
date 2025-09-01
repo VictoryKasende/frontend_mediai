@@ -10,8 +10,6 @@ import DoctorChatIa from '../pages/Doctor/DoctorChatIa';
 import PatientDashboard from '../pages/Patient/PatientDashboard';
 import DoctorDashboard from '../pages/Doctor/DoctorDashboard';
 
-// Layout principal
-// import Layout from '../components/Layout';
 
 /**
  * Composant pour protéger les routes authentifiées
