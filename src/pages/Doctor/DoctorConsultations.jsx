@@ -370,50 +370,52 @@ const DoctorConsultations = () => {
               {filteredConsultations.map((consultation) => (
                 <div 
                   key={consultation.id}
-                  className="border border-border-light rounded-xl p-6 hover:bg-light transition-all duration-300 hover-lift cursor-pointer"
+                  className="border border-border-light rounded-xl p-4 lg:p-6 hover:bg-light transition-all duration-300 hover-lift cursor-pointer"
                   onClick={() => handleConsultationClick(consultation)}
                 >
                   <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-6">
-                      <div className="w-16 h-16 bg-mediai-primary rounded-xl flex items-center justify-center">
-                        <MedicalIcon icon={MedicalIcons.Profile} size="w-8 h-8" className="text-white" />
+                    <div className="flex items-start space-x-3 lg:space-x-6">
+                      <div className="w-12 h-12 lg:w-16 lg:h-16 bg-mediai-primary rounded-xl flex items-center justify-center flex-shrink-0">
+                        <MedicalIcon icon={MedicalIcons.Profile} size="w-6 h-6 lg:w-8 lg:h-8" className="text-white" />
                       </div>
                       
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <h3 className="text-lg font-bold text-mediai-dark font-heading">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:space-x-3 mb-2">
+                          <h3 className="text-base lg:text-lg font-bold text-mediai-dark font-heading truncate">
                             {consultation.patient.nom} {consultation.patient.postnom} {consultation.patient.prenom}
                           </h3>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getStatutColor(consultation.statut)}`}>
-                            {consultation.statut.replace('_', ' ')}
-                          </span>
-                          <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getUrgenceColor(consultation.urgence)}`}>
-                            {consultation.urgence}
-                          </span>
+                          <div className="flex flex-wrap gap-2 mt-1 lg:mt-0">
+                            <span className={`px-2 lg:px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getStatutColor(consultation.statut)}`}>
+                              {consultation.statut.replace('_', ' ')}
+                            </span>
+                            <span className={`px-2 lg:px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide ${getUrgenceColor(consultation.urgence)}`}>
+                              {consultation.urgence}
+                            </span>
+                          </div>
                         </div>
                         
-                        <p className="text-mediai-dark font-body-medium mb-2">
+                        <p className="text-sm lg:text-base text-mediai-dark font-body-medium mb-2">
                           <strong>Motif:</strong> {consultation.motifConsultation}
                         </p>
                         
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-mediai-medium font-body">
+                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 lg:gap-4 text-xs lg:text-sm text-mediai-medium font-body">
                           <div>
                             <span className="font-medium">Âge:</span> {consultation.patient.age} ans
                           </div>
                           <div>
                             <span className="font-medium">Sexe:</span> {consultation.patient.sexe}
                           </div>
-                          <div>
-                            <span className="font-medium">Téléphone:</span> {consultation.patient.telephone}
+                          <div className="col-span-2 lg:col-span-1">
+                            <span className="font-medium">Tél:</span> {consultation.patient.telephone}
                           </div>
-                          <div>
+                          <div className="col-span-2 lg:col-span-1">
                             <span className="font-medium">Date:</span> {new Date(consultation.dateConsultation).toLocaleDateString('fr-FR')}
                           </div>
                         </div>
                       </div>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col lg:flex-row items-center space-y-2 lg:space-y-0 lg:space-x-2 flex-shrink-0">
                       <button
                         onClick={(e) => {
                           e.stopPropagation();
@@ -422,7 +424,7 @@ const DoctorConsultations = () => {
                         className="p-2 text-mediai-primary hover:text-mediai-secondary hover:bg-light rounded-lg transition-colors"
                         title="Éditer la consultation"
                       >
-                        <Icon icon={ActionIcons.Edit} size="w-5 h-5" />
+                        <Icon icon={ActionIcons.Edit} size="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                       
                       <button
@@ -433,7 +435,7 @@ const DoctorConsultations = () => {
                         className="p-2 text-mediai-medium hover:text-mediai-dark hover:bg-light rounded-lg transition-colors"
                         title="Exporter en PDF"
                       >
-                        <Icon icon={ActionIcons.Download} size="w-5 h-5" />
+                        <Icon icon={ActionIcons.Download} size="w-4 h-4 lg:w-5 lg:h-5" />
                       </button>
                     </div>
                   </div>
@@ -452,8 +454,8 @@ const DoctorConsultations = () => {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
-          <div className="flex items-center justify-between">
+        <div className="bg-white rounded-xl lg:rounded-2xl shadow-xl border border-border-light p-4 lg:p-6">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setActiveView('list')}
@@ -462,16 +464,17 @@ const DoctorConsultations = () => {
                 <Icon icon={NavigationIcons.ArrowLeft} size="w-5 h-5" />
               </button>
               <div>
-                <h2 className="text-2xl font-bold text-mediai-dark font-heading">
+                <h2 className="text-lg lg:text-2xl font-bold text-mediai-dark font-heading">
                   Consultation #{selectedConsultation.id}
                 </h2>
-                <p className="text-mediai-medium font-body">
+                <p className="text-sm lg:text-base text-mediai-medium font-body">
                   {selectedConsultation.patient.nom} {selectedConsultation.patient.postnom} {selectedConsultation.patient.prenom}
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-3">
+            {/* Actions desktop */}
+            <div className="hidden lg:flex items-center space-x-3">
               <button
                 onClick={() => handleEditConsultation(selectedConsultation)}
                 className="px-4 py-2 bg-mediai-primary text-white rounded-lg hover:bg-mediai-secondary transition-colors font-body"
@@ -491,11 +494,102 @@ const DoctorConsultations = () => {
                 Export PDF
               </button>
             </div>
+
+            {/* Actions mobile */}
+            <div className="lg:hidden flex space-x-2">
+              <button
+                onClick={() => handleEditConsultation(selectedConsultation)}
+                className="flex-1 px-3 py-2 bg-mediai-primary text-white rounded-lg text-sm font-body"
+              >
+                Compléter
+              </button>
+              <button
+                onClick={() => handlePrintConsultation(selectedConsultation)}
+                className="flex-1 px-3 py-2 bg-success text-white rounded-lg text-sm font-body"
+              >
+                Imprimer
+              </button>
+              <button
+                onClick={() => handleExportToPDF(selectedConsultation)}
+                className="flex-1 px-3 py-2 bg-medium text-white rounded-lg text-sm font-body"
+              >
+                PDF
+              </button>
+            </div>
           </div>
         </div>
 
         {/* Détails de la consultation */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Version mobile compacte */}
+        <div className="lg:hidden space-y-4">
+          {/* Informations patient - Mobile */}
+          <div className="bg-white rounded-xl border border-border-light p-4">
+            <h3 className="text-base font-bold text-mediai-dark font-heading mb-3 flex items-center">
+              <MedicalIcon icon={MedicalIcons.Profile} size="w-4 h-4" className="mr-2" />
+              Patient
+            </h3>
+            <div className="grid grid-cols-2 gap-3 text-sm">
+              <div>
+                <span className="font-medium text-mediai-medium text-xs">Nom:</span>
+                <p className="text-mediai-dark truncate">{selectedConsultation.patient.nom} {selectedConsultation.patient.postnom}</p>
+              </div>
+              <div>
+                <span className="font-medium text-mediai-medium text-xs">Âge:</span>
+                <p className="text-mediai-dark">{selectedConsultation.patient.age} ans</p>
+              </div>
+              <div>
+                <span className="font-medium text-mediai-medium text-xs">Sexe:</span>
+                <p className="text-mediai-dark">{selectedConsultation.patient.sexe}</p>
+              </div>
+              <div>
+                <span className="font-medium text-mediai-medium text-xs">Tél:</span>
+                <p className="text-mediai-dark text-xs">{selectedConsultation.patient.telephone}</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Signes vitaux & Statut - Mobile */}
+          <div className="bg-white rounded-xl border border-border-light p-4">
+            <h3 className="text-base font-bold text-mediai-dark font-heading mb-3 flex items-center">
+              <MedicalIcon icon={MedicalIcons.Heart} size="w-4 h-4" className="mr-2" />
+              Signes vitaux & Statut
+            </h3>
+            
+            {/* Signes vitaux en grille */}
+            <div className="grid grid-cols-2 gap-2 text-sm mb-4">
+              {Object.entries(selectedConsultation.signesVitaux).map(([key, value]) => (
+                <div key={key} className="flex justify-between">
+                  <span className="font-medium text-mediai-medium text-xs capitalize">
+                    {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
+                  </span>
+                  <span className="text-mediai-dark font-mono text-xs">{value}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Badges statut */}
+            <div className="flex flex-wrap gap-2">
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getStatutColor(selectedConsultation.statut)}`}>
+                {selectedConsultation.statut.replace('_', ' ')}
+              </span>
+              <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${getUrgenceColor(selectedConsultation.urgence)}`}>
+                {selectedConsultation.urgence}
+              </span>
+            </div>
+            
+            <p className="text-xs text-mediai-medium mt-2">
+              {new Date(selectedConsultation.dateConsultation).toLocaleDateString('fr-FR', {
+                day: 'numeric',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+              })}
+            </p>
+          </div>
+        </div>
+
+        {/* Version desktop avec cartes séparées */}
+        <div className="hidden lg:grid lg:grid-cols-3 gap-6">
           {/* Informations patient */}
           <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
             <h3 className="text-lg font-bold text-mediai-dark font-heading mb-4 flex items-center">
@@ -579,10 +673,65 @@ const DoctorConsultations = () => {
               </div>
             </div>
           </div>
+        </div>        {/* Anamnèse et examen clinique */}
+        {/* Version mobile compacte */}
+        <div className="lg:hidden space-y-4">
+          {/* Motif de consultation - Mobile */}
+          <div className="bg-white rounded-xl border border-border-light p-4">
+            <h3 className="text-base font-bold text-mediai-dark font-heading mb-2 flex items-center">
+              <MedicalIcon icon={MedicalIcons.Document} size="w-4 h-4" className="mr-2" />
+              Motif de consultation
+            </h3>
+            <p className="text-sm text-mediai-dark">{selectedConsultation.motifConsultation}</p>
+          </div>
+
+          {/* Anamnèse compacte - Mobile */}
+          <div className="bg-white rounded-xl border border-border-light p-4">
+            <h3 className="text-base font-bold text-mediai-dark font-heading mb-3">Anamnèse</h3>
+            <div className="space-y-3 text-sm">
+              <div>
+                <span className="font-medium text-mediai-medium text-xs">Histoire:</span>
+                <p className="text-mediai-dark mt-1">{selectedConsultation.anamnese?.histoireMaladie}</p>
+              </div>
+              
+              <div className="grid grid-cols-1 gap-2">
+                <div>
+                  <span className="font-medium text-mediai-medium text-xs">Antécédents:</span>
+                  <p className="text-mediai-dark">{selectedConsultation.anamnese?.antecedents}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-mediai-medium text-xs">Allergies:</span>
+                  <p className="text-mediai-dark">{selectedConsultation.anamnese?.allergies}</p>
+                </div>
+                <div>
+                  <span className="font-medium text-mediai-medium text-xs">Médicaments:</span>
+                  <p className="text-mediai-dark">{selectedConsultation.anamnese?.medicaments}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Examen clinique - Mobile */}
+          <div className="bg-white rounded-xl border border-border-light p-4">
+            <h3 className="text-base font-bold text-mediai-dark font-heading mb-3 flex items-center">
+              <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-4 h-4" className="mr-2" />
+              Examen clinique
+            </h3>
+            <div className="space-y-2 text-sm">
+              {Object.entries(selectedConsultation.examenClinique || {}).map(([key, value]) => (
+                <div key={key}>
+                  <span className="font-medium text-mediai-medium text-xs capitalize">
+                    {key.replace(/([A-Z])/g, ' $1').toLowerCase()}:
+                  </span>
+                  <p className="text-mediai-dark">{value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {/* Anamnèse et examen clinique */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Version desktop avec cartes séparées */}
+        <div className="hidden lg:grid lg:grid-cols-2 gap-6">
           <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
             <h3 className="text-lg font-bold text-mediai-dark font-heading mb-4 flex items-center">
               <MedicalIcon icon={MedicalIcons.Document} size="w-5 h-5" className="mr-2" />
@@ -632,55 +781,111 @@ const DoctorConsultations = () => {
 
         {/* Diagnostic et traitement (si complété) */}
         {selectedConsultation.diagnostic && (
-          <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
-            <h3 className="text-lg font-bold text-mediai-dark font-heading mb-6 flex items-center">
-              <MedicalIcon icon={MedicalIcons.Check} size="w-5 h-5" className="mr-2" />
-              Diagnostic et traitement
-            </h3>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-mediai-medium">Diagnostic</label>
-                  <div className="bg-light p-4 rounded-lg mt-1">
-                    <p className="text-mediai-dark font-body">{selectedConsultation.diagnostic}</p>
+          <>
+            {/* Version mobile compacte */}
+            <div className="lg:hidden">
+              <div className="bg-white rounded-xl border border-border-light p-4">
+                <h3 className="text-base font-bold text-mediai-dark font-heading mb-3 flex items-center">
+                  <MedicalIcon icon={MedicalIcons.Check} size="w-4 h-4" className="mr-2" />
+                  Diagnostic & Traitement
+                </h3>
+                
+                <div className="space-y-3 text-sm">
+                  <div>
+                    <span className="font-medium text-mediai-medium text-xs">Diagnostic:</span>
+                    <div className="bg-light p-3 rounded-lg mt-1">
+                      <p className="text-mediai-dark">{selectedConsultation.diagnostic}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <span className="font-medium text-mediai-medium text-xs">Traitement:</span>
+                    <div className="bg-light p-3 rounded-lg mt-1">
+                      <p className="text-mediai-dark">{selectedConsultation.traitement}</p>
+                    </div>
+                  </div>
+                  
+                  {selectedConsultation.examensComplementaires && (
+                    <div>
+                      <span className="font-medium text-mediai-medium text-xs">Examens:</span>
+                      <div className="bg-light p-3 rounded-lg mt-1">
+                        <p className="text-mediai-dark">{selectedConsultation.examensComplementaires}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedConsultation.conseils && (
+                    <div>
+                      <span className="font-medium text-mediai-medium text-xs">Conseils:</span>
+                      <div className="bg-light p-3 rounded-lg mt-1">
+                        <p className="text-mediai-dark">{selectedConsultation.conseils}</p>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedConsultation.recommandations && (
+                    <div>
+                      <span className="font-medium text-mediai-medium text-xs">Recommandations:</span>
+                      <div className="bg-light p-3 rounded-lg mt-1">
+                        <p className="text-mediai-dark">{selectedConsultation.recommandations}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Version desktop avec cartes */}
+            <div className="hidden lg:block bg-white rounded-2xl shadow-xl border border-border-light p-6">
+              <h3 className="text-lg font-bold text-mediai-dark font-heading mb-6 flex items-center">
+                <MedicalIcon icon={MedicalIcons.Check} size="w-5 h-5" className="mr-2" />
+                Diagnostic et traitement
+              </h3>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-mediai-medium">Diagnostic</label>
+                    <div className="bg-light p-4 rounded-lg mt-1">
+                      <p className="text-mediai-dark font-body">{selectedConsultation.diagnostic}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-mediai-medium">Traitement proposé</label>
+                    <div className="bg-light p-4 rounded-lg mt-1">
+                      <p className="text-mediai-dark font-body">{selectedConsultation.traitement}</p>
+                    </div>
                   </div>
                 </div>
                 
-                <div>
-                  <label className="text-sm font-medium text-mediai-medium">Traitement proposé</label>
-                  <div className="bg-light p-4 rounded-lg mt-1">
-                    <p className="text-mediai-dark font-body">{selectedConsultation.traitement}</p>
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-sm font-medium text-mediai-medium">Examens complémentaires</label>
+                    <div className="bg-light p-4 rounded-lg mt-1">
+                      <p className="text-mediai-dark font-body">{selectedConsultation.examensComplementaires}</p>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium text-mediai-medium">Conseils et recommandations</label>
+                    <div className="bg-light p-4 rounded-lg mt-1">
+                      <p className="text-mediai-dark font-body">{selectedConsultation.conseils}</p>
+                    </div>
                   </div>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                <div>
-                  <label className="text-sm font-medium text-mediai-medium">Examens complémentaires</label>
+              {selectedConsultation.recommandations && (
+                <div className="mt-6">
+                  <label className="text-sm font-medium text-mediai-medium">Recommandations médicales</label>
                   <div className="bg-light p-4 rounded-lg mt-1">
-                    <p className="text-mediai-dark font-body">{selectedConsultation.examensComplementaires}</p>
+                    <p className="text-mediai-dark font-body">{selectedConsultation.recommandations}</p>
                   </div>
                 </div>
-                
-                <div>
-                  <label className="text-sm font-medium text-mediai-medium">Conseils et recommandations</label>
-                  <div className="bg-light p-4 rounded-lg mt-1">
-                    <p className="text-mediai-dark font-body">{selectedConsultation.conseils}</p>
-                  </div>
-                </div>
-              </div>
+              )}
             </div>
-            
-            {selectedConsultation.recommandations && (
-              <div className="mt-6">
-                <label className="text-sm font-medium text-mediai-medium">Recommandations médicales</label>
-                <div className="bg-light p-4 rounded-lg mt-1">
-                  <p className="text-mediai-dark font-body">{selectedConsultation.recommandations}</p>
-                </div>
-              </div>
-            )}
-          </div>
+          </>
         )}
       </div>
     );
@@ -710,7 +915,7 @@ const DoctorConsultations = () => {
     return (
       <div className="space-y-6">
         {/* Header */}
-        <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
+        <div className="bg-white rounded-xl lg:rounded-2xl shadow-xl border border-border-light p-4 lg:p-6">
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setActiveView('detail')}
@@ -719,10 +924,10 @@ const DoctorConsultations = () => {
               <Icon icon={NavigationIcons.ArrowLeft} size="w-5 h-5" />
             </button>
             <div>
-              <h2 className="text-2xl font-bold text-mediai-dark font-heading">
+              <h2 className="text-lg lg:text-2xl font-bold text-mediai-dark font-heading">
                 Compléter la consultation
               </h2>
-              <p className="text-mediai-medium font-body">
+              <p className="text-sm lg:text-base text-mediai-medium font-body">
                 {selectedConsultation.patient.nom} {selectedConsultation.patient.postnom} {selectedConsultation.patient.prenom}
               </p>
             </div>
@@ -730,14 +935,14 @@ const DoctorConsultations = () => {
         </div>
 
         {/* Formulaire de diagnostic */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
-            <h3 className="text-lg font-bold text-mediai-dark font-heading mb-6 flex items-center">
-              <MedicalIcon icon={MedicalIcons.Document} size="w-5 h-5" className="mr-2" />
+        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+          <div className="bg-white rounded-xl lg:rounded-2xl shadow-xl border border-border-light p-4 lg:p-6">
+            <h3 className="text-base lg:text-lg font-bold text-mediai-dark font-heading mb-4 lg:mb-6 flex items-center">
+              <MedicalIcon icon={MedicalIcons.Document} size="w-4 h-4 lg:w-5 lg:h-5" className="mr-2" />
               Diagnostic et traitement médical
             </h3>
             
-            <div className="space-y-6">
+            <div className="space-y-4 lg:space-y-6">
               {/* Diagnostic */}
               <div>
                 <label className="block text-sm font-medium text-mediai-dark mb-2 font-body">
@@ -747,8 +952,8 @@ const DoctorConsultations = () => {
                   value={formData.diagnostic}
                   onChange={(e) => handleInputChange('diagnostic', e.target.value)}
                   placeholder="Saisissez le diagnostic principal et différentiel..."
-                  className="w-full p-4 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none"
-                  rows={4}
+                  className="w-full p-3 lg:p-4 border border-border-light rounded-lg lg:rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none text-sm lg:text-base"
+                  rows={3}
                   required
                 />
               </div>
@@ -762,8 +967,8 @@ const DoctorConsultations = () => {
                   value={formData.recommandations}
                   onChange={(e) => handleInputChange('recommandations', e.target.value)}
                   placeholder="Recommandations générales pour le suivi du patient..."
-                  className="w-full p-4 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none"
-                  rows={4}
+                  className="w-full p-3 lg:p-4 border border-border-light rounded-lg lg:rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none text-sm lg:text-base"
+                  rows={3}
                   required
                 />
               </div>
@@ -777,8 +982,8 @@ const DoctorConsultations = () => {
                   value={formData.traitement}
                   onChange={(e) => handleInputChange('traitement', e.target.value)}
                   placeholder="Détaillez le plan de traitement : médicaments, posologie, durée..."
-                  className="w-full p-4 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none"
-                  rows={5}
+                  className="w-full p-3 lg:p-4 border border-border-light rounded-lg lg:rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none text-sm lg:text-base"
+                  rows={4}
                   required
                 />
               </div>
@@ -792,8 +997,8 @@ const DoctorConsultations = () => {
                   value={formData.examensComplementaires}
                   onChange={(e) => handleInputChange('examensComplementaires', e.target.value)}
                   placeholder="Examens de laboratoire, imagerie, consultations spécialisées..."
-                  className="w-full p-4 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none"
-                  rows={4}
+                  className="w-full p-3 lg:p-4 border border-border-light rounded-lg lg:rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none text-sm lg:text-base"
+                  rows={3}
                 />
               </div>
 
@@ -806,21 +1011,22 @@ const DoctorConsultations = () => {
                   value={formData.conseils}
                   onChange={(e) => handleInputChange('conseils', e.target.value)}
                   placeholder="Conseils d'hygiène de vie, prévention, signes d'alarme..."
-                  className="w-full p-4 border border-border-light rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none"
-                  rows={4}
+                  className="w-full p-3 lg:p-4 border border-border-light rounded-lg lg:rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none text-sm lg:text-base"
+                  rows={3}
                 />
               </div>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="bg-white rounded-2xl shadow-xl border border-border-light p-6">
-            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
-              <div className="flex items-center space-x-4">
+          <div className="bg-white rounded-xl lg:rounded-2xl shadow-xl border border-border-light p-4 lg:p-6">
+            <div className="flex flex-col space-y-4">
+              {/* Signature */}
+              <div className="flex items-center justify-between">
                 <button
                   type="button"
                   onClick={() => setShowSignatureModal(true)}
-                  className="flex items-center space-x-2 px-4 py-2 bg-mediai-secondary text-white rounded-lg hover:bg-mediai-dark transition-colors font-body"
+                  className="flex items-center space-x-2 px-3 lg:px-4 py-2 bg-mediai-secondary text-white rounded-lg hover:bg-mediai-dark transition-colors font-body text-sm lg:text-base"
                 >
                   <MedicalIcon icon={ActionIcons.Edit} size="w-4 h-4" />
                   <span>Signature numérique</span>
@@ -834,11 +1040,12 @@ const DoctorConsultations = () => {
                 )}
               </div>
               
-              <div className="flex space-x-4">
+              {/* Boutons d'action */}
+              <div className="flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-4">
                 <button
                   type="button"
                   onClick={() => setActiveView('detail')}
-                  className="px-6 py-3 border border-border-light text-mediai-dark rounded-lg hover:bg-light transition-colors font-body"
+                  className="w-full lg:w-auto px-4 lg:px-6 py-3 border border-border-light text-mediai-dark rounded-lg hover:bg-light transition-colors font-body text-sm lg:text-base"
                 >
                   Annuler
                 </button>
@@ -849,7 +1056,7 @@ const DoctorConsultations = () => {
                     const tempConsultation = { ...selectedConsultation, ...formData };
                     handlePrintConsultation(tempConsultation);
                   }}
-                  className="px-6 py-3 bg-success text-white rounded-lg hover:bg-mediai-dark transition-colors font-body"
+                  className="w-full lg:w-auto px-4 lg:px-6 py-3 bg-success text-white rounded-lg hover:bg-mediai-dark transition-colors font-body text-sm lg:text-base"
                 >
                   Aperçu impression
                 </button>
@@ -857,7 +1064,7 @@ const DoctorConsultations = () => {
                 <button
                   type="submit"
                   disabled={!formData.diagnostic || !formData.recommandations || !formData.traitement}
-                  className="px-6 py-3 gradient-mediai text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-body"
+                  className="w-full lg:w-auto px-4 lg:px-6 py-3 gradient-mediai text-white rounded-lg hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-body text-sm lg:text-base"
                 >
                   Finaliser et sauvegarder
                 </button>
