@@ -111,12 +111,14 @@ const DoctorDashboard = () => {
                 <MedicalIcon icon={icon} size="w-5 h-5 sm:w-6 sm:h-6 lg:w-7 lg:h-7" className={styles.iconColor} />
               </div>
             </div>
-            <div className="ml-3 sm:ml-4 lg:ml-6 w-0 flex-1">
+            <div className="ml-3 sm:ml-4 lg:ml-5 w-0 flex-1 min-w-0">
               <dl>
-                <dt className={`text-xs sm:text-sm font-semibold ${styles.textColor} truncate font-medical tracking-wide uppercase`}>{title}</dt>
-                <dd className={`text-xl sm:text-2xl lg:text-3xl font-bold ${styles.valueColor} font-mono tracking-tight`}>
+                <dt className={`text-[10px] sm:text-[11px] lg:text-[10px] xl:text-[11px] font-semibold ${styles.textColor} font-medical tracking-wide uppercase leading-tight`}>
+                  <span className="block" title={title}>{title}</span>
+                </dt>
+                <dd className={`text-xl sm:text-2xl lg:text-xl xl:text-2xl 2xl:text-3xl font-bold ${styles.valueColor} font-mono tracking-tight mt-1`}>
                   {isLoading ? (
-                    <div className="animate-pulse h-6 sm:h-8 lg:h-9 bg-white/20 rounded-lg w-12 sm:w-16 lg:w-20"></div>
+                    <div className="animate-pulse h-6 sm:h-8 lg:h-7 xl:h-8 2xl:h-9 bg-white/20 rounded-lg w-12 sm:w-16 lg:w-14 xl:w-16 2xl:w-20"></div>
                   ) : (
                     <span className="tabular-nums">{value}</span>
                   )}
@@ -811,7 +813,7 @@ const DoctorDashboard = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`flex flex-col items-center justify-center py-2 px-1 transition-all duration-300 ${
+                className={`flex flex-col items-center justify-center py-1.5 px-1 transition-all duration-300 ${
                   isActive
                     ? 'bg-mediai-primary text-white'
                     : 'text-mediai-medium hover:text-mediai-dark hover:bg-light'
@@ -819,10 +821,10 @@ const DoctorDashboard = () => {
               >
                 <MedicalIcon 
                   icon={IconComponent} 
-                  size="w-5 h-5" 
+                  size="w-4 h-4 sm:w-5 sm:h-5" 
                   className={isActive ? 'text-white' : item.color}
                 />
-                <span className="text-xs font-medium mt-1 truncate">{item.label}</span>
+                <span className="text-[9px] sm:text-xs font-medium mt-0.5 truncate leading-tight">{item.label}</span>
               </button>
             );
           })}
@@ -836,5 +838,3 @@ const DoctorDashboard = () => {
 };
 
 export default DoctorDashboard;
-
-
