@@ -9,6 +9,72 @@ import Modal from '../../components/Modal';
 import ConfirmModal from '../../components/ConfirmModal';
 import api, { iaService } from '../../services/api';
 
+// Styles CSS pour les animations personnalisées
+const loadingStyles = `
+  @keyframes loadingWave {
+    0%, 60%, 100% {
+      transform: translateY(0);
+      opacity: 0.4;
+    }
+    30% {
+      transform: translateY(-10px);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes loadingPulse {
+    0%, 100% {
+      transform: scale(0.8);
+      opacity: 0.5;
+    }
+    50% {
+      transform: scale(1.2);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes loadingBar {
+    0% {
+      width: 0%;
+      opacity: 0.7;
+    }
+    50% {
+      width: 70%;
+      opacity: 1;
+    }
+    100% {
+      width: 100%;
+      opacity: 0.7;
+    }
+  }
+  
+  .loading-dot-1 {
+    animation: loadingWave 1.8s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+  
+  .loading-dot-2 {
+    animation: loadingWave 1.8s ease-in-out infinite;
+    animation-delay: 0.3s;
+  }
+  
+  .loading-dot-3 {
+    animation: loadingWave 1.8s ease-in-out infinite;
+    animation-delay: 0.6s;
+  }
+  
+  .loading-bar {
+    animation: loadingBar 2.5s ease-in-out infinite;
+  }
+`;
+
+// Injecter les styles dans le document
+if (typeof document !== 'undefined') {
+  const styleSheet = document.createElement('style');
+  styleSheet.textContent = loadingStyles;
+  document.head.appendChild(styleSheet);
+}
+
 /**
  * Page Chat IA Médecin - Interface similaire à ChatGPT avec API réelle
  */
@@ -1205,15 +1271,45 @@ const DoctorChatIa = () => {
                       <Icon icon={MedicalIcons.AI} size="w-3 h-3 sm:w-4 sm:h-4" className="text-white" />
                     </div>
                     <div className="bg-white border border-border-primary rounded-2xl rounded-bl-md px-3 sm:px-4 py-2 sm:py-3">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex items-center space-x-3">
+                        {/* Animation des trois points qui nagent */}
                         <div className="flex space-x-1">
-                          <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce"></div>
-                          <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                          <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                          <div 
+                            className="w-2 h-2 bg-mediai-primary rounded-full animate-pulse"
+                            style={{
+                              animation: 'loadingDot 1.5s ease-in-out infinite',
+                              animationDelay: '0s'
+                            }}
+                          ></div>
+                          <div 
+                            className="w-2 h-2 bg-mediai-primary rounded-full animate-pulse"
+                            style={{
+                              animation: 'loadingDot 1.5s ease-in-out infinite',
+                              animationDelay: '0.3s'
+                            }}
+                          ></div>
+                          <div 
+                            className="w-2 h-2 bg-mediai-primary rounded-full animate-pulse"
+                            style={{
+                              animation: 'loadingDot 1.5s ease-in-out infinite',
+                              animationDelay: '0.6s'
+                            }}
+                          ></div>
                         </div>
-                        <span className="text-sm text-content-secondary font-body">
-                          Analyse médicale en cours...
+                        <span className="text-sm text-mediai-primary font-body-medium">
+                          Analyse médicale en cours
                         </span>
+                      </div>
+                      
+                      {/* Barre de progression animée */}
+                      <div className="mt-2 w-full bg-surface-muted rounded-full h-1">
+                        <div 
+                          className="bg-gradient-to-r from-mediai-primary to-mediai-primary/70 h-1 rounded-full animate-pulse"
+                          style={{
+                            animation: 'loadingBar 2s ease-in-out infinite',
+                            width: '0%'
+                          }}
+                        ></div>
                       </div>
                     </div>
                   </div>

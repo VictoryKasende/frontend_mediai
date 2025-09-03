@@ -5,13 +5,13 @@ const getBaseURL = () => {
   if (process.env.NODE_ENV === 'production') {
     return 'https://mediai-front-app-3vcax.ondigitalocean.app/api/v1';
   }
-  return 'http://localhost:8000/api/v1';
+  return 'https://medi-ai-app-t7r39.ondigitalocean.app';
 };
 
 // Configuration de base
 const API_CONFIG = {
   LOCAL_URL: 'http://localhost:8000/api/v1',
-  PRODUCTION_URL: 'https://backend-mediai-production.up.railway.app/api/v1',
+  PRODUCTION_URL: 'https://medi-ai-app-t7r39.ondigitalocean.app/api/v1',
   TIMEOUT: 30000
 };
 
