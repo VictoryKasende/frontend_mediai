@@ -1,26 +1,40 @@
 import axios from 'axios';
 
-// Configuration de base d'Axios
+// Configuration des URL selon l'environnement
+const getBaseURL = () => {
+  if (process.env.NODE_ENV === 'production') {
+    return 'https://mediai-front-app-3vcax.ondigitalocean.app/api/v1';
+  }
+  return 'http://localhost:8000/api/v1';
+};
+
+// Configuration de base
+const API_CONFIG = {
+  LOCAL_URL: 'http://localhost:8000/api/v1',
+  PRODUCTION_URL: 'https://backend-mediai-production.up.railway.app/api/v1',
+  TIMEOUT: 30000
+};
+
+// Créer l'instance axios
 const api = axios.create({
-  baseURL: process.env.REACT_APP_API_URL || 'http://localhost:3001/api',
-  timeout: 10000,
+  baseURL: getBaseURL(),
+  timeout: API_CONFIG.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
-  }
+    'Accept': 'application/json',
+  },
 });
 
 // Intercepteur pour ajouter le token d'authentification
 api.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('mediai_token');
+    const token = localStorage.getItem('mediai_access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
 // Intercepteur pour gérer les réponses et erreurs
@@ -28,12 +42,41 @@ api.interceptors.response.use(
   (response) => {
     return response;
   },
-  (error) => {
-    // Gestion des erreurs d'authentification
-    if (error.response?.status === 401) {
-      localStorage.removeItem('mediai_token');
-      localStorage.removeItem('mediai_user');
-      window.location.href = '/auth/login';
+  async (error) => {
+    const originalRequest = error.config;
+
+    // Gestion du token expiré (401)
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+      
+      const refreshToken = localStorage.getItem('mediai_refresh_token');
+      if (refreshToken) {
+        try {
+          const response = await axios.post(`${getBaseURL()}/auth/refresh/`, {
+            refresh: refreshToken
+          });
+          
+          const newAccessToken = response.data.access;
+          localStorage.setItem('mediai_access_token', newAccessToken);
+          
+          // Retry la requête originale avec le nouveau token
+          originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
+          return api(originalRequest);
+        } catch (refreshError) {
+          // Si le refresh échoue, déconnecter l'utilisateur
+          localStorage.removeItem('mediai_access_token');
+          localStorage.removeItem('mediai_refresh_token');
+          localStorage.removeItem('mediai_user');
+          window.location.href = '/auth/login';
+          return Promise.reject(refreshError);
+        }
+      } else {
+        // Pas de refresh token, rediriger vers login
+        localStorage.removeItem('mediai_access_token');
+        localStorage.removeItem('mediai_refresh_token');
+        localStorage.removeItem('mediai_user');
+        window.location.href = '/auth/login';
+      }
     }
     
     // Gestion des erreurs réseau
@@ -51,78 +94,230 @@ api.interceptors.response.use(
 // ==================== AUTHENTIFICATION ====================
 
 /**
- * Service d'authentification
+ * Service d'authentification selon l'API Medical IA
  */
 export const authService = {
   /**
+   * Enregistrement d'un nouvel utilisateur
+   * @param {Object} userData - Données d'enregistrement
+   * @param {string} userData.username - Nom d'utilisateur
+   * @param {string} userData.password - Mot de passe (minimum 4 caractères)
+   * @param {string} userData.email - Email
+   * @param {string} userData.role - Role ('patient' ou 'medecin')
+   * @param {string} userData.first_name - Prénom
+   * @param {string} userData.last_name - Nom
+   * @returns {Promise<Object>} - Données utilisateur créé
+   */
+  async register(userData) {
+    try {
+      const response = await api.post('/auth/users/register/', userData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Connexion utilisateur
    * @param {Object} credentials - Identifiants de connexion
-   * @param {string} credentials.email - Email
+   * @param {string} credentials.username - Nom d'utilisateur
    * @param {string} credentials.password - Mot de passe
-   * @returns {Promise<Object>} - Données utilisateur et token
+   * @returns {Promise<Object>} - Tokens JWT
    */
-  login: async (credentials) => {
+  async login(credentials) {
     try {
-      const response = await api.post('/auth/login', credentials);
-      return response.data;
+      const response = await api.post('/auth/token/', credentials);
+      const { access, refresh } = response.data;
+      
+      // Stocker les tokens
+      localStorage.setItem('mediai_access_token', access);
+      localStorage.setItem('mediai_refresh_token', refresh);
+      
+      // Récupérer les informations utilisateur
+      const userInfo = await this.getUserProfile();
+      localStorage.setItem('mediai_user', JSON.stringify(userInfo));
+      
+      return {
+        tokens: { access, refresh },
+        user: userInfo
+      };
     } catch (error) {
-      throw error.response?.data || error;
+      throw this.handleError(error);
     }
   },
 
   /**
-   * Inscription utilisateur
-   * @param {Object} userData - Données d'inscription
-   * @returns {Promise<Object>} - Confirmation d'inscription
+   * Rafraîchir le token d'accès
+   * @param {string} refreshToken - Token de rafraîchissement
+   * @returns {Promise<Object>} - Nouveau token d'accès
    */
-  register: async (userData) => {
+  async refreshToken(refreshToken) {
     try {
-      const response = await api.post('/auth/register', userData);
+      const response = await api.post('/auth/refresh/', {
+        refresh: refreshToken
+      });
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      throw this.handleError(error);
     }
   },
 
   /**
-   * Déconnexion
+   * Vérifier la validité d'un token
+   * @param {string} token - Token à vérifier
+   * @returns {Promise<boolean>} - Validité du token
+   */
+  async verifyToken(token) {
+    try {
+      await api.post('/auth/verify/', { token });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  },
+
+  /**
+   * Récupérer le profil utilisateur
+   * @returns {Promise<Object>} - Profil utilisateur
+   */
+  async getUserProfile() {
+    try {
+      const response = await api.get('/auth/users/me/');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Modifier le profil utilisateur
+   * @param {Object} profileData - Données à modifier
+   * @param {string} profileData.first_name - Prénom
+   * @param {string} profileData.last_name - Nom
+   * @param {string} profileData.email - Email
+   * @returns {Promise<Object>} - Profil mis à jour
+   */
+  async updateProfile(profileData) {
+    try {
+      const response = await api.patch('/auth/users/me/', profileData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Déconnexion utilisateur
    * @returns {Promise<void>}
    */
-  logout: async () => {
+  async logout() {
     try {
-      await api.post('/auth/logout');
+      const refreshToken = localStorage.getItem('mediai_refresh_token');
+      if (refreshToken) {
+        // Essayer d'abord l'endpoint standard de logout
+        try {
+          await api.post('/auth/logout/', {
+            refresh: refreshToken
+          });
+        } catch (logoutError) {
+          // Si ça échoue, essayer l'endpoint de blacklist
+          try {
+            await api.post('/auth/token/blacklist/', {
+              refresh: refreshToken
+            });
+          } catch (blacklistError) {
+            console.warn('Impossible d\'invalider le token côté serveur:', blacklistError.response?.data || blacklistError.message);
+          }
+        }
+      }
     } catch (error) {
-      console.error('Erreur lors de la déconnexion:', error);
+      console.warn('Erreur lors de la déconnexion:', error.response?.data || error.message);
     } finally {
-      localStorage.removeItem('mediai_token');
+      // Nettoyer le localStorage dans tous les cas
+      localStorage.removeItem('mediai_access_token');
+      localStorage.removeItem('mediai_refresh_token');
       localStorage.removeItem('mediai_user');
     }
   },
 
   /**
-   * Récupérer le profil utilisateur actuel
-   * @returns {Promise<Object>} - Profil utilisateur
+   * Vérifier si l'utilisateur est connecté
+   * @returns {boolean} - État de connexion
    */
-  getProfile: async () => {
-    try {
-      const response = await api.get('/auth/profile');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
+  isAuthenticated() {
+    const token = localStorage.getItem('mediai_access_token');
+    const user = localStorage.getItem('mediai_user');
+    return !!(token && user);
   },
 
   /**
-   * Mot de passe oublié
-   * @param {string} email - Email de récupération
-   * @returns {Promise<Object>} - Confirmation d'envoi
+   * Récupérer l'utilisateur depuis le localStorage
+   * @returns {Object|null} - Données utilisateur
    */
-  forgotPassword: async (email) => {
-    try {
-      const response = await api.post('/auth/forgot-password', { email });
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
+  getCurrentUser() {
+    const userStr = localStorage.getItem('mediai_user');
+    return userStr ? JSON.parse(userStr) : null;
+  },
+
+  /**
+   * Gestion des erreurs d'authentification
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      switch (status) {
+        case 400:
+          return {
+            message: 'Données invalides',
+            details: data,
+            status: 400
+          };
+        case 401:
+          return {
+            message: 'Identifiants incorrects',
+            details: data,
+            status: 401
+          };
+        case 403:
+          return {
+            message: 'Accès refusé',
+            details: data,
+            status: 403
+          };
+        case 404:
+          return {
+            message: 'Service non trouvé',
+            details: data,
+            status: 404
+          };
+        case 500:
+          return {
+            message: 'Erreur serveur interne',
+            details: data,
+            status: 500
+          };
+        default:
+          return {
+            message: 'Erreur inconnue',
+            details: data,
+            status
+          };
+      }
+    } else if (error.request) {
+      return {
+        message: 'Erreur de connexion au serveur',
+        details: error.message,
+        status: 0
+      };
+    } else {
+      return {
+        message: 'Erreur inattendue',
+        details: error.message,
+        status: -1
+      };
     }
   }
 };
@@ -217,7 +412,7 @@ export const chatService = {
    */
   getConversations: async () => {
     try {
-      const response = await api.get('/chat/conversations');
+      const response = await api.get('/conversations/');
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -231,7 +426,7 @@ export const chatService = {
    */
   getMessages: async (conversationId) => {
     try {
-      const response = await api.get(`/chat/conversations/${conversationId}/messages`);
+      const response = await api.get(`/conversations/${conversationId}/messages/`);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -246,7 +441,7 @@ export const chatService = {
    */
   sendMessage: async (conversationId, messageData) => {
     try {
-      const response = await api.post(`/chat/conversations/${conversationId}/messages`, messageData);
+      const response = await api.post(`/conversations/${conversationId}/messages/`, messageData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
@@ -260,10 +455,262 @@ export const chatService = {
    */
   createConversation: async (conversationData) => {
     try {
-      const response = await api.post('/chat/conversations', conversationData);
+      const response = await api.post('/conversations/', conversationData);
       return response.data;
     } catch (error) {
       throw error.response?.data || error;
+    }
+  },
+
+  /**
+   * Obtenir les détails d'une conversation
+   * @param {string} conversationId - ID de la conversation
+   * @returns {Promise<Object>} - Détails de la conversation
+   */
+  getConversationDetails: async (conversationId) => {
+    try {
+      const response = await api.get(`/conversations/${conversationId}/`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
+   * Mettre à jour le titre d'une conversation
+   * @param {string} conversationId - ID de la conversation
+   * @param {string} titre - Nouveau titre
+   * @returns {Promise<Object>} - Conversation mise à jour
+   */
+  updateConversationTitle: async (conversationId, titre) => {
+    try {
+      const response = await api.patch(`/conversations/${conversationId}/`, { titre });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
+   * Supprimer une conversation
+   * @param {string} conversationId - ID de la conversation
+   * @returns {Promise<void>} - Confirmation de suppression
+   */
+  deleteConversation: async (conversationId) => {
+    try {
+      const response = await api.delete(`/conversations/${conversationId}/`);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  }
+};
+
+// ==================== IA MEDICALE ====================
+
+/**
+ * Service de gestion de l'IA médicale
+ */
+export const iaService = {
+  /**
+   * Démarrer une analyse IA des symptômes (selon votre exemple)
+   * @param {Object} analyseData - Données pour l'analyse
+   * @param {string} analyseData.symptomes - Description des symptômes
+   * @param {number} analyseData.conversation_id - ID de la conversation (optionnel)
+   * @returns {Promise<Object>} - Résultat de l'analyse ou task_id
+   */
+  async startAnalyse(analyseData) {
+    try {
+      const token = localStorage.getItem('mediai_access_token');
+      const baseURL = getBaseURL().replace('/api/v1', ''); // Retirer /api/v1 pour avoir la base
+      
+      const response = await fetch(`${baseURL}/api/ia/analyse/`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          symptomes: analyseData.symptomes,
+          conversation_id: analyseData.conversation_id
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Vérifier le statut d'une tâche IA
+   * @param {string} taskId - ID de la tâche Celery
+   * @returns {Promise<Object>} - Statut de la tâche
+   */
+  async getTaskStatus(taskId) {
+    try {
+      const token = localStorage.getItem('mediai_access_token');
+      const baseURL = getBaseURL().replace('/api/v1', '');
+      
+      const response = await fetch(`${baseURL}/api/ia/status/${taskId}/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Récupérer le résultat d'une analyse IA
+   * @param {string} cacheKey - Clé de cache retournée lors du démarrage
+   * @returns {Promise<Object>} - Résultat de l'analyse
+   */
+  async getAnalyseResult(cacheKey) {
+    try {
+      const token = localStorage.getItem('mediai_access_token');
+      const baseURL = getBaseURL().replace('/api/v1', '');
+      
+      const response = await fetch(`${baseURL}/api/ia/result/?cache_key=${cacheKey}`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Analyser des symptômes avec polling automatique du résultat
+   * @param {Object} analyseData - Données pour l'analyse
+   * @param {Function} onProgress - Callback pour le suivi du progrès (optionnel)
+   * @returns {Promise<Object>} - Résultat final de l'analyse
+   */
+  async analyzeSymptoms(analyseData, onProgress = null) {
+    try {
+      // Démarrer l'analyse
+      const startResult = await this.startAnalyse(analyseData);
+      
+      // Si déjà en cache, retourner immédiatement
+      if (startResult.already_cached && startResult.response) {
+        return {
+          status: 'done',
+          response: startResult.response,
+          cache_key: startResult.cache_key
+        };
+      }
+
+      // Sinon, poller le résultat
+      const cacheKey = startResult.cache_key;
+      let attempts = 0;
+      const maxAttempts = 30; // 30 secondes max
+      
+      while (attempts < maxAttempts) {
+        if (onProgress) {
+          onProgress({
+            status: 'pending',
+            progress: Math.min((attempts / maxAttempts) * 100, 90),
+            message: 'Analyse en cours...'
+          });
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Attendre 1 seconde
+        
+        const result = await this.getAnalyseResult(cacheKey);
+        
+        if (result.status === 'done' && result.response) {
+          if (onProgress) {
+            onProgress({
+              status: 'done',
+              progress: 100,
+              message: 'Analyse terminée !'
+            });
+          }
+          return result;
+        }
+        
+        attempts++;
+      }
+
+      throw new Error('Timeout: L\'analyse IA a pris trop de temps');
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs d'IA
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      switch (status) {
+        case 400:
+          return {
+            message: 'Données invalides pour l\'analyse IA',
+            details: data,
+            status: 400
+          };
+        case 401:
+          return {
+            message: 'Autorisation requise pour utiliser l\'IA',
+            details: data,
+            status: 401
+          };
+        case 403:
+          return {
+            message: 'Accès à l\'IA réservé aux médecins',
+            details: data,
+            status: 403
+          };
+        case 429:
+          return {
+            message: 'Trop de requêtes IA. Veuillez patienter.',
+            details: data,
+            status: 429
+          };
+        case 500:
+          return {
+            message: 'Erreur serveur lors de l\'analyse IA',
+            details: data,
+            status: 500
+          };
+        default:
+          return {
+            message: 'Erreur inconnue de l\'IA médicale',
+            details: data,
+            status
+          };
+      }
+    } else if (error.request) {
+      return {
+        message: 'Erreur de connexion au service IA',
+        details: error.message,
+        status: 0
+      };
+    } else {
+      return {
+        message: 'Erreur inattendue lors de l\'analyse IA',
+        details: error.message,
+        status: -1
+      };
     }
   }
 };

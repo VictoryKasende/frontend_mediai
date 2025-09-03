@@ -28,7 +28,7 @@ import {
  * Formulaire multi-étapes avec validation complète
  */
 const Register = () => {
-  const { USER_ROLES } = useAuth();
+  const { register } = useAuth();
   const navigate = useNavigate();
   
   // État du formulaire multi-étapes
@@ -39,6 +39,7 @@ const Register = () => {
     // Étape 1: Informations personnelles
     firstName: '',
     lastName: '',
+    username: '',
     email: '',
     phone: '',
     dateOfBirth: '',
@@ -55,8 +56,7 @@ const Register = () => {
     password: '',
     confirmPassword: '',
     acceptTerms: false,
-    acceptMarketing: false,
-    role: USER_ROLES.PATIENT
+    acceptMarketing: false
   });
   
   const [errors, setErrors] = useState({});
@@ -123,11 +123,9 @@ const Register = () => {
         }
         
         if (!formData.gender) {
-          newErrors.gender = 'Veuillez sélectionner votre genre';
+          newErrors.gender = 'Le genre est requis';
         }
-        break;
-        
-      case 2:
+        break;      case 2:
         if (!formData.address.trim()) {
           newErrors.address = 'L\'adresse est requise';
         }
@@ -200,18 +198,18 @@ const Register = () => {
     setIsLoading(true);
 
     try {
-      // TODO: Remplacer par un appel API réel
-      // Simulation d'une inscription réussie
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const result = await register(formData);
       
-      console.log('Données d\'inscription complètes:', formData);
-      
-      // Rediriger vers la page de connexion avec un message de succès
-      navigate('/auth/login', { 
-        state: { 
-          message: 'Inscription réussie ! Bienvenue sur Mediai. Vous pouvez maintenant vous connecter.' 
-        } 
-      });
+      if (result.success) {
+        // Rediriger vers la page de connexion avec un message de succès
+        navigate('/auth/login', {
+          state: {
+            message: 'Inscription réussie ! Vous pouvez maintenant vous connecter avec vos identifiants.'
+          }
+        });
+      } else {
+        setErrors({ submit: result.error });
+      }
     } catch (error) {
       setErrors({ submit: 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.' });
     } finally {
@@ -248,6 +246,19 @@ const Register = () => {
       </div>
 
       <Input
+        label="Nom d'utilisateur"
+        type="text"
+        name="username"
+        value={formData.username}
+        onChange={handleChange}
+        placeholder="nom_utilisateur"
+        required
+        error={errors.username}
+        icon={UserIcon}
+        helperText="Choisissez un nom d'utilisateur unique"
+      />
+
+      <Input
         label="Adresse email"
         type="email"
         name="email"
@@ -257,7 +268,7 @@ const Register = () => {
         required
         error={errors.email}
         icon={EnvelopeIcon}
-        helperText="Votre email servira à vous connecter"
+        helperText="Votre email pour les notifications"
       />
 
       <PhoneInput

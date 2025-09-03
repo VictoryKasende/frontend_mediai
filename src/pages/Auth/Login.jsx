@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PasswordInput from '../../components/PasswordInput';
@@ -25,17 +26,25 @@ import {
  */
 const Login = () => {
   const { login, isLoading } = useAuth();
+  const { showSuccess, showError, showInfo } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
   
   // Message de succès depuis l'inscription
   const successMessage = location.state?.message;
   const [formData, setFormData] = useState({
-    email: '',
+    username: '',
     password: ''
   });
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
+
+  // Afficher le message de bienvenue ou d'inscription réussie
+  useEffect(() => {
+    if (successMessage) {
+      showSuccess(successMessage);
+    }
+  }, [successMessage, showSuccess]);
 
   // Gestion des changements dans le formulaire
   const handleChange = (e) => {
@@ -57,10 +66,8 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.email) {
-      newErrors.email = 'L\'email est requis';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Format d\'email invalide';
+    if (!formData.username) {
+      newErrors.username = 'Le nom d\'utilisateur est requis';
     }
 
     if (!formData.password) {
@@ -84,12 +91,24 @@ const Login = () => {
     try {
       const result = await login(formData);
       if (result.success) {
-        navigate('/dashboard');
+        // Toast de succès
+        showSuccess(`Bienvenue ${result.user?.first_name || 'sur Mediai'} ! Connexion réussie.`);
+        
+        // Rediriger selon le rôle de l'utilisateur
+        const userRole = result.user?.role;
+        if (userRole === 'medecin') {
+          navigate('/doctor/dashboard');
+        } else {
+          navigate('/patient/dashboard');
+        }
       } else {
         setErrors({ submit: result.error });
+        showError(result.error || 'Identifiants incorrects');
       }
     } catch (error) {
-      setErrors({ submit: 'Une erreur est survenue lors de la connexion' });
+      const errorMessage = 'Une erreur est survenue lors de la connexion';
+      setErrors({ submit: errorMessage });
+      showError(errorMessage);
     }
   };
 
@@ -115,16 +134,16 @@ const Login = () => {
           <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="space-y-4">
               <Input
-                label="Adresse email"
-                type="email"
-                name="email"
-                value={formData.email}
+                label="Nom d'utilisateur"
+                type="text"
+                name="username"
+                value={formData.username}
                 onChange={handleChange}
-                placeholder="nom@exemple.com"
+                placeholder="Votre nom d'utilisateur"
                 required
-                error={errors.email}
-                icon={EnvelopeIcon}
-                helperText="Votre email de connexion"
+                error={errors.username}
+                icon={UserIcon}
+                helperText="Votre identifiant de connexion"
               />
 
               <PasswordInput

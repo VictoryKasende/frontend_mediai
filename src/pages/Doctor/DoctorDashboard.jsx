@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useLogout } from '../../hooks/useLogout';
 import { useNavigate } from 'react-router-dom';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
 import Logo from '../../components/Logo';
@@ -12,7 +13,8 @@ import DoctorChatIa from './DoctorChatIa';
  * Affichage des statistiques et suivi de l'activité médicale
  */
 const DoctorDashboard = () => {
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
+  const { handleLogout } = useLogout();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     consultationsEnCours: 0,
@@ -24,6 +26,13 @@ const DoctorDashboard = () => {
   const [activeView, setActiveView] = useState('overview');
   const [selectedConsultation, setSelectedConsultation] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  
+  // États pour la gestion des patients
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('tous');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [showPatientDetail, setShowPatientDetail] = useState(false);
 
   // Simulation du chargement des données médicales
   useEffect(() => {
@@ -289,9 +298,9 @@ const DoctorDashboard = () => {
       <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-border-light">
         <div className="gradient-mediai text-white p-6 rounded-t-2xl flex justify-between items-center">
           <div>
-            <h3 className="text-xl font-bold flex items-center font-medical">
+            <h3 className="text-xl font-bold flex items-center font-heading">
               <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center mr-3">
-                <Icon icon={NavigationIcons.Chat} size="w-5 h-5" />
+                <MedicalIcon icon={NavigationIcons.Chat} size="w-5 h-5" />
               </div>
               Chat IA Médical
             </h3>
@@ -317,7 +326,7 @@ const DoctorDashboard = () => {
                 <MedicalIcon icon={NavigationIcons.Chat} size="w-8 h-8" className="text-white" />
               </div>
               <h4 className="text-lg font-semibold text-mediai-dark mb-2 font-heading">Chat IA Médical</h4>
-              <p className="text-medical-body-secondary">Consultation envoyée au système d'intelligence artificielle...</p>
+              <p className="text-mediai-medium font-body">Consultation envoyée au système d'intelligence artificielle...</p>
             </div>
           ) : (
             chatMessages.map((message) => (
@@ -353,8 +362,8 @@ const DoctorDashboard = () => {
             <button
               onClick={sendChatMessage}
               disabled={!chatInput.trim()}
-              className="px-6 py-3 gradient-mediai text-white rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-semibold">
-              <Icon icon={ActionIcons.Send} size="w-5 h-5" />
+              className="px-6 py-3 gradient-mediai text-white rounded-xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 font-body-medium">
+              <MedicalIcon icon={ActionIcons.Send} size="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -374,100 +383,529 @@ const DoctorDashboard = () => {
     <DoctorChatIa />
   );
 
-  const renderPatients = () => (
-    <div className="space-y-6 animate-fadeIn">
-      {/* Header */}
-      <div className="bg-white rounded-2xl shadow-lg p-6 border border-border-light">
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="w-12 h-12 gradient-mediai rounded-xl flex items-center justify-center">
-            <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
+  const renderPatients = () => {
+    // Données complètes des patients (maintenant sans hooks)
+    const allPatients = [
+      { 
+        id: 1, 
+        nom: "Marie Dupont", 
+        prenom: "Marie",
+        age: 34, 
+        dateNaissance: "1991-03-15",
+        telephone: "+243 85 123 4567",
+        email: "marie.dupont@email.com",
+        adresse: "123 Avenue Lumumba, Kinshasa",
+        derniere: "2025-08-28", 
+        statut: "Suivi", 
+        motif: "Hypertension",
+        medicaments: ["Lisinopril 10mg", "Hydrochlorothiazide 25mg"],
+        allergies: ["Pénicilline"],
+        antecedents: ["Diabète familial"],
+        assurance: "SONAS",
+        consultations: 8
+      },
+      { 
+        id: 2, 
+        nom: "Jean Martin", 
+        prenom: "Jean",
+        age: 45, 
+        dateNaissance: "1980-07-22",
+        telephone: "+243 81 987 6543",
+        email: "jean.martin@email.com",
+        adresse: "456 Boulevard du 30 Juin, Kinshasa",
+        derniere: "2025-08-27", 
+        statut: "Traitement", 
+        motif: "Diabète type 2",
+        medicaments: ["Metformine 500mg", "Insuline"],
+        allergies: ["Aucune connue"],
+        antecedents: ["Hypertension", "Obésité"],
+        assurance: "CNSS",
+        consultations: 15
+      },
+      { 
+        id: 3, 
+        nom: "Sarah Johnson", 
+        prenom: "Sarah",
+        age: 28, 
+        dateNaissance: "1997-11-08",
+        telephone: "+243 99 456 7890",
+        email: "sarah.johnson@email.com",
+        adresse: "789 Rue de la Paix, Kinshasa",
+        derniere: "2025-08-26", 
+        statut: "Guéri", 
+        motif: "Infection respiratoire",
+        medicaments: ["Amoxicilline"],
+        allergies: ["Aspirine"],
+        antecedents: ["Asthme léger"],
+        assurance: "Privée",
+        consultations: 3
+      },
+      { 
+        id: 4, 
+        nom: "Paul Mukendi", 
+        prenom: "Paul",
+        age: 52, 
+        dateNaissance: "1973-01-30",
+        telephone: "+243 82 321 6547",
+        email: "paul.mukendi@email.com",
+        adresse: "321 Avenue Kasavubu, Kinshasa",
+        derniere: "2025-08-25", 
+        statut: "Urgence", 
+        motif: "Douleurs cardiaques",
+        medicaments: ["Aspirine", "Atorvastatine"],
+        allergies: ["Iode"],
+        antecedents: ["Infarctus 2020", "Cholestérol"],
+        assurance: "SONAS",
+        consultations: 12
+      },
+      { 
+        id: 5, 
+        nom: "Anne Kabongo", 
+        prenom: "Anne",
+        age: 39, 
+        dateNaissance: "1986-05-14",
+        telephone: "+243 84 654 3210",
+        email: "anne.kabongo@email.com",
+        adresse: "654 Rue Lumière, Kinshasa",
+        derniere: "2025-08-24", 
+        statut: "Suivi", 
+        motif: "Grossesse - 3e trimestre",
+        medicaments: ["Vitamines prénatales", "Fer"],
+        allergies: ["Latex"],
+        antecedents: ["2 grossesses normales"],
+        assurance: "CNSS",
+        consultations: 6
+      }
+    ];
+
+    // Filtrage des patients
+    const filteredPatients = allPatients.filter(patient => {
+      const matchesSearch = patient.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           patient.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           patient.motif.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesFilter = filterStatus === 'tous' || patient.statut.toLowerCase() === filterStatus.toLowerCase();
+      return matchesSearch && matchesFilter;
+    });
+
+  const getStatutBadge = (statut) => {
+    switch(statut) {
+      case 'Suivi': return 'bg-blue-100 text-blue-800 border-blue-200';
+      case 'Traitement': return 'bg-warning/10 text-warning border-warning/20';
+      case 'Guéri': return 'bg-success/10 text-success border-success/20';
+      case 'Urgence': return 'bg-danger/10 text-danger border-danger/20';
+      default: return 'bg-mediai-light text-mediai-medium border-border-light';
+    }
+  };
+
+    const openPatientDetail = (patient) => {
+      setSelectedPatient(patient);
+      setShowPatientDetail(true);
+    };
+
+    const renderPatientDetailModal = () => (
+      <div className="fixed inset-0 bg-overlay-bg backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-border-light">
+          <div className="gradient-mediai text-white p-6 rounded-t-2xl flex justify-between items-center">
+            <div className="flex items-center space-x-4">
+              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold font-heading">
+                  {selectedPatient?.prenom} {selectedPatient?.nom}
+                </h3>
+                <p className="text-white/80 text-sm">Dossier médical - {selectedPatient?.age} ans</p>
+              </div>
+            </div>
+            <button 
+              onClick={() => setShowPatientDetail(false)}
+              className="text-white hover:bg-white/20 rounded-xl p-2 transition-all">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
           </div>
-          <div>
-            <h2 className="text-xl font-bold text-mediai-dark font-heading">Gestion des patients</h2>
-            <p className="text-sm text-mediai-medium font-body">Suivez et gérez vos patients</p>
+          
+          <div className="p-6 space-y-6">
+            {/* Informations personnelles */}
+            <div className="bg-light rounded-xl p-6 border border-border-light">
+              <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
+                <MedicalIcon icon={MedicalIcons.User} size="w-5 h-5" className="text-mediai-primary mr-2" />
+                Informations personnelles
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Date de naissance</p>
+                  <p className="text-mediai-dark">{selectedPatient?.dateNaissance}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Téléphone</p>
+                  <p className="text-mediai-dark">{selectedPatient?.telephone}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Email</p>
+                  <p className="text-mediai-dark">{selectedPatient?.email}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Assurance</p>
+                  <p className="text-mediai-dark">{selectedPatient?.assurance}</p>
+                </div>
+                <div className="md:col-span-2">
+                  <p className="text-sm text-mediai-medium font-subheading">Adresse</p>
+                  <p className="text-mediai-dark">{selectedPatient?.adresse}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Statut médical actuel */}
+            <div className="bg-light rounded-xl p-6 border border-border-light">
+              <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
+                <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-5 h-5" className="text-mediai-primary mr-2" />
+                Statut médical actuel
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Motif de suivi</p>
+                  <p className="text-mediai-dark">{selectedPatient?.motif}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Statut</p>
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatutBadge(selectedPatient?.statut)}`}>
+                    {selectedPatient?.statut}
+                  </span>
+                </div>
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Dernière consultation</p>
+                  <p className="text-mediai-dark">{selectedPatient?.derniere}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-mediai-medium font-subheading">Nombre de consultations</p>
+                  <p className="text-mediai-dark">{selectedPatient?.consultations}</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Médicaments actuels */}
+            <div className="bg-light rounded-xl p-6 border border-border-light">
+              <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
+                <MedicalIcon icon={MedicalIcons.Prescription} size="w-5 h-5" className="text-mediai-primary mr-2" />
+                Médicaments actuels
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {selectedPatient?.medicaments.map((med, index) => (
+                  <span key={index} className="bg-success/10 text-success px-3 py-1 rounded-full text-sm font-medium">
+                    {med}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Allergies et antécédents */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-light rounded-xl p-6 border border-border-light">
+                <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
+                  <MedicalIcon icon={StatusIcons.Warning} size="w-5 h-5" className="text-warning mr-2" />
+                  Allergies
+                </h4>
+                <div className="space-y-2">
+                  {selectedPatient?.allergies.map((allergie, index) => (
+                    <span key={index} className="block bg-warning/10 text-warning px-3 py-2 rounded-lg text-sm font-medium">
+                      ⚠️ {allergie}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-light rounded-xl p-6 border border-border-light">
+                <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
+                  <MedicalIcon icon={MedicalIcons.History} size="w-5 h-5" className="text-mediai-secondary mr-2" />
+                  Antécédents
+                </h4>
+                <div className="space-y-2">
+                  {selectedPatient?.antecedents.map((antecedent, index) => (
+                    <span key={index} className="block bg-mediai-secondary/10 text-mediai-secondary px-3 py-2 rounded-lg text-sm font-medium">
+                      📋 {antecedent}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex flex-wrap gap-3 pt-4 border-t border-border-light">
+              <button className="flex items-center space-x-2 bg-mediai-primary text-white px-4 py-2 rounded-lg hover:bg-mediai-secondary transition-colors">
+                <MedicalIcon icon={MedicalIcons.Appointment} size="w-4 h-4" />
+                <span>Nouvelle consultation</span>
+              </button>
+              <button className="flex items-center space-x-2 bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
+                <MedicalIcon icon={MedicalIcons.Prescription} size="w-4 h-4" />
+                <span>Prescrire</span>
+              </button>
+              <button className="flex items-center space-x-2 bg-mediai-secondary text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors">
+                <MedicalIcon icon={MedicalIcons.History} size="w-4 h-4" />
+                <span>Historique</span>
+              </button>
+              <button className="flex items-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
+                <MedicalIcon icon={ActionIcons.Edit} size="w-4 h-4" />
+                <span>Modifier</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+
+    const renderAddPatientModal = () => (
+      <div className="fixed inset-0 bg-overlay-bg backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-border-light">
+          <div className="gradient-mediai text-white p-6 rounded-t-2xl flex justify-between items-center">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                <MedicalIcon icon={ActionIcons.Add} size="w-5 h-5" className="text-white" />
+              </div>
+              <h3 className="text-xl font-bold font-heading">Nouveau patient</h3>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(false)}
+              className="text-white hover:bg-white/20 rounded-xl p-2 transition-all">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="p-6">
+            <form className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Prénom *</label>
+                  <input type="text" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Nom *</label>
+                  <input type="text" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Date de naissance *</label>
+                  <input type="date" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Téléphone *</label>
+                  <input type="tel" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Email</label>
+                  <input type="email" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
+                </div>
+                <div>
+                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Assurance</label>
+                  <select className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary">
+                    <option value="">Sélectionner...</option>
+                    <option value="SONAS">SONAS</option>
+                    <option value="CNSS">CNSS</option>
+                    <option value="Privée">Assurance privée</option>
+                    <option value="Aucune">Aucune</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-subheading text-mediai-dark mb-2">Adresse</label>
+                <textarea rows="2" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary"></textarea>
+              </div>
+
+              <div>
+                <label className="block text-sm font-subheading text-mediai-dark mb-2">Motif de consultation</label>
+                <textarea rows="3" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" placeholder="Décrivez le motif de la première consultation..."></textarea>
+              </div>
+
+              <div className="flex justify-end space-x-3 pt-4 border-t border-border-light">
+                <button 
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-6 py-2 border border-border-light text-mediai-medium rounded-lg hover:bg-light transition-colors">
+                  Annuler
+                </button>
+                <button 
+                  type="submit"
+                  className="px-6 py-2 gradient-mediai text-white rounded-lg hover:shadow-lg transition-all">
+                  Ajouter le patient
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+    );
+
+    return (
+      <div className="space-y-6 animate-fadeIn">
+        {/* Header avec actions */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 border border-border-light">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            <div className="flex items-center space-x-3">
+              <div className="w-12 h-12 gradient-mediai rounded-xl flex items-center justify-center">
+                <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-mediai-dark font-heading">Gestion des patients</h2>
+                <p className="text-sm text-mediai-medium font-body">
+                  {filteredPatients.length} patient{filteredPatients.length > 1 ? 's' : ''} • Total: {allPatients.length}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
+              <button 
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center justify-center space-x-2 bg-mediai-primary text-white px-4 py-2 rounded-lg hover:bg-mediai-secondary transition-colors font-body-medium">
+                <MedicalIcon icon={ActionIcons.Add} size="w-4 h-4" />
+                <span>Nouveau patient</span>
+              </button>
+              <button className="flex items-center justify-center space-x-2 bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-body-medium">
+                <MedicalIcon icon={ActionIcons.Export} size="w-4 h-4" />
+                <span>Exporter</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Barre de recherche et filtres */}
+          <div className="mt-6 flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-4">
+            <div className="flex-1">
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Rechercher un patient (nom, prénom, motif)..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-mediai-primary bg-light"
+                />
+                <MedicalIcon icon={ActionIcons.Search} size="w-5 h-5" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-mediai-medium" />
+              </div>
+            </div>
+            <div className="lg:w-48">
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="w-full px-4 py-3 border border-border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-mediai-primary bg-light">
+                <option value="tous">Tous les statuts</option>
+                <option value="suivi">En suivi</option>
+                <option value="traitement">En traitement</option>
+                <option value="guéri">Guéri</option>
+                <option value="urgence">Urgence</option>
+              </select>
+            </div>
           </div>
         </div>
 
         {/* Statistiques des patients */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-light p-4 rounded-xl border border-border-light">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
             <div className="flex items-center">
               <MedicalIcon icon={StatusIcons.Success} size="w-8 h-8" className="text-success mr-3" />
               <div>
-                <p className="text-2xl font-bold text-mediai-dark">{stats.patientsTotal}</p>
+                <p className="text-2xl font-bold text-mediai-dark">{allPatients.length}</p>
                 <p className="text-sm text-mediai-medium">Patients total</p>
               </div>
             </div>
           </div>
-          <div className="bg-light p-4 rounded-xl border border-border-light">
+          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
             <div className="flex items-center">
               <MedicalIcon icon={MedicalIcons.Appointment} size="w-8 h-8" className="text-warning mr-3" />
               <div>
-                <p className="text-2xl font-bold text-mediai-dark">12</p>
-                <p className="text-sm text-mediai-medium">Nouveaux cette semaine</p>
+                <p className="text-2xl font-bold text-mediai-dark">{allPatients.filter(p => p.statut === 'Suivi').length}</p>
+                <p className="text-sm text-mediai-medium">En suivi</p>
               </div>
             </div>
           </div>
-          <div className="bg-light p-4 rounded-xl border border-border-light">
+          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
             <div className="flex items-center">
               <MedicalIcon icon={StatusIcons.Warning} size="w-8 h-8" className="text-mediai-primary mr-3" />
               <div>
-                <p className="text-2xl font-bold text-mediai-dark">3</p>
-                <p className="text-sm text-mediai-medium">Suivi prioritaire</p>
+                <p className="text-2xl font-bold text-mediai-dark">{allPatients.filter(p => p.statut === 'Traitement').length}</p>
+                <p className="text-sm text-mediai-medium">En traitement</p>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
+            <div className="flex items-center">
+              <MedicalIcon icon={StatusIcons.Error} size="w-8 h-8" className="text-danger mr-3" />
+              <div>
+                <p className="text-2xl font-bold text-mediai-dark">{allPatients.filter(p => p.statut === 'Urgence').length}</p>
+                <p className="text-sm text-mediai-medium">Urgences</p>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Liste des patients récents */}
-      <div className="bg-white rounded-2xl shadow-lg border border-border-light overflow-hidden">
-        <div className="bg-light px-6 py-4 border-b border-border-light">
-          <h3 className="text-lg font-bold text-mediai-dark font-heading">Patients récents</h3>
-        </div>
-        <div className="p-6">
-          <div className="space-y-4">
-            {[
-              { id: 1, nom: "Marie Dupont", age: 34, derniere: "2025-08-28", statut: "Suivi", motif: "Hypertension" },
-              { id: 2, nom: "Jean Martin", age: 45, derniere: "2025-08-27", statut: "Traitement", motif: "Diabète type 2" },
-              { id: 3, nom: "Sarah Johnson", age: 28, derniere: "2025-08-26", statut: "Guéri", motif: "Infection respiratoire" }
-            ].map((patient) => (
-              <div key={patient.id} className="flex items-center justify-between p-4 border border-border-light rounded-xl hover:bg-light transition-all duration-300">
-                <div className="flex items-center space-x-4">
-                  <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center">
-                    <MedicalIcon icon={MedicalIcons.User} size="w-6 h-6" className="text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-mediai-dark">{patient.nom}</p>
-                    <p className="text-sm text-mediai-medium">{patient.age} ans • {patient.motif}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-mediai-dark">Dernière consultation</p>
-                    <p className="text-xs text-mediai-medium">{patient.derniere}</p>
-                  </div>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                    patient.statut === 'Suivi' ? 'bg-warning/10 text-warning' :
-                    patient.statut === 'Traitement' ? 'bg-mediai-primary/10 text-mediai-primary' :
-                    'bg-success/10 text-success'
-                  }`}>
-                    {patient.statut}
-                  </span>
-                </div>
+        {/* Liste des patients */}
+        <div className="bg-white rounded-2xl shadow-lg border border-border-light overflow-hidden">
+          <div className="bg-light px-6 py-4 border-b border-border-light">
+            <h3 className="text-lg font-bold text-mediai-dark font-heading">
+              Liste des patients ({filteredPatients.length})
+            </h3>
+          </div>
+          <div className="p-6">
+            {filteredPatients.length === 0 ? (
+              <div className="text-center py-12">
+                <MedicalIcon icon={StatusIcons.Info} size="w-12 h-12" className="text-mediai-medium mx-auto mb-4" />
+                <p className="text-mediai-medium">Aucun patient trouvé</p>
+                <p className="text-sm text-mediai-medium mt-2">Modifiez vos critères de recherche ou ajoutez un nouveau patient</p>
               </div>
-            ))}
-          </div>
-          
-          <div className="mt-6 text-center">
-            <button className="bg-mediai-primary hover:bg-mediai-secondary text-white px-6 py-3 rounded-xl font-semibold transition-colors duration-300">
-              Voir tous les patients
-            </button>
+            ) : (
+              <div className="space-y-4">
+                {filteredPatients.map((patient) => (
+                  <div key={patient.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border border-border-light rounded-xl hover:bg-light transition-all duration-300 hover-lift space-y-3 lg:space-y-0">
+                    <div className="flex items-center space-x-4 flex-1">
+                      <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center flex-shrink-0">
+                        <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center space-x-3 mb-1">
+                          <h4 className="font-bold text-mediai-dark text-lg font-heading truncate">
+                            {patient.prenom} {patient.nom}
+                          </h4>
+                          <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatutBadge(patient.statut)}`}>
+                            {patient.statut}
+                          </span>
+                        </div>
+                        <p className="text-sm text-mediai-medium font-body">{patient.age} ans • {patient.motif}</p>
+                        <p className="text-xs text-mediai-medium font-body mt-1">
+                          📞 {patient.telephone} • 🏥 {patient.assurance}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center justify-between lg:justify-end space-x-3 lg:space-x-4">
+                      <div className="text-right hidden lg:block">
+                        <p className="text-sm font-medium text-mediai-dark">Dernière consultation</p>
+                        <p className="text-xs text-mediai-medium">{patient.derniere}</p>
+                        <p className="text-xs text-mediai-medium">{patient.consultations} consultation{patient.consultations > 1 ? 's' : ''}</p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button 
+                          onClick={() => openPatientDetail(patient)}
+                          className="px-3 py-2 bg-mediai-primary text-white text-sm font-semibold rounded-lg hover:bg-mediai-secondary transition-colors">
+                          Voir détails
+                        </button>
+                        <button className="px-3 py-2 bg-success text-white text-sm font-semibold rounded-lg hover:bg-green-600 transition-colors">
+                          Consulter
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
+
+        {/* Modals */}
+        {showPatientDetail && renderPatientDetailModal()}
+        {showAddModal && renderAddPatientModal()}
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderOverview = () => (
     <div className="space-y-6 lg:space-y-8">
@@ -539,7 +977,7 @@ const DoctorDashboard = () => {
           <div className="bg-light px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border-light">
             <div className="flex items-center">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-mediai-primary rounded-xl flex items-center justify-center mr-3 sm:mr-4">
-                <Icon icon={MedicalIcons.Activity} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
+                <MedicalIcon icon={MedicalIcons.Activity} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Activités récentes</h2>
             </div>
@@ -588,7 +1026,7 @@ const DoctorDashboard = () => {
           <div className="bg-light px-4 sm:px-6 lg:px-8 py-4 sm:py-6 border-b border-border-light">
             <div className="flex items-center">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-mediai-secondary rounded-xl flex items-center justify-center mr-3 sm:mr-4">
-                <Icon icon={ActionIcons.Settings} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
+                <MedicalIcon icon={ActionIcons.Settings} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Actions rapides</h2>
             </div>
@@ -638,7 +1076,7 @@ const DoctorDashboard = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <div className="w-8 h-8 sm:w-10 sm:h-10 bg-mediai-dark rounded-xl flex items-center justify-center mr-3 sm:mr-4">
-                <Icon icon={MedicalIcons.Appointment} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
+                <MedicalIcon icon={MedicalIcons.Appointment} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Consultations du jour</h2>
             </div>
@@ -749,10 +1187,10 @@ const DoctorDashboard = () => {
                 <button 
                   onClick={() => navigate('/settings')}
                   className="p-2 text-mediai-medium hover:text-mediai-dark hover:bg-light rounded-lg transition-colors">
-                  <Icon icon={ActionIcons.Settings} size="w-4 h-4 sm:w-5 sm:h-5" />
+                  <MedicalIcon icon={ActionIcons.Settings} size="w-4 h-4 sm:w-5 sm:h-5" />
                 </button>
                 <button 
-                  onClick={logout}
+                  onClick={handleLogout}
                   className="px-4 py-2 bg-danger text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-300 font-body">
                   Déconnexion
                 </button>
@@ -805,7 +1243,7 @@ const DoctorDashboard = () => {
 
       {/* Navigation mobile en bas */}
       <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-border-light shadow-2xl z-50">
-        <div className="grid grid-cols-5 gap-1">
+        <div className="grid grid-cols-5 gap-0.5 sm:gap-1">
           {menuItems.map((item) => {
             const IconComponent = item.icon;
             const isActive = activeView === item.id;
@@ -813,7 +1251,7 @@ const DoctorDashboard = () => {
               <button
                 key={item.id}
                 onClick={() => setActiveView(item.id)}
-                className={`flex flex-col items-center justify-center py-1.5 px-1 transition-all duration-300 ${
+                className={`flex flex-col items-center justify-center py-1.5 px-0.5 sm:px-1 transition-all duration-300 ${
                   isActive
                     ? 'bg-mediai-primary text-white'
                     : 'text-mediai-medium hover:text-mediai-dark hover:bg-light'
@@ -821,10 +1259,10 @@ const DoctorDashboard = () => {
               >
                 <MedicalIcon 
                   icon={IconComponent} 
-                  size="w-4 h-4 sm:w-5 sm:h-5" 
+                  size="w-4 h-4" 
                   className={isActive ? 'text-white' : item.color}
                 />
-                <span className="text-[9px] sm:text-xs font-medium mt-0.5 truncate leading-tight">{item.label}</span>
+                <span className="text-[8px] sm:text-[9px] md:text-xs font-medium mt-0.5 truncate leading-tight font-body">{item.label}</span>
               </button>
             );
           })}

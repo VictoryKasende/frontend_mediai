@@ -1,11 +1,13 @@
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import { authService } from '../services/api';
 
-// Types de rôles utilisateur
+// Hook pour utiliser les notifications - nous l'importerons dynamiquement pour éviter les dépendances circulaires
+let useNotificationHook = null;
+
+// Types de rôles utilisateur selon l'API
 export const USER_ROLES = {
-  ADMIN: 'administrator',
   DOCTOR: 'medecin',
-  PATIENT: 'patient',
-  PROFILE: 'profil'
+  PATIENT: 'patient'
 };
 
 // Actions pour le reducer
@@ -89,34 +91,59 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     
     try {
-      // TODO: Remplacer par un appel API réel
-      // Simulation d'une connexion réussie
-      const mockUser = {
-        id: 1,
-        email: credentials.email,
-        role: USER_ROLES.DOCTOR,
-        name: 'Dr. Jean Dupont',
-        avatar: null
-      };
+      const response = await authService.login({
+        username: credentials.username || credentials.email,
+        password: credentials.password
+      });
       
-      // Sauvegarder dans localStorage
-      localStorage.setItem('mediai_user', JSON.stringify(mockUser));
-      localStorage.setItem('mediai_token', 'mock_token_123');
+      const user = response.user;
+      dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: user });
       
-      dispatch({ type: AUTH_ACTIONS.LOGIN_SUCCESS, payload: mockUser });
-      return { success: true };
+      return { success: true, user };
     } catch (error) {
-      const errorMessage = error.response?.data?.message || 'Erreur de connexion';
+      const errorMessage = error.message || 'Erreur de connexion';
+      dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: errorMessage });
+      return { success: false, error: errorMessage };
+    }
+  };
+
+  // Fonction d'inscription
+  const register = async (userData) => {
+    dispatch({ type: AUTH_ACTIONS.LOGIN_START });
+    
+    try {
+      await authService.register({
+        username: userData.username,
+        email: userData.email,
+        password: userData.password,
+        first_name: userData.firstName,
+        last_name: userData.lastName,
+        role: USER_ROLES.PATIENT // Toujours patient pour cette interface
+      });
+      
+      // Après inscription réussie, connecter automatiquement l'utilisateur
+      return await login({
+        username: userData.username,
+        password: userData.password
+      });
+    } catch (error) {
+      const errorMessage = error.message || 'Erreur lors de l\'inscription';
       dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: errorMessage });
       return { success: false, error: errorMessage };
     }
   };
 
   // Fonction de déconnexion
-  const logout = () => {
-    localStorage.removeItem('mediai_user');
-    localStorage.removeItem('mediai_token');
-    dispatch({ type: AUTH_ACTIONS.LOGOUT });
+  const logout = async () => {
+    try {
+      await authService.logout();
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      return { success: true };
+    } catch (error) {
+      console.warn('Erreur lors de la déconnexion:', error);
+      dispatch({ type: AUTH_ACTIONS.LOGOUT });
+      return { success: false, error: error.message };
+    }
   };
 
   // Fonction pour vérifier si l'utilisateur a un rôle spécifique
@@ -132,24 +159,54 @@ export const AuthProvider = ({ children }) => {
 
   // Vérifier l'authentification au chargement de l'app
   useEffect(() => {
-    const savedUser = localStorage.getItem('mediai_user');
-    const savedToken = localStorage.getItem('mediai_token');
-    
-    if (savedUser && savedToken) {
-      try {
-        const user = JSON.parse(savedUser);
-        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
-      } catch (error) {
-        console.error('Erreur lors de la récupération des données utilisateur:', error);
-        logout();
+    const initializeAuth = async () => {
+      const savedUser = localStorage.getItem('mediai_user');
+      const accessToken = localStorage.getItem('mediai_access_token');
+      
+      if (savedUser && accessToken) {
+        try {
+          const user = JSON.parse(savedUser);
+          
+          // Vérifier si le token est toujours valide
+          const isValid = await authService.verifyToken(accessToken);
+          
+          if (isValid) {
+            dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
+          } else {
+            // Token invalide, essayer de le rafraîchir
+            const refreshToken = localStorage.getItem('mediai_refresh_token');
+            if (refreshToken) {
+              try {
+                const newTokens = await authService.refreshToken(refreshToken);
+                localStorage.setItem('mediai_access_token', newTokens.access);
+                
+                // Récupérer les informations utilisateur à jour
+                const updatedUser = await authService.getUserProfile();
+                localStorage.setItem('mediai_user', JSON.stringify(updatedUser));
+                dispatch({ type: AUTH_ACTIONS.SET_USER, payload: updatedUser });
+              } catch (error) {
+                console.warn('Impossible de rafraîchir le token:', error);
+                logout();
+              }
+            } else {
+              logout();
+            }
+          }
+        } catch (error) {
+          console.error('Erreur lors de l\'initialisation de l\'authentification:', error);
+          logout();
+        }
       }
-    }
+    };
+
+    initializeAuth();
   }, []);
 
   // Valeurs fournies par le contexte
   const value = {
     ...state,
     login,
+    register,
     logout,
     hasRole,
     hasPermission,

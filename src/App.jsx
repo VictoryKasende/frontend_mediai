@@ -1,8 +1,8 @@
 import React from 'react';
-import { RouterProvider } from 'react-router-dom';
+import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
-import { router } from './routes/routes';
+import AppRoutes from './routes/AppRoutes';
 
 /**
  * Composant principal de l'application Mediai
@@ -10,13 +10,15 @@ import { router } from './routes/routes';
  */
 function App() {
   return (
-    <AuthProvider>
-      <NotificationProvider>
-        <div className="App">
-          <RouterProvider router={router} />
-        </div>
-      </NotificationProvider>
-    </AuthProvider>
+    <BrowserRouter>
+      <AuthProvider>
+        <NotificationProvider>
+          <div className="App">
+            <AppRoutes />
+          </div>
+        </NotificationProvider>
+      </AuthProvider>
+    </BrowserRouter>
   );
 }
 

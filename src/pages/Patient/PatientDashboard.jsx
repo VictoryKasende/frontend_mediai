@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useLogout } from '../../hooks/useLogout';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
@@ -15,6 +16,7 @@ import ConsultationDetails from './ConsultationDetails';
 const PatientDashboard = () => {
   const { user } = useAuth();
   const { showSuccess, showError, showWarning, showInfo, notifications, removeNotification } = useNotification();
+  const { handleLogout } = useLogout();
   
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedConsultation, setSelectedConsultation] = useState(null);
@@ -578,6 +580,7 @@ const PatientDashboard = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
+                  onClick={handleLogout}
                   className="border-2 border-white/30 hover:border-white hover:bg-white/20 text-white hover:text-white transition-all duration-300"
                 >
                   Déconnexion
@@ -664,6 +667,7 @@ const PatientDashboard = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
+                onClick={handleLogout}
                 className="w-full text-sm border-2 border-medium hover:border-mediai-dark hover:bg-medium text-mediai-dark hover:text-white transition-all duration-300"
               >
                 Déconnexion

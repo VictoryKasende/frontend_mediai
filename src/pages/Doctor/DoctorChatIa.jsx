@@ -3,9 +3,11 @@ import { useAuth } from '../../contexts/AuthContext';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
+import api, { iaService } from '../../services/api';
 
 /**
- * Page Chat IA Médecin - Interface similaire à ChatGPT avec historique des conversations
+ * Page Chat IA Médecin - Interface similaire à ChatGPT avec API réelle
  */
 const DoctorChatIa = () => {
   const { user } = useAuth();
@@ -14,92 +16,24 @@ const DoctorChatIa = () => {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [editingConversation, setEditingConversation] = useState(null);
   const [editingTitle, setEditingTitle] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Conversations initiales factices
-  const initialConversations = [
-    {
-      id: 1,
-      title: 'Consultation symptômes grippaux',
-      lastMessage: 'Merci pour ces conseils docteur',
-      timestamp: new Date(Date.now() - 3600000),
-      messageCount: 12,
-      type: 'medical'
-    },
-    {
-      id: 2,
-      title: 'Questions sur traitement',
-      lastMessage: 'Je vais suivre vos recommandations',
-      timestamp: new Date(Date.now() - 7200000),
-      messageCount: 8,
-      type: 'medical'
-    },
-    {
-      id: 3,
-      title: 'Prise de rendez-vous urgente',
-      lastMessage: 'Rendez-vous confirmé pour demain',
-      timestamp: new Date(Date.now() - 86400000),
-      messageCount: 5,
-      type: 'appointment'
-    },
-    {
-      id: 4,
-      title: 'Résultats analyses sanguines',
-      lastMessage: 'Tout semble normal',
-      timestamp: new Date(Date.now() - 172800000),
-      messageCount: 15,
-      type: 'results'
-    },
-    {
-      id: 5,
-      title: 'Suivi post-consultation',
-      lastMessage: 'Les médicaments font effet',
-      timestamp: new Date(Date.now() - 259200000),
-      messageCount: 7,
-      type: 'followup'
-    }
-  ];
-
-  // Messages par conversation
-  const conversationMessages = {
-    1: [
-      {
-        id: 1,
-        sender: 'assistant',
-        content: 'Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd\'hui ?',
-        timestamp: new Date(Date.now() - 300000),
-        type: 'text'
-      },
-      {
-        id: 2,
-        sender: 'user',
-        content: 'Bonjour, j\'ai des symptômes qui ressemblent à une grippe depuis 2 jours.',
-        timestamp: new Date(Date.now() - 240000),
-        type: 'text'
-      },
-      {
-        id: 3,
-        sender: 'assistant',
-        content: 'Je comprends vos inquiétudes. Pouvez-vous me décrire précisément vos symptômes ? Avez-vous de la fièvre, des courbatures, une toux ?',
-        timestamp: new Date(Date.now() - 180000),
-        type: 'text'
-      }
-    ]
-  };
-
   // Charger les conversations au montage du composant
   useEffect(() => {
-    setConversations(initialConversations);
-    // Sélectionner la première conversation par défaut
-    if (initialConversations.length > 0) {
-      setSelectedConversation(initialConversations[0]);
-      setMessages(conversationMessages[1] || []);
-    }
+    loadConversations();
   }, []);
+
+  // Charger les messages quand une conversation est sélectionnée
+  useEffect(() => {
+    if (selectedConversation) {
+      loadMessages(selectedConversation.id);
+    }
+  }, [selectedConversation]);
 
   // Faire défiler vers le bas quand de nouveaux messages arrivent
   useEffect(() => {
@@ -110,53 +44,180 @@ const DoctorChatIa = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Charger les conversations depuis l'API
+  const loadConversations = async () => {
+    try {
+      setIsLoadingConversations(true);
+      const response = await api.get('/conversations/');
+      
+      // Gérer les réponses paginées et directes
+      const conversationsData = response.data.results || response.data;
+      
+      if (Array.isArray(conversationsData)) {
+        // Enrichir les conversations avec les titres stockés localement
+        const enrichedConversations = conversationsData.map(conversation => {
+          const titleKey = `conversation_title_${conversation.id}`;
+          const storedTitle = localStorage.getItem(titleKey);
+          
+          return {
+            ...conversation,
+            title: storedTitle || generateConversationTitle(conversation),
+            // Simuler un last_message si pas disponible dans l'API
+            last_message: conversation.last_message || 'Aucun message'
+          };
+        });
+        
+        setConversations(enrichedConversations);
+        
+        // Sélectionner la première conversation si disponible
+        if (enrichedConversations.length > 0) {
+          setSelectedConversation(enrichedConversations[0]);
+        }
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des conversations:', error);
+    } finally {
+      setIsLoadingConversations(false);
+    }
+  };
+
+  // Fonction utilitaire pour générer un titre par défaut
+  const generateConversationTitle = (conversation) => {
+    const date = new Date(conversation.created_at);
+    const dateStr = date.toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+    const timeStr = date.toLocaleTimeString('fr-FR', {
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+    return `Conversation ${dateStr} ${timeStr}`;
+  };
+
+  // Charger les messages d'une conversation
+  const loadMessages = async (conversationId) => {
+    try {
+      console.log('Chargement des messages pour la conversation:', conversationId);
+      const response = await api.get(`/conversations/${conversationId}/messages/`);
+      
+      console.log('Réponse API messages:', response.data);
+      
+      // Gérer les réponses paginées et directes
+      const messagesData = response.data.results || response.data;
+      
+      console.log('Messages extraits:', messagesData);
+      
+      if (Array.isArray(messagesData) && messagesData.length > 0) {
+        // Transformer les messages pour correspondre au format UI
+        const formattedMessages = messagesData.map(message => ({
+          id: message.id,
+          sender: message.role === 'user' ? 'user' : 'assistant',
+          content: message.content || '',
+          timestamp: new Date(message.timestamp),
+          type: 'text'
+        }));
+        
+        console.log('Messages formatés:', formattedMessages);
+        setMessages(formattedMessages);
+      } else {
+        // Aucun message dans la conversation
+        console.log('Aucun message trouvé pour cette conversation');
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des messages:', error);
+      
+      // En cas d'erreur de chargement, ne pas afficher de message d'accueil
+      // L'utilisateur verra "Aucun message" qui est plus approprié
+      setMessages([]);
+    }
+  };
+
   // Créer une nouvelle conversation
-  const createNewConversation = () => {
-    const newConversation = {
-      id: Date.now(),
-      title: 'Nouvelle conversation',
-      lastMessage: '',
-      timestamp: new Date(),
-      messageCount: 0,
-      type: 'medical'
-    };
-    
-    setConversations(prev => [newConversation, ...prev]);
-    setSelectedConversation(newConversation);
-    setMessages([{
-      id: 1,
-      sender: 'assistant',
-      content: 'Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd\'hui ?',
-      timestamp: new Date(),
-      type: 'text'
-    }]);
+  const createNewConversation = async () => {
+    try {
+      const response = await api.post('/conversations/', {
+        fiche: null // Optionnel, pas de fiche de consultation liée
+      });
+      
+      const newConversation = {
+        ...response.data,
+        title: generateConversationTitle(response.data),
+        last_message: 'Aucun message'
+      };
+      
+      // Mettre à jour la liste des conversations
+      setConversations(prev => [newConversation, ...prev]);
+      setSelectedConversation(newConversation);
+      
+      // Créer le message d'accueil initial
+      const welcomeMessage = {
+        id: Date.now(),
+        sender: 'assistant',
+        content: 'Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd\'hui ?',
+        timestamp: new Date(),
+        type: 'text'
+      };
+      
+      setMessages([welcomeMessage]);
+      
+    } catch (error) {
+      console.error('Erreur lors de la création de la conversation:', error);
+      
+      // Fallback en cas d'erreur
+      const newConversation = {
+        id: Date.now(),
+        title: 'Nouvelle conversation',
+        user: user?.id,
+        fiche: null,
+        created_at: new Date().toISOString(),
+      };
+      
+      setConversations(prev => [newConversation, ...prev]);
+      setSelectedConversation(newConversation);
+      setMessages([{
+        id: 1,
+        sender: 'assistant',
+        content: 'Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd\'hui ?',
+        timestamp: new Date(),
+        type: 'text'
+      }]);
+    }
   };
 
   // Sélectionner une conversation
   const selectConversation = (conversation) => {
     setSelectedConversation(conversation);
-    setMessages(conversationMessages[conversation.id] || [{
-      id: 1,
-      sender: 'assistant',
-      content: 'Bonjour ! Je suis votre assistant médical IA. Comment puis-je vous aider aujourd\'hui ?',
-      timestamp: new Date(),
-      type: 'text'
-    }]);
+    // Charger immédiatement les messages de la conversation sélectionnée
+    loadMessages(conversation.id);
   };
 
   // Supprimer une conversation
-  const deleteConversation = (conversationId, e) => {
+  const deleteConversation = async (conversationId, e) => {
     e.stopPropagation();
+    
     if (window.confirm('Êtes-vous sûr de vouloir supprimer cette conversation ?')) {
-      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-      if (selectedConversation?.id === conversationId) {
-        const remaining = conversations.filter(conv => conv.id !== conversationId);
-        if (remaining.length > 0) {
-          selectConversation(remaining[0]);
-        } else {
-          setSelectedConversation(null);
-          setMessages([]);
+      try {
+        await api.delete(`/conversations/${conversationId}/`);
+        
+        // Mettre à jour l'état local
+        setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+        
+        if (selectedConversation?.id === conversationId) {
+          const remaining = conversations.filter(conv => conv.id !== conversationId);
+          if (remaining.length > 0) {
+            selectConversation(remaining[0]);
+          } else {
+            setSelectedConversation(null);
+            setMessages([]);
+          }
         }
+        
+      } catch (error) {
+        console.error('Erreur lors de la suppression de la conversation:', error);
+        alert('Erreur lors de la suppression de la conversation');
       }
     }
   };
@@ -168,18 +229,32 @@ const DoctorChatIa = () => {
     setEditingTitle(conversation.title);
   };
 
-  const saveConversationTitle = (conversationId) => {
+  const saveConversationTitle = async (conversationId) => {
     if (editingTitle.trim()) {
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === conversationId 
-            ? { ...conv, title: editingTitle.trim() }
-            : conv
-        )
-      );
-      
-      if (selectedConversation?.id === conversationId) {
-        setSelectedConversation(prev => ({ ...prev, title: editingTitle.trim() }));
+      try {
+        // Mettre à jour le titre via l'API
+        await api.patch(`/conversations/${conversationId}/`, { 
+          titre: editingTitle.trim() 
+        });
+        
+        // Mettre à jour l'état local
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === conversationId 
+              ? { ...conv, title: editingTitle.trim() }
+              : conv
+          )
+        );
+        
+        if (selectedConversation?.id === conversationId) {
+          setSelectedConversation(prev => ({ ...prev, title: editingTitle.trim() }));
+        }
+        
+        console.log('Titre mis à jour via API:', editingTitle.trim());
+        
+      } catch (error) {
+        console.error('Erreur lors de la mise à jour du titre:', error);
+        alert('Erreur lors de la mise à jour du titre de la conversation');
       }
     }
     setEditingConversation(null);
@@ -225,74 +300,157 @@ const DoctorChatIa = () => {
       type: 'text'
     };
 
+    // Ajouter le message utilisateur immédiatement
     setMessages(prev => [...prev, userMessage]);
+    const messageToSend = newMessage.trim();
     setNewMessage('');
     setIsLoading(true);
 
-    // Mettre à jour le titre de la conversation si c'est le premier message
-    if (selectedConversation.title === 'Nouvelle conversation' && messages.length <= 1) {
-      const newTitle = newMessage.trim().length > 50 
-        ? newMessage.trim().substring(0, 50) + '...'
-        : newMessage.trim();
-      
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === selectedConversation.id 
-            ? { ...conv, title: newTitle }
-            : conv
-        )
-      );
-      
-      setSelectedConversation(prev => ({ ...prev, title: newTitle }));
-    }
-
-    // Simuler une réponse de l'assistant
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 1. Ajouter le message utilisateur à la conversation
+      await api.post(`/conversations/${selectedConversation.id}/messages/`, {
+        content: messageToSend
+      });
+
+      // 2. Démarrer l'analyse IA
+      const analyseResponse = await iaService.startAnalyse({
+        symptomes: messageToSend,
+        conversation_id: selectedConversation.id
+      });
       
-      const assistantResponse = {
+      // 3. Vérifier si déjà en cache ou obtenir le cache_key
+      if (analyseResponse.already_cached && analyseResponse.status === 'done') {
+        // Résultat déjà disponible
+        const assistantResponse = {
+          id: Date.now() + 1,
+          sender: 'assistant',
+          content: analyseResponse.response,
+          timestamp: new Date(),
+          type: 'text'
+        };
+
+        setMessages(prev => [...prev, assistantResponse]);
+      } else {
+        // 4. Attendre et récupérer le résultat
+        const cacheKey = analyseResponse.cache_key;
+        const taskId = analyseResponse.task_id;
+        
+        // Polling pour vérifier le statut si on a un task_id
+        if (taskId) {
+          await pollTaskStatus(taskId, cacheKey);
+        } else {
+          // Polling direct sur le résultat avec cache_key
+          await pollAnalysisResult(cacheKey);
+        }
+      }
+      
+      // Mettre à jour le titre de la conversation si c'est le premier message
+      if ((selectedConversation.title === 'Nouvelle conversation' || !selectedConversation.title) && messages.length <= 1) {
+        const newTitle = messageToSend.length > 50 
+          ? messageToSend.substring(0, 50) + '...'
+          : messageToSend;
+        
+        // Mise à jour locale du titre (l'API ne supporte pas cette fonctionnalité)
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === selectedConversation.id 
+              ? { ...conv, title: newTitle }
+              : conv
+          )
+        );
+        
+        setSelectedConversation(prev => ({ ...prev, title: newTitle }));
+      }
+      
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi du message:', error);
+      
+      // Message d'erreur en cas d'échec de l'API
+      const errorMessage = {
         id: Date.now() + 1,
         sender: 'assistant',
-        content: generateAssistantResponse(userMessage.content),
+        content: 'Désolé, une erreur s\'est produite lors de l\'analyse. Veuillez réessayer.',
         timestamp: new Date(),
         type: 'text'
       };
 
-      setMessages(prev => [...prev, assistantResponse]);
-      
-      // Mettre à jour la conversation dans la liste
-      setConversations(prev => 
-        prev.map(conv => 
-          conv.id === selectedConversation.id 
-            ? { 
-                ...conv, 
-                lastMessage: assistantResponse.content,
-                timestamp: assistantResponse.timestamp,
-                messageCount: conv.messageCount + 2
-              }
-            : conv
-        )
-      );
-      
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi du message:', error);
+      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Générer une réponse de l'assistant (simulation)
-  const generateAssistantResponse = (userMessage) => {
-    const responses = [
-      'Je comprends vos préoccupations. Pouvez-vous me donner plus de détails sur vos symptômes ?',
-      'Ces symptômes peuvent avoir plusieurs causes. Depuis quand ressentez-vous ces troubles ?',
-      'Il est important de surveiller ces signes. Je recommande de consulter un professionnel de santé.',
-      'Merci pour ces informations. Voici quelques conseils qui pourraient vous aider en attendant...',
-      'D\'après ce que vous me décrivez, voici ce que je peux vous suggérer comme première approche...',
-      'Ces symptômes nécessitent une attention particulière. Avez-vous déjà consulté pour des problèmes similaires ?'
-    ];
+  // Fonction pour surveiller le statut d'une tâche Celery
+  const pollTaskStatus = async (taskId, cacheKey, maxAttempts = 30) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const statusResponse = await iaService.getTaskStatus(taskId);
+        
+        if (statusResponse.state === 'SUCCESS') {
+          // Tâche terminée, récupérer le résultat
+          await pollAnalysisResult(cacheKey);
+          return;
+        } else if (statusResponse.state === 'FAILURE') {
+          throw new Error('Échec de l\'analyse IA');
+        }
+        
+        // Attendre 2 secondes avant la prochaine vérification
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      } catch (error) {
+        console.error('Erreur lors de la vérification du statut:', error);
+        break;
+      }
+    }
     
-    return responses[Math.floor(Math.random() * responses.length)];
+    // Timeout ou erreur
+    throw new Error('Délai d\'attente dépassé pour l\'analyse IA');
+  };
+
+  // Fonction pour récupérer le résultat d'analyse
+  const pollAnalysisResult = async (cacheKey, maxAttempts = 15) => {
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      try {
+        const resultResponse = await iaService.getAnalyseResult(cacheKey);
+        
+        if (resultResponse.status === 'done' && resultResponse.response) {
+          // Résultat disponible
+          const assistantResponse = {
+            id: Date.now() + 1,
+            sender: 'assistant',
+            content: resultResponse.response,
+            timestamp: new Date(),
+            type: 'text'
+          };
+
+          setMessages(prev => [...prev, assistantResponse]);
+          
+          // Mettre à jour la conversation dans la liste
+          setConversations(prev => 
+            prev.map(conv => 
+              conv.id === selectedConversation.id 
+                ? { 
+                    ...conv, 
+                    // Simuler last_message et updated_at pour l'UX
+                    last_message: assistantResponse.content.substring(0, 100),
+                    updated_at: assistantResponse.timestamp.toISOString()
+                  }
+                : conv
+            )
+          );
+          
+          return;
+        }
+        
+        // Attendre 3 secondes avant la prochaine vérification
+        await new Promise(resolve => setTimeout(resolve, 3000));
+      } catch (error) {
+        console.error('Erreur lors de la récupération du résultat:', error);
+        break;
+      }
+    }
+    
+    // Timeout ou erreur
+    throw new Error('Impossible de récupérer le résultat de l\'analyse IA');
   };
 
   // Formater l'heure pour les messages
@@ -305,17 +463,18 @@ const DoctorChatIa = () => {
 
   // Formater la date pour les conversations
   const formatConversationTime = (timestamp) => {
+    const date = timestamp instanceof Date ? timestamp : new Date(timestamp);
     const now = new Date();
-    const diffDays = Math.floor((now - timestamp) / (1000 * 60 * 60 * 24));
+    const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
     
     if (diffDays === 0) {
-      return formatMessageTime(timestamp);
+      return formatMessageTime(date);
     } else if (diffDays === 1) {
       return 'Hier';
     } else if (diffDays < 7) {
       return `Il y a ${diffDays} jours`;
     } else {
-      return timestamp.toLocaleDateString('fr-FR', { 
+      return date.toLocaleDateString('fr-FR', { 
         day: 'numeric', 
         month: 'short' 
       });
@@ -323,14 +482,11 @@ const DoctorChatIa = () => {
   };
 
   // Obtenir l'icône selon le type de conversation
-  const getConversationIcon = (type) => {
-    switch (type) {
-      case 'medical': return MedicalIcons.Doctor;
-      case 'appointment': return MedicalIcons.Calendar;
-      case 'results': return MedicalIcons.Report;
-      case 'followup': return MedicalIcons.Heart;
-      default: return NavigationIcons.Chat;
+  const getConversationIcon = (conversation) => {
+    if (conversation.fiche) {
+      return MedicalIcons.Report; // Conversation liée à une fiche
     }
+    return NavigationIcons.Chat; // Conversation libre
   };
 
   // Filtrer les conversations selon la recherche
@@ -339,9 +495,9 @@ const DoctorChatIa = () => {
     
     const query = searchQuery.toLowerCase();
     return (
-      conversation.title.toLowerCase().includes(query) ||
-      conversation.lastMessage.toLowerCase().includes(query) ||
-      conversation.type.toLowerCase().includes(query)
+      conversation.title?.toLowerCase().includes(query) ||
+      conversation.last_message?.toLowerCase().includes(query) ||
+      conversation.user?.toString().includes(query)
     );
   });
 
@@ -363,9 +519,16 @@ const DoctorChatIa = () => {
               ? 'bg-mediai-primary text-white rounded-br-md' 
               : 'bg-surface-background text-content-primary rounded-bl-md border border-border-primary'
           }`}>
-            <p className="text-sm font-body leading-relaxed whitespace-pre-wrap">
-              {message.content}
-            </p>
+            {isUser ? (
+              <p className="text-sm font-body leading-relaxed whitespace-pre-wrap">
+                {message.content}
+              </p>
+            ) : (
+              <MarkdownRenderer 
+                content={message.content} 
+                className="text-sm font-body leading-relaxed"
+              />
+            )}
           </div>
           
           <p className={`text-xs mt-2 font-body-medium ${
@@ -468,7 +631,14 @@ const DoctorChatIa = () => {
             </div>
           )}
           
-          {filteredConversations.length === 0 && searchQuery ? (
+          {isLoadingConversations ? (
+            <div className="p-6 text-center">
+              <div className="animate-spin w-6 h-6 border-2 border-mediai-primary border-t-transparent rounded-full mx-auto mb-3"></div>
+              <p className="text-sm text-content-secondary font-body">
+                Chargement des conversations...
+              </p>
+            </div>
+          ) : filteredConversations.length === 0 && searchQuery ? (
             <div className="p-6 text-center">
               <Icon icon={ActionIcons.Search} size="w-8 h-8" className="text-content-tertiary mx-auto mb-3" />
               <p className="text-sm text-content-secondary font-body">
@@ -481,6 +651,21 @@ const DoctorChatIa = () => {
                 Effacer la recherche
               </button>
             </div>
+          ) : filteredConversations.length === 0 ? (
+            <div className="p-6 text-center">
+              <Icon icon={NavigationIcons.Chat} size="w-8 h-8" className="text-content-tertiary mx-auto mb-3" />
+              <p className="text-sm text-content-secondary font-body mb-4">
+                Aucune conversation pour le moment
+              </p>
+              <Button
+                size="sm"
+                onClick={createNewConversation}
+                className="w-full"
+              >
+                <Icon icon={ActionIcons.Add} size="w-4 h-4 mr-2" />
+                Créer une conversation
+              </Button>
+            </div>
           ) : (
             filteredConversations.map((conversation) => (
             <div
@@ -492,7 +677,7 @@ const DoctorChatIa = () => {
             >
               <div className="flex items-start space-x-3">
                 <div className="w-8 h-8 rounded-lg bg-mediai-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Icon icon={getConversationIcon(conversation.type)} size="w-4 h-4" className="text-mediai-primary" />
+                  <Icon icon={getConversationIcon(conversation)} size="w-4 h-4" className="text-mediai-primary" />
                 </div>
                 
                 {!sidebarCollapsed && (
@@ -518,7 +703,7 @@ const DoctorChatIa = () => {
                         </div>
                       ) : (
                         <h3 className="text-sm font-medium text-content-primary truncate font-heading">
-                          {conversation.title}
+                          {conversation.title || `Conversation ${conversation.id}`}
                         </h3>
                       )}
                       
@@ -552,17 +737,17 @@ const DoctorChatIa = () => {
                     </div>
                     
                     <p className="text-xs text-content-secondary truncate mt-1 font-body">
-                      {conversation.lastMessage || 'Aucun message'}
+                      {conversation.last_message || 'Aucun message'}
                     </p>
                     
                     <div className="flex items-center justify-between mt-2">
                       <span className="text-xs text-content-tertiary font-body-medium">
-                        {formatConversationTime(conversation.timestamp)}
+                        {formatConversationTime(conversation.updated_at || conversation.created_at)}
                       </span>
                       
-                      {conversation.messageCount > 0 && (
+                      {conversation.message_count > 0 && (
                         <span className="text-xs bg-mediai-primary/10 text-mediai-primary px-2 py-0.5 rounded-full font-body-medium">
-                          {conversation.messageCount}
+                          {conversation.message_count}
                         </span>
                       )}
                     </div>
@@ -601,9 +786,9 @@ const DoctorChatIa = () => {
         {selectedConversation ? (
           <>
             {/* Header du chat */}
-            <div className="p-4 sm:p-6 border-b border-border-primary bg-white">
+            <div className="p-3 sm:p-4 border-b border-border-primary bg-white">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="flex items-center space-x-2 sm:space-x-3">
                   {/* Bouton pour afficher sidebar sur mobile */}
                   <button 
                     className="sm:hidden p-2 text-content-secondary hover:text-content-primary transition-colors"
@@ -612,15 +797,15 @@ const DoctorChatIa = () => {
                     <Icon icon={NavigationIcons.Menu} size="w-5 h-5" />
                   </button>
                   
-                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg bg-gradient-primary flex items-center justify-center">
-                    <Icon icon={MedicalIcons.AI} size="w-4 h-4 sm:w-5 sm:h-5" className="text-white" />
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
+                    <Icon icon={MedicalIcons.AI} size="w-3 h-3 sm:w-4 sm:h-4" className="text-white" />
                   </div>
                   <div>
-                    <h2 className="text-base sm:text-lg font-heading font-semibold text-content-primary">
+                    <h2 className="text-sm sm:text-base font-heading font-semibold text-content-primary">
                       Assistant Médical IA
                     </h2>
-                    <p className="text-xs sm:text-sm text-success font-body-medium flex items-center">
-                      <span className="w-2 h-2 bg-success rounded-full mr-2"></span>
+                    <p className="text-xs text-success font-body-medium flex items-center">
+                      <span className="w-1.5 h-1.5 bg-success rounded-full mr-1.5"></span>
                       En ligne
                     </p>
                   </div>
@@ -631,9 +816,25 @@ const DoctorChatIa = () => {
             {/* Zone des messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 bg-surface-background">
               <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
-                {messages.map((message) => (
-                  <Message key={message.id} message={message} />
-                ))}
+                {messages.length === 0 ? (
+                  /* État vide - Aucun message */
+                  <div className="flex flex-col items-center justify-center h-64 text-center">
+                    <div className="w-16 h-16 rounded-full bg-gradient-primary/10 flex items-center justify-center mb-4">
+                      <Icon icon={MedicalIcons.AI} size="w-8 h-8" className="text-mediai-primary" />
+                    </div>
+                    <h3 className="text-lg font-heading font-semibold text-content-primary mb-2">
+                      Conversation vide
+                    </h3>
+                    <p className="text-sm text-content-secondary font-body max-w-sm">
+                      Commencez la conversation en tapant votre message ci-dessous ou en sélectionnant une suggestion.
+                    </p>
+                  </div>
+                ) : (
+                  /* Messages existants */
+                  messages.map((message) => (
+                    <Message key={message.id} message={message} />
+                  ))
+                )}
                 
                 {/* Indicateur de frappe */}
                 {isLoading && (
@@ -642,10 +843,15 @@ const DoctorChatIa = () => {
                       <Icon icon={MedicalIcons.AI} size="w-3 h-3 sm:w-4 sm:h-4" className="text-white" />
                     </div>
                     <div className="bg-white border border-border-primary rounded-2xl rounded-bl-md px-3 sm:px-4 py-2 sm:py-3">
-                      <div className="flex space-x-1">
-                        <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce"></div>
-                        <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                        <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                      <div className="flex items-center space-x-2">
+                        <div className="flex space-x-1">
+                          <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce"></div>
+                          <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                          <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+                        </div>
+                        <span className="text-xs text-content-secondary font-body">
+                          Analyse médicale en cours...
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -732,16 +938,16 @@ const DoctorChatIa = () => {
         ) : (
           /* État vide - Aucune conversation sélectionnée */
           <div className="flex-1 flex items-center justify-center bg-surface-background">
-            <div className="text-center max-w-md mx-auto p-8">
-              <div className="w-24 h-24 rounded-full bg-gradient-primary flex items-center justify-center mx-auto mb-6">
-                <Icon icon={MedicalIcons.AI} size="w-12 h-12" className="text-white" />
+            <div className="text-center max-w-md mx-auto p-6">
+              <div className="w-16 h-16 rounded-full bg-gradient-primary flex items-center justify-center mx-auto mb-4">
+                <Icon icon={MedicalIcons.AI} size="w-8 h-8" className="text-white" />
               </div>
               
-              <h2 className="text-2xl font-heading font-semibold text-content-primary mb-4">
+              <h2 className="text-xl font-heading font-semibold text-content-primary mb-3">
                 Assistant Médical IA
               </h2>
               
-              <p className="text-content-secondary font-body mb-6 leading-relaxed">
+              <p className="text-sm text-content-secondary font-body mb-4 leading-relaxed">
                 Bienvenue ! Je suis votre assistant médical personnel. 
                 Créez une nouvelle conversation pour commencer à discuter de vos questions de santé.
               </p>
