@@ -492,6 +492,50 @@ export const chatService = {
   },
 
   /**
+   * Mettre à jour le nom d'une conversation
+   * @param {string} conversationId - ID de la conversation
+   * @param {string} nom - Nouveau nom
+   * @param {number|null} fiche - ID de la fiche (optionnel)
+   * @returns {Promise<Object>} - Conversation mise à jour
+   */
+  updateConversationName: async (conversationId, nom, fiche = null) => {
+    try {
+      const payload = { nom };
+      if (fiche !== null) {
+        payload.fiche = fiche;
+      }
+      const response = await api.patch(`/conversations/${conversationId}/`, payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
+   * Mettre à jour une conversation (nom, titre, fiche)
+   * @param {string} conversationId - ID de la conversation
+   * @param {Object} updateData - Données à mettre à jour
+   * @param {string} updateData.nom - Nouveau nom (optionnel)
+   * @param {string} updateData.titre - Nouveau titre (optionnel)
+   * @param {number} updateData.fiche - ID de la fiche (optionnel)
+   * @returns {Promise<Object>} - Conversation mise à jour
+   */
+  updateConversation: async (conversationId, updateData) => {
+    try {
+      // Ne garder que les champs définis
+      const payload = {};
+      if (updateData.nom !== undefined) payload.nom = updateData.nom;
+      if (updateData.titre !== undefined) payload.titre = updateData.titre;
+      if (updateData.fiche !== undefined) payload.fiche = updateData.fiche;
+      
+      const response = await api.patch(`/conversations/${conversationId}/`, payload);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
    * Supprimer une conversation
    * @param {string} conversationId - ID de la conversation
    * @returns {Promise<void>} - Confirmation de suppression

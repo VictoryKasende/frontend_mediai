@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
+import Modal from '../../components/Modal';
+import ConfirmModal from '../../components/ConfirmModal';
 import api, { iaService } from '../../services/api';
 
 /**
@@ -11,6 +14,7 @@ import api, { iaService } from '../../services/api';
  */
 const DoctorChatIa = () => {
   const { user } = useAuth();
+  const { showSuccess, showError, showWarning, showInfo } = useNotification();
   const [conversations, setConversations] = useState([]);
   const [selectedConversation, setSelectedConversation] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -19,9 +23,36 @@ const DoctorChatIa = () => {
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [editingConversation, setEditingConversation] = useState(null);
-  const [editingTitle, setEditingTitle] = useState('');
+  const [editingName, setEditingName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshKey, setRefreshKey] = useState(0); // Pour forcer la mise à jour
+  
+  // États pour les modales
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [showPhotoModal, setShowPhotoModal] = useState(false);
+  const [selectedConversationForAction, setSelectedConversationForAction] = useState(null);
+  const [tempEditName, setTempEditName] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState([]);
+  
   const messagesEndRef = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Fonction helper pour les notifications
+  const showNotification = (message, type = 'info') => {
+    switch (type) {
+      case 'success':
+        return showSuccess(message);
+      case 'error':
+        return showError(message);
+      case 'warning':
+        return showWarning(message);
+      case 'info':
+      default:
+        return showInfo(message);
+    }
+  };
 
   // Charger les conversations au montage du composant
   useEffect(() => {
@@ -40,6 +71,25 @@ const DoctorChatIa = () => {
     scrollToBottom();
   }, [messages]);
 
+  // Auto-resize de la textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      // Reset la hauteur pour recalculer correctement
+      textarea.style.height = 'auto';
+      // Applique la nouvelle hauteur basée sur le contenu
+      const newHeight = Math.min(textarea.scrollHeight, 200);
+      textarea.style.height = newHeight + 'px';
+      
+      // Gère le scroll si le contenu dépasse
+      if (textarea.scrollHeight > 200) {
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.overflowY = 'hidden';
+      }
+    }
+  }, [newMessage]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -54,18 +104,34 @@ const DoctorChatIa = () => {
       const conversationsData = response.data.results || response.data;
       
       if (Array.isArray(conversationsData)) {
-        // Enrichir les conversations avec les titres stockés localement
-        const enrichedConversations = conversationsData.map(conversation => {
-          const titleKey = `conversation_title_${conversation.id}`;
-          const storedTitle = localStorage.getItem(titleKey);
-          
-          return {
-            ...conversation,
-            title: storedTitle || generateConversationTitle(conversation),
-            // Simuler un last_message si pas disponible dans l'API
-            last_message: conversation.last_message || 'Aucun message'
-          };
-        });
+        // Utiliser les vraies données de l'API
+        const enrichedConversations = await Promise.all(
+          conversationsData.map(async (conversation) => {
+            // Charger les messages pour calculer le bon comptage
+            let visibleMessagesCount = 0;
+            try {
+              const messagesResponse = await api.get(`/conversations/${conversation.id}/messages/`);
+              const messages = messagesResponse.data.results || messagesResponse.data;
+              
+              if (Array.isArray(messages)) {
+                // Compter seulement les messages user et synthese
+                visibleMessagesCount = messages.filter(msg => 
+                  msg.role === 'user' || msg.role === 'synthese'
+                ).length;
+              }
+            } catch (error) {
+              console.error(`Erreur lors du chargement des messages pour la conversation ${conversation.id}:`, error);
+            }
+            
+            return {
+              ...conversation,
+              title: conversation.titre || `Conversation du ${new Date(conversation.created_at).toLocaleDateString('fr-FR')}`,
+              last_message: conversation.first_message || 'Aucun message',
+              updated_at: conversation.updated_at || conversation.created_at,
+              visibleMessagesCount // Ajouter le comptage filtré
+            };
+          })
+        );
         
         setConversations(enrichedConversations);
         
@@ -76,6 +142,7 @@ const DoctorChatIa = () => {
       }
     } catch (error) {
       console.error('Erreur lors du chargement des conversations:', error);
+      showNotification('Erreur lors du chargement des conversations', 'error');
     } finally {
       setIsLoadingConversations(false);
     }
@@ -99,15 +166,10 @@ const DoctorChatIa = () => {
   // Charger les messages d'une conversation
   const loadMessages = async (conversationId) => {
     try {
-      console.log('Chargement des messages pour la conversation:', conversationId);
       const response = await api.get(`/conversations/${conversationId}/messages/`);
-      
-      console.log('Réponse API messages:', response.data);
       
       // Gérer les réponses paginées et directes
       const messagesData = response.data.results || response.data;
-      
-      console.log('Messages extraits:', messagesData);
       
       if (Array.isArray(messagesData) && messagesData.length > 0) {
         // Transformer les messages pour correspondre au format UI
@@ -116,14 +178,27 @@ const DoctorChatIa = () => {
           sender: message.role === 'user' ? 'user' : 'assistant',
           content: message.content || '',
           timestamp: new Date(message.timestamp),
-          type: 'text'
+          type: 'text',
+          role: message.role // Garder le rôle original pour le filtrage
         }));
         
-        console.log('Messages formatés:', formattedMessages);
-        setMessages(formattedMessages);
+        // Filtrer pour ne garder que les messages utilisateur et les messages de synthèse
+        const filteredMessages = formattedMessages.filter(message => 
+          message.role === 'user' || message.role === 'synthese'
+        );
+        
+        // Supprimer les doublons basés sur l'ID et le contenu
+        const uniqueMessages = filteredMessages.filter((message, index, self) =>
+          index === self.findIndex(m => m.id === message.id || 
+            (m.content === message.content && m.sender === message.sender))
+        );
+        
+        // Trier par timestamp pour garantir l'ordre chronologique
+        uniqueMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+        
+        setMessages(uniqueMessages);
       } else {
         // Aucun message dans la conversation
-        console.log('Aucun message trouvé pour cette conversation');
         setMessages([]);
       }
     } catch (error) {
@@ -138,6 +213,8 @@ const DoctorChatIa = () => {
   // Créer une nouvelle conversation
   const createNewConversation = async () => {
     try {
+      showNotification('Création d\'une nouvelle conversation...', 'info');
+      
       const response = await api.post('/conversations/', {
         fiche: null // Optionnel, pas de fiche de consultation liée
       });
@@ -163,8 +240,11 @@ const DoctorChatIa = () => {
       
       setMessages([welcomeMessage]);
       
+      showNotification('Nouvelle conversation créée avec succès', 'success');
+      
     } catch (error) {
       console.error('Erreur lors de la création de la conversation:', error);
+      showNotification('Erreur lors de la création de la conversation', 'error');
       
       // Fallback en cas d'erreur
       const newConversation = {
@@ -184,6 +264,8 @@ const DoctorChatIa = () => {
         timestamp: new Date(),
         type: 'text'
       }]);
+      
+      showNotification('Conversation créée en mode hors-ligne', 'warning');
     }
   };
 
@@ -198,91 +280,178 @@ const DoctorChatIa = () => {
   const deleteConversation = async (conversationId, e) => {
     e.stopPropagation();
     
-    if (window.confirm('Êtes-vous sûr de vouloir supprimer cette conversation ?')) {
-      try {
-        await api.delete(`/conversations/${conversationId}/`);
-        
-        // Mettre à jour l'état local
-        setConversations(prev => prev.filter(conv => conv.id !== conversationId));
-        
-        if (selectedConversation?.id === conversationId) {
-          const remaining = conversations.filter(conv => conv.id !== conversationId);
-          if (remaining.length > 0) {
-            selectConversation(remaining[0]);
-          } else {
-            setSelectedConversation(null);
-            setMessages([]);
-          }
+    const conversation = conversations.find(conv => conv.id === conversationId);
+    setSelectedConversationForAction(conversation);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteConversation = async () => {
+    const conversationId = selectedConversationForAction?.id;
+    const conversationName = selectedConversationForAction?.titre || selectedConversationForAction?.nom || 'Sans nom';
+    
+    try {
+      // Fermer la modale immédiatement
+      setShowDeleteModal(false);
+      
+      // Toast de chargement
+      showNotification('Suppression en cours...', 'info');
+      
+      await api.delete(`/conversations/${conversationId}/`);
+      
+      // Mettre à jour l'état local
+      setConversations(prev => prev.filter(conv => conv.id !== conversationId));
+      
+      if (selectedConversation?.id === conversationId) {
+        const remaining = conversations.filter(conv => conv.id !== conversationId);
+        if (remaining.length > 0) {
+          selectConversation(remaining[0]);
+        } else {
+          setSelectedConversation(null);
+          setMessages([]);
         }
-        
-      } catch (error) {
-        console.error('Erreur lors de la suppression de la conversation:', error);
-        alert('Erreur lors de la suppression de la conversation');
       }
+      
+      // Toast de succès avec le nom de la conversation
+      showNotification(`Conversation "${conversationName}" supprimée avec succès`, 'success');
+      
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la conversation:', error);
+      showNotification('Erreur lors de la suppression de la conversation', 'error');
+      
+      // Rouvrir la modale en cas d'erreur
+      setShowDeleteModal(true);
+    } finally {
+      setSelectedConversationForAction(null);
     }
   };
 
-  // Éditer le titre d'une conversation
-  const startEditingConversation = (conversation, e) => {
+  // Éditer le nom d'une conversation
+  const startEditingConversationName = (conversation, e) => {
     e.stopPropagation();
-    setEditingConversation(conversation.id);
-    setEditingTitle(conversation.title);
+    setSelectedConversationForAction(conversation);
+    setTempEditName(conversation.nom || '');
+    setShowEditModal(true);
   };
 
-  const saveConversationTitle = async (conversationId) => {
-    if (editingTitle.trim()) {
-      try {
-        // Mettre à jour le titre via l'API
-        await api.patch(`/conversations/${conversationId}/`, { 
-          titre: editingTitle.trim() 
-        });
-        
-        // Mettre à jour l'état local
-        setConversations(prev => 
-          prev.map(conv => 
-            conv.id === conversationId 
-              ? { ...conv, title: editingTitle.trim() }
-              : conv
-          )
-        );
-        
-        if (selectedConversation?.id === conversationId) {
-          setSelectedConversation(prev => ({ ...prev, title: editingTitle.trim() }));
-        }
-        
-        console.log('Titre mis à jour via API:', editingTitle.trim());
-        
-      } catch (error) {
-        console.error('Erreur lors de la mise à jour du titre:', error);
-        alert('Erreur lors de la mise à jour du titre de la conversation');
-      }
+  const confirmEditConversationName = async () => {
+    const conversationId = selectedConversationForAction?.id;
+    
+    if (!conversationId) {
+      showNotification('Aucune conversation sélectionnée', 'error');
+      return;
     }
-    setEditingConversation(null);
-    setEditingTitle('');
-  };
+    
+    if (!tempEditName.trim()) {
+      showNotification('Le nom ne peut pas être vide', 'error');
+      return;
+    }
 
-  const cancelEditingConversation = () => {
-    setEditingConversation(null);
-    setEditingTitle('');
+    const newName = tempEditName.trim();
+    
+    try {
+      // Fermer la modale immédiatement pour un feedback rapide
+      setShowEditModal(false);
+      
+      // Afficher un toast de chargement
+      showNotification('Modification en cours...', 'info');
+      
+      const response = await api.patch(`/conversations/${conversationId}/`, { 
+        nom: newName 
+      });
+      
+      const updatedNom = response.data.nom || newName;
+      
+      // Mise à jour immédiate et forcée de l'état
+      setConversations(prevConversations => {
+        const updated = prevConversations.map(conv => {
+          if (conv.id === conversationId) {
+            return {
+              ...conv,
+              nom: updatedNom,
+              titre: updatedNom, // Assurer que titre est aussi mis à jour
+              title: updatedNom   // Pour l'affichage local
+            };
+          }
+          return conv;
+        });
+        return updated;
+      });
+      
+      // Mettre à jour aussi la conversation sélectionnée si c'est la même
+      if (selectedConversation?.id === conversationId) {
+        setSelectedConversation(prev => ({
+          ...prev,
+          nom: updatedNom,
+          titre: updatedNom, // Assurer que titre est aussi mis à jour
+          title: updatedNom   // Pour l'affichage local
+        }));
+      }
+      
+      // Force un refresh complet de l'interface avec une nouvelle clé
+      setRefreshKey(prev => prev + 1);
+      
+      // Forcer un re-render immédiat de la liste des conversations
+      setTimeout(() => {
+        setConversations(prevConversations => [...prevConversations]);
+      }, 100);
+      
+      // Toast de succès
+      showNotification('Nom de la conversation modifié avec succès', 'success');
+      
+    } catch (error) {
+      console.error('❌ Erreur lors de la mise à jour du nom:', error);
+      showNotification('Erreur lors de la modification du nom', 'error');
+      
+      // Rouvrir la modale en cas d'erreur
+      setShowEditModal(true);
+    } finally {
+      // Nettoyer les états
+      setSelectedConversationForAction(null);
+      setTempEditName('');
+    }
   };
 
   // Partager une conversation
   const shareConversation = (conversation, e) => {
     e.stopPropagation();
+    setSelectedConversationForAction(conversation);
+    setShowShareModal(true);
+  };
+
+  const confirmShareConversation = async () => {
+    const conversation = selectedConversationForAction;
+    const conversationName = conversation?.titre || conversation?.nom || 'Conversation médicale';
     
-    if (navigator.share) {
-      navigator.share({
-        title: `Conversation: ${conversation.title}`,
-        text: `Partage de la conversation médicale: ${conversation.title}`,
-        url: window.location.href
-      }).catch(console.error);
-    } else {
-      // Fallback: copier le lien dans le presse-papiers
-      navigator.clipboard.writeText(window.location.href).then(() => {
-        alert('Lien de la conversation copié dans le presse-papiers !');
-      }).catch(() => {
-        alert('Impossible de partager la conversation.');
-      });
+    try {
+      // Fermer la modale immédiatement
+      setShowShareModal(false);
+      
+      if (navigator.share) {
+        await navigator.share({
+          title: `Conversation: ${conversationName}`,
+          text: `Partage de la conversation médicale: ${conversationName}`,
+          url: window.location.href
+        });
+        showNotification(`Conversation "${conversationName}" partagée avec succès`, 'success');
+      } else {
+        // Fallback: copier le lien dans le presse-papiers
+        await navigator.clipboard.writeText(window.location.href);
+        showNotification('Lien de la conversation copié dans le presse-papiers !', 'success');
+      }
+    } catch (error) {
+      console.error('Erreur lors du partage:', error);
+      if (error.name !== 'AbortError') { // L'utilisateur a annulé le partage
+        showNotification('Impossible de partager la conversation', 'error');
+        // Rouvrir la modale en cas d'erreur (sauf si annulation)
+        setShowShareModal(true);
+      } else {
+        // L'utilisateur a annulé le partage
+        showNotification('Partage annulé', 'info');
+      }
+    } finally {
+      if (!showShareModal) { // Ne nettoyer que si la modale est fermée
+        setSelectedConversationForAction(null);
+      }
     }
   };
 
@@ -293,7 +462,7 @@ const DoctorChatIa = () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
     const userMessage = {
-      id: Date.now(),
+      id: `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       sender: 'user',
       content: newMessage.trim(),
       timestamp: new Date(),
@@ -322,14 +491,41 @@ const DoctorChatIa = () => {
       if (analyseResponse.already_cached && analyseResponse.status === 'done') {
         // Résultat déjà disponible
         const assistantResponse = {
-          id: Date.now() + 1,
+          id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
           sender: 'assistant',
           content: analyseResponse.response,
           timestamp: new Date(),
-          type: 'text'
+          type: 'text',
+          role: 'synthese' // Marquer comme message de synthèse
         };
 
-        setMessages(prev => [...prev, assistantResponse]);
+        addUniqueMessage(assistantResponse);
+        
+        // Mettre à jour la conversation dans la liste
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === selectedConversation.id 
+              ? { 
+                  ...conv, 
+                  last_message: assistantResponse.content.substring(0, 100),
+                  updated_at: assistantResponse.timestamp.toISOString()
+                }
+              : conv
+          )
+        );
+        
+        // Mettre à jour la conversation dans la liste
+        setConversations(prev => 
+          prev.map(conv => 
+            conv.id === selectedConversation.id 
+              ? { 
+                  ...conv, 
+                  last_message: assistantResponse.content.substring(0, 100),
+                  updated_at: assistantResponse.timestamp.toISOString()
+                }
+              : conv
+          )
+        );
       } else {
         // 4. Attendre et récupérer le résultat
         const cacheKey = analyseResponse.cache_key;
@@ -367,17 +563,36 @@ const DoctorChatIa = () => {
       
       // Message d'erreur en cas d'échec de l'API
       const errorMessage = {
-        id: Date.now() + 1,
+        id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         sender: 'assistant',
         content: 'Désolé, une erreur s\'est produite lors de l\'analyse. Veuillez réessayer.',
         timestamp: new Date(),
         type: 'text'
       };
 
-      setMessages(prev => [...prev, errorMessage]);
+      addUniqueMessage(errorMessage);
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Fonction pour éviter les doublons de messages
+  const addUniqueMessage = (newMessage) => {
+    setMessages(prev => {
+      // Vérifier si un message similaire existe déjà
+      const messageExists = prev.some(msg => 
+        (msg.id === newMessage.id) || 
+        (msg.content === newMessage.content && msg.sender === newMessage.sender && 
+         Math.abs(new Date(msg.timestamp) - new Date(newMessage.timestamp)) < 5000) // 5 secondes de tolérance
+      );
+      
+      if (messageExists) {
+        console.log('Message en doublon détecté, ignoré:', newMessage.content.substring(0, 50));
+        return prev;
+      }
+      
+      return [...prev, newMessage];
+    });
   };
 
   // Fonction pour surveiller le statut d'une tâche Celery
@@ -387,8 +602,35 @@ const DoctorChatIa = () => {
         const statusResponse = await iaService.getTaskStatus(taskId);
         
         if (statusResponse.state === 'SUCCESS') {
-          // Tâche terminée, récupérer le résultat
-          await pollAnalysisResult(cacheKey);
+          // Tâche terminée, récupérer le résultat directement
+          const resultResponse = await iaService.getAnalyseResult(cacheKey);
+          
+          if (resultResponse.status === 'done' && resultResponse.response) {
+            // Ajouter uniquement le message final
+            const assistantResponse = {
+              id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              sender: 'assistant',
+              content: resultResponse.response,
+              timestamp: new Date(),
+              type: 'text',
+              role: 'synthese' // Marquer comme message de synthèse
+            };
+
+            addUniqueMessage(assistantResponse);
+            
+            // Mettre à jour la conversation dans la liste
+            setConversations(prev => 
+              prev.map(conv => 
+                conv.id === selectedConversation.id 
+                  ? { 
+                      ...conv, 
+                      last_message: assistantResponse.content.substring(0, 100),
+                      updated_at: assistantResponse.timestamp.toISOString()
+                    }
+                  : conv
+              )
+            );
+          }
           return;
         } else if (statusResponse.state === 'FAILURE') {
           throw new Error('Échec de l\'analyse IA');
@@ -406,23 +648,23 @@ const DoctorChatIa = () => {
     throw new Error('Délai d\'attente dépassé pour l\'analyse IA');
   };
 
-  // Fonction pour récupérer le résultat d'analyse
+  // Fonction pour récupérer le résultat d'analyse (polling direct)
   const pollAnalysisResult = async (cacheKey, maxAttempts = 15) => {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const resultResponse = await iaService.getAnalyseResult(cacheKey);
         
         if (resultResponse.status === 'done' && resultResponse.response) {
-          // Résultat disponible
+          // Résultat disponible - ajouter le message de l'assistant
           const assistantResponse = {
-            id: Date.now() + 1,
+            id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
             sender: 'assistant',
             content: resultResponse.response,
             timestamp: new Date(),
             type: 'text'
           };
 
-          setMessages(prev => [...prev, assistantResponse]);
+          addUniqueMessage(assistantResponse);
           
           // Mettre à jour la conversation dans la liste
           setConversations(prev => 
@@ -430,7 +672,6 @@ const DoctorChatIa = () => {
               conv.id === selectedConversation.id 
                 ? { 
                     ...conv, 
-                    // Simuler last_message et updated_at pour l'UX
                     last_message: assistantResponse.content.substring(0, 100),
                     updated_at: assistantResponse.timestamp.toISOString()
                   }
@@ -501,6 +742,64 @@ const DoctorChatIa = () => {
     );
   });
 
+  // Ouvrir le modal pour importer des photos
+  const openPhotoModal = () => {
+    setShowPhotoModal(true);
+  };
+
+  // Gérer la sélection de fichiers
+  const handleFileSelect = (event) => {
+    const files = Array.from(event.target.files);
+    const imageFiles = files.filter(file => file.type.startsWith('image/'));
+    
+    if (imageFiles.length !== files.length) {
+      showNotification('Seules les images sont acceptées', 'warning');
+    }
+    
+    setSelectedFiles(prev => [...prev, ...imageFiles]);
+  };
+
+  // Supprimer un fichier sélectionné
+  const removeSelectedFile = (index) => {
+    setSelectedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  // Confirmer l'envoi des photos
+  const confirmSendPhotos = () => {
+    if (selectedFiles.length === 0) {
+      showNotification('Veuillez sélectionner au moins une image', 'warning');
+      return;
+    }
+
+    // TODO: Implémenter l'envoi des photos à l'API
+    // Pour l'instant, on simule l'envoi
+    const photoMessage = {
+      id: `photo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      sender: 'user',
+      content: `${selectedFiles.length} image(s) envoyée(s)`,
+      timestamp: new Date(),
+      type: 'photos',
+      files: selectedFiles
+    };
+
+    setMessages(prev => [...prev, photoMessage]);
+    setSelectedFiles([]);
+    setShowPhotoModal(false);
+    
+    showNotification(`${selectedFiles.length} image(s) envoyée(s) avec succès`, 'success');
+  };
+
+  // Copier le contenu d'un message
+  const copyMessageContent = async (content) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      showNotification('Message copié dans le presse-papiers !', 'success');
+    } catch (error) {
+      console.error('Erreur lors de la copie:', error);
+      showNotification('Impossible de copier le message', 'error');
+    }
+  };
+
   // Composant Message
   const Message = ({ message }) => {
     const isUser = message.sender === 'user';
@@ -513,21 +812,31 @@ const DoctorChatIa = () => {
           </div>
         )}
         
-        <div className={`max-w-[70%] ${isUser ? 'ml-auto' : ''}`}>
+        <div className={`max-w-[80%] ${isUser ? 'ml-auto' : ''}`}>
           <div className={`px-4 py-3 rounded-2xl ${
             isUser 
               ? 'bg-mediai-primary text-white rounded-br-md' 
               : 'bg-surface-background text-content-primary rounded-bl-md border border-border-primary'
           }`}>
             {isUser ? (
-              <p className="text-sm font-body leading-relaxed whitespace-pre-wrap">
+              <p className="text-base font-body leading-relaxed whitespace-pre-wrap">
                 {message.content}
               </p>
             ) : (
-              <MarkdownRenderer 
-                content={message.content} 
-                className="text-sm font-body leading-relaxed"
-              />
+              <div className="relative group">
+                <MarkdownRenderer 
+                  content={message.content} 
+                  className="text-base font-body leading-relaxed"
+                />
+                {/* Icône de copie pour les messages de l'assistant */}
+                <button
+                  onClick={() => copyMessageContent(message.content)}
+                  className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-1.5 bg-white/90 hover:bg-white border border-border-primary rounded-md shadow-sm"
+                  title="Copier le message"
+                >
+                  <Icon icon={ActionIcons.Copy} size="w-3.5 h-3.5" className="text-content-secondary hover:text-mediai-primary transition-colors" />
+                </button>
+              </div>
             )}
           </div>
           
@@ -552,12 +861,12 @@ const DoctorChatIa = () => {
   return (
     <div className="h-[calc(100vh-4rem)] flex bg-surface-background font-body">
       {/* Sidebar - Historique des conversations */}
-      <div className={`${sidebarCollapsed ? 'w-12 sm:w-16' : 'w-72 sm:w-80'} bg-white border-r border-border-primary flex flex-col transition-all duration-300 ${sidebarCollapsed ? '' : 'hidden sm:flex'}`}>
+      <div className={`${sidebarCollapsed ? 'w-12 sm:w-16' : 'w-56 sm:w-64'} bg-white border-r border-border-primary flex flex-col transition-all duration-300 ${sidebarCollapsed ? '' : 'hidden sm:flex'}`}>
         {/* Header de la sidebar */}
-        <div className="p-3 sm:p-4 border-b border-border-primary">
+        <div className="p-2 sm:p-3 border-b border-border-primary">
           <div className="flex items-center justify-between">
             {!sidebarCollapsed && (
-              <h1 className="text-lg sm:text-xl font-heading font-semibold text-content-primary">
+              <h1 className="text-base sm:text-lg font-heading font-semibold text-content-primary">
                 Conversations
               </h1>
             )}
@@ -590,25 +899,25 @@ const DoctorChatIa = () => {
         
         {/* Barre de recherche */}
         {!sidebarCollapsed && (
-          <div className="p-4 border-b border-border-primary">
+          <div className="p-3 border-b border-border-primary">
             <div className="relative">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Rechercher une conversation..."
-                className="w-full pl-10 pr-4 py-2 text-sm border border-border-primary rounded-lg focus:ring-2 focus:ring-mediai-primary focus:border-transparent font-body text-content-primary placeholder-content-tertiary bg-white"
+                placeholder="Rechercher..."
+                className="w-full pl-8 pr-4 py-1.5 text-sm border border-border-primary rounded-lg focus:ring-2 focus:ring-mediai-primary focus:border-transparent font-body text-content-primary placeholder-content-tertiary bg-white"
               />
-              <div className="absolute left-3 top-1/2 transform -translate-y-1/2">
-                <Icon icon={ActionIcons.Search} size="w-4 h-4" className="text-content-tertiary" />
+              <div className="absolute left-2.5 top-1/2 transform -translate-y-1/2">
+                <Icon icon={ActionIcons.Search} size="w-3.5 h-3.5" className="text-content-tertiary" />
               </div>
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-content-tertiary hover:text-content-primary"
+                  className="absolute right-2.5 top-1/2 transform -translate-y-1/2 text-content-tertiary hover:text-content-primary"
                   title="Effacer la recherche"
                 >
-                  <Icon icon={ActionIcons.Close} size="w-4 h-4" />
+                  <Icon icon={ActionIcons.Close} size="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
@@ -669,75 +978,70 @@ const DoctorChatIa = () => {
           ) : (
             filteredConversations.map((conversation) => (
             <div
-              key={conversation.id}
+              key={`conv-${conversation.id}-${refreshKey}-${conversation.nom || ''}`}
               onClick={() => selectConversation(conversation)}
-              className={`p-4 cursor-pointer border-b border-border-primary hover:bg-surface-muted transition-colors group ${
-                selectedConversation?.id === conversation.id ? 'bg-mediai-primary/5 border-r-2 border-r-mediai-primary' : ''
+              className={`p-3 cursor-pointer border-b border-border-primary hover:bg-surface-muted transition-all duration-200 group ${
+                selectedConversation?.id === conversation.id 
+                  ? 'bg-mediai-primary/10 border-r-4 border-r-mediai-primary shadow-sm' 
+                  : 'hover:bg-gray-50'
               }`}
             >
-              <div className="flex items-start space-x-3">
-                <div className="w-8 h-8 rounded-lg bg-mediai-primary/10 flex items-center justify-center flex-shrink-0">
-                  <Icon icon={getConversationIcon(conversation)} size="w-4 h-4" className="text-mediai-primary" />
+              <div className="flex items-start space-x-2.5">
+                <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-all duration-200 ${
+                  selectedConversation?.id === conversation.id 
+                    ? 'bg-mediai-primary text-white shadow-sm' 
+                    : 'bg-mediai-primary/10 text-mediai-primary'
+                }`}>
+                  <Icon icon={getConversationIcon(conversation)} size="w-3.5 h-3.5" className={
+                    selectedConversation?.id === conversation.id 
+                      ? 'text-white' 
+                      : 'text-mediai-primary'
+                  } />
                 </div>
                 
                 {!sidebarCollapsed && (
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      {editingConversation === conversation.id ? (
-                        <div className="flex-1 mr-2">
-                          <input
-                            type="text"
-                            value={editingTitle}
-                            onChange={(e) => setEditingTitle(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                saveConversationTitle(conversation.id);
-                              } else if (e.key === 'Escape') {
-                                cancelEditingConversation();
-                              }
-                            }}
-                            onBlur={() => saveConversationTitle(conversation.id)}
-                            className="w-full text-sm font-medium text-content-primary bg-transparent border-b border-mediai-primary focus:outline-none font-heading"
-                            autoFocus
-                          />
-                        </div>
-                      ) : (
-                        <h3 className="text-sm font-medium text-content-primary truncate font-heading">
-                          {conversation.title || `Conversation ${conversation.id}`}
+                      <div className="flex-1">
+                        <h3 className={`text-sm font-medium truncate font-heading transition-colors duration-200 ${
+                          selectedConversation?.id === conversation.id 
+                            ? 'text-mediai-primary font-semibold' 
+                            : 'text-content-primary'
+                        }`}>
+                          {/* Priorité : nom modifié, puis titre, puis titre généré */}
+                          {conversation.nom || conversation.titre || generateConversationTitle(conversation)}
                         </h3>
-                      )}
+                      </div>
                       
-                      {editingConversation !== conversation.id && (
-                        <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all">
-                          <button
-                            onClick={(e) => startEditingConversation(conversation, e)}
-                            className="text-content-tertiary hover:text-mediai-primary transition-all p-1"
-                            title="Éditer le titre"
-                          >
-                            <Icon icon={ActionIcons.Edit} size="w-3 h-3" />
-                          </button>
-                          
-                          <button
-                            onClick={(e) => shareConversation(conversation, e)}
-                            className="text-content-tertiary hover:text-mediai-primary transition-all p-1"
-                            title="Partager la conversation"
-                          >
-                            <Icon icon={ActionIcons.Share} size="w-3 h-3" />
-                          </button>
-                          
-                          <button
-                            onClick={(e) => deleteConversation(conversation.id, e)}
-                            className="text-content-tertiary hover:text-danger transition-all p-1"
-                            title="Supprimer la conversation"
-                          >
-                            <Icon icon={ActionIcons.Delete} size="w-3 h-3" />
-                          </button>
-                        </div>
-                      )}
+                      <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-all">
+                        <button
+                          onClick={(e) => startEditingConversationName(conversation, e)}
+                          className="text-content-tertiary hover:text-mediai-primary transition-all p-1"
+                          title="Éditer le nom"
+                        >
+                          <Icon icon={ActionIcons.Edit} size="w-3 h-3" />
+                        </button>
+                        
+                        <button
+                          onClick={(e) => shareConversation(conversation, e)}
+                          className="text-content-tertiary hover:text-mediai-primary transition-all p-1"
+                          title="Partager la conversation"
+                        >
+                          <Icon icon={ActionIcons.Share} size="w-3 h-3" />
+                        </button>
+                        
+                        <button
+                          onClick={(e) => deleteConversation(conversation.id, e)}
+                          className="text-content-tertiary hover:text-danger transition-all p-1"
+                          title="Supprimer la conversation"
+                        >
+                          <Icon icon={ActionIcons.Delete} size="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                     
                     <p className="text-xs text-content-secondary truncate mt-1 font-body">
-                      {conversation.last_message || 'Aucun message'}
+                      {conversation.first_message || conversation.last_message || 'Aucun message'}
                     </p>
                     
                     <div className="flex items-center justify-between mt-2">
@@ -745,11 +1049,19 @@ const DoctorChatIa = () => {
                         {formatConversationTime(conversation.updated_at || conversation.created_at)}
                       </span>
                       
-                      {conversation.message_count > 0 && (
-                        <span className="text-xs bg-mediai-primary/10 text-mediai-primary px-2 py-0.5 rounded-full font-body-medium">
-                          {conversation.message_count}
-                        </span>
-                      )}
+                      {(() => {
+                        // Utiliser le comptage pré-calculé ou calculer à la volée
+                        const visibleMessagesCount = conversation.visibleMessagesCount || 
+                          conversation.messages?.filter(msg => 
+                            msg.role === 'user' || msg.role === 'synthese'
+                          ).length || 0;
+                        
+                        return visibleMessagesCount > 0 && (
+                          <span className="text-xs bg-mediai-primary/10 text-mediai-primary px-2 py-0.5 rounded-full font-body-medium">
+                            {visibleMessagesCount}
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                 )}
@@ -761,16 +1073,16 @@ const DoctorChatIa = () => {
         
         {/* User info en bas */}
         {!sidebarCollapsed && (
-          <div className="p-4 border-t border-border-primary bg-surface-muted">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 rounded-full bg-mediai-primary flex items-center justify-center">
-                <span className="text-sm font-medium text-white">
-                  {user?.nom?.charAt(0)?.toUpperCase() || 'U'}
+          <div className="p-3 border-t border-border-primary bg-surface-muted">
+            <div className="flex items-center space-x-2.5">
+              <div className="w-7 h-7 rounded-full bg-mediai-primary flex items-center justify-center">
+                <span className="text-xs font-medium text-white">
+                  {user?.first_name?.charAt(0)?.toUpperCase() || 'U'}
                 </span>
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-content-primary truncate font-body">
-                  {user?.nom || 'Utilisateur'}
+                <p className="text-xs font-medium text-content-primary truncate font-body">
+                  {user?.first_name || 'Utilisateur'}
                 </p>
                 <p className="text-xs text-content-secondary font-body">
                   {user?.role || 'Patient'}
@@ -786,26 +1098,26 @@ const DoctorChatIa = () => {
         {selectedConversation ? (
           <>
             {/* Header du chat */}
-            <div className="p-3 sm:p-4 border-b border-border-primary bg-white">
+            <div className="p-2 sm:p-3 border-b border-border-primary bg-white">
               <div className="flex items-center justify-between">
-                <div className="flex items-center space-x-2 sm:space-x-3">
+                <div className="flex items-center space-x-2">
                   {/* Bouton pour afficher sidebar sur mobile */}
                   <button 
-                    className="sm:hidden p-2 text-content-secondary hover:text-content-primary transition-colors"
+                    className="sm:hidden p-1.5 text-content-secondary hover:text-content-primary transition-colors"
                     onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
                   >
-                    <Icon icon={NavigationIcons.Menu} size="w-5 h-5" />
+                    <Icon icon={NavigationIcons.Menu} size="w-4 h-4" />
                   </button>
                   
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-primary flex items-center justify-center">
-                    <Icon icon={MedicalIcons.AI} size="w-3 h-3 sm:w-4 sm:h-4" className="text-white" />
+                  <div className="w-6 h-6 sm:w-7 sm:h-7 rounded-lg bg-gradient-primary flex items-center justify-center">
+                    <Icon icon={MedicalIcons.AI} size="w-3 h-3 sm:w-3.5 sm:h-3.5" className="text-white" />
                   </div>
                   <div>
-                    <h2 className="text-sm sm:text-base font-heading font-semibold text-content-primary">
+                    <h2 className="text-sm font-heading font-semibold text-content-primary">
                       Assistant Médical IA
                     </h2>
                     <p className="text-xs text-success font-body-medium flex items-center">
-                      <span className="w-1.5 h-1.5 bg-success rounded-full mr-1.5"></span>
+                      <span className="w-1 h-1 bg-success rounded-full mr-1"></span>
                       En ligne
                     </p>
                   </div>
@@ -815,19 +1127,69 @@ const DoctorChatIa = () => {
 
             {/* Zone des messages */}
             <div className="flex-1 overflow-y-auto p-3 sm:p-4 lg:p-6 bg-surface-background">
-              <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6">
+              <div className="max-w-5xl mx-auto space-y-4 sm:space-y-6">
                 {messages.length === 0 ? (
-                  /* État vide - Aucun message */
-                  <div className="flex flex-col items-center justify-center h-64 text-center">
+                  /* État vide - Aucun message avec suggestions */
+                  <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center">
                     <div className="w-16 h-16 rounded-full bg-gradient-primary/10 flex items-center justify-center mb-4">
                       <Icon icon={MedicalIcons.AI} size="w-8 h-8" className="text-mediai-primary" />
                     </div>
-                    <h3 className="text-lg font-heading font-semibold text-content-primary mb-2">
+                    <h3 className="text-xl font-heading font-semibold text-content-primary mb-2">
                       Conversation vide
                     </h3>
-                    <p className="text-sm text-content-secondary font-body max-w-sm">
+                    <p className="text-base text-content-secondary font-body max-w-sm mb-6">
                       Commencez la conversation en tapant votre message ci-dessous ou en sélectionnant une suggestion.
                     </p>
+                    
+                    {/* Suggestions de démarrage */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-w-2xl w-full px-4">
+                      {[
+                        {
+                          icon: MedicalIcons.Stethoscope,
+                          title: "Analyse de symptômes",
+                          description: "J'ai des symptômes que j'aimerais analyser",
+                          message: "J'ai des symptômes que j'aimerais analyser. Pouvez-vous m'aider ?"
+                        },
+                        {
+                          icon: MedicalIcons.Report,
+                          title: "Interprétation d'examens",
+                          description: "Aide pour interpréter des résultats médicaux",
+                          message: "J'ai des résultats d'examens médicaux que j'aimerais comprendre"
+                        },
+                        {
+                          icon: MedicalIcons.Pills,
+                          title: "Information sur médicaments",
+                          description: "Questions sur les traitements",
+                          message: "J'ai des questions concernant un traitement médical"
+                        },
+                        {
+                          icon: MedicalIcons.Heart,
+                          title: "Conseil médical général",
+                          description: "Demande de conseil de santé",
+                          message: "J'aimerais avoir un conseil médical général"
+                        }
+                      ].map((suggestion, index) => (
+                        <button
+                          key={index}
+                          onClick={() => setNewMessage(suggestion.message)}
+                          className="p-4 text-left border border-border-primary rounded-xl hover:border-mediai-primary hover:bg-mediai-primary/5 transition-all group"
+                        >
+                          <div className="flex items-start space-x-3">
+                            <div className="w-8 h-8 rounded-lg bg-mediai-primary/10 flex items-center justify-center flex-shrink-0 group-hover:bg-mediai-primary/20 transition-colors">
+                              <Icon icon={suggestion.icon} size="w-4 h-4" className="text-mediai-primary" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-sm font-heading font-medium text-content-primary mb-1">
+                                {suggestion.title}
+                              </h4>
+                              <p className="text-xs text-content-secondary font-body leading-relaxed">
+                                {suggestion.description}
+                              </p>
+                            </div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 ) : (
                   /* Messages existants */
@@ -849,7 +1211,7 @@ const DoctorChatIa = () => {
                           <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                           <div className="w-2 h-2 bg-content-secondary rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
                         </div>
-                        <span className="text-xs text-content-secondary font-body">
+                        <span className="text-sm text-content-secondary font-body">
                           Analyse médicale en cours...
                         </span>
                       </div>
@@ -863,74 +1225,74 @@ const DoctorChatIa = () => {
 
             {/* Zone de saisie */}
             <div className="p-3 sm:p-4 lg:p-6 border-t border-border-primary bg-white">
-              <div className="max-w-4xl mx-auto">
-                {/* Suggestions rapides */}
-                <div className="mb-3 sm:mb-4 flex flex-wrap gap-2">
-                  {[
-                    'J\'ai mal à la tête depuis ce matin',
-                    'Besoin d\'un rendez-vous urgent',
-                    'Questions sur mes résultats d\'analyse',
-                    'Effets secondaires de mon traitement'
-                  ].map((suggestion) => (
-                    <button
-                      key={suggestion}
-                      onClick={() => setNewMessage(suggestion)}
-                      className="px-2 sm:px-3 py-1 sm:py-2 text-xs sm:text-sm bg-surface-muted hover:bg-surface-background border border-border-primary rounded-lg text-content-secondary hover:text-content-primary transition-colors font-body"
+              <div className="max-w-5xl mx-auto">
+                <form onSubmit={handleSendMessage} className="relative">
+                  <div className="flex items-end bg-surface-background border border-border-primary rounded-2xl p-2 focus-within:border-mediai-primary transition-colors">
+                    {/* Icône plus à gauche */}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={openPhotoModal}
+                      title="Importer des images"
+                      className="text-content-tertiary hover:text-mediai-primary p-2 mr-2 flex-shrink-0"
                     >
-                      {suggestion}
-                    </button>
-                  ))}
-                </div>
-                
-                <form onSubmit={handleSendMessage} className="flex items-end space-x-2 sm:space-x-3">
-                  <div className="flex-1 relative">
-                    <textarea
-                      value={newMessage}
-                      onChange={(e) => setNewMessage(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          handleSendMessage(e);
-                        }
-                      }}
-                      placeholder="Tapez votre message..."
-                      disabled={isLoading}
-                      rows={1}
-                      className="w-full p-3 sm:p-4 pr-12 sm:pr-16 border border-border-primary rounded-xl resize-none focus:ring-2 focus:ring-mediai-primary focus:border-transparent font-body text-content-primary placeholder-content-tertiary bg-white text-sm sm:text-base"
-                      style={{ minHeight: '48px', maxHeight: '120px' }}
-                    />
+                      <Icon icon={ActionIcons.Add} size="w-5 h-5" />
+                    </Button>
                     
-                    {/* Boutons dans le textarea */}
-                    <div className="absolute right-2 sm:right-3 bottom-2 sm:bottom-3 flex items-center space-x-1 sm:space-x-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        title="Joindre un fichier"
-                        className="text-content-tertiary hover:text-content-secondary hidden sm:inline-flex"
-                      >
-                        <Icon icon={ActionIcons.Attach} size="w-4 h-4" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        title="Enregistrement vocal"
-                        className="text-content-tertiary hover:text-content-secondary"
-                      >
-                        <Icon icon={ActionIcons.Mic} size="w-4 h-4" />
-                      </Button>
+                    {/* Zone de texte qui s'agrandit automatiquement */}
+                    <div className="flex-1 relative">
+                      <textarea
+                        ref={textareaRef}
+                        value={newMessage}
+                        onChange={(e) => {
+                          setNewMessage(e.target.value);
+                          // Auto-resize immédiat
+                          const textarea = e.target;
+                          textarea.style.height = 'auto';
+                          textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            handleSendMessage(e);
+                          }
+                        }}
+                        placeholder="Message Assistant Médical IA..."
+                        disabled={isLoading}
+                        rows={1}
+                        className="w-full py-3 px-0 border-none resize-none focus:ring-0 focus:outline-none font-body text-content-primary placeholder-content-tertiary bg-transparent text-base leading-6"
+                        style={{ 
+                          minHeight: '24px',
+                          maxHeight: '200px'
+                        }}
+                      />
                     </div>
+                    
+                    {/* Icône d'envoi à droite */}
+                    <Button
+                      type="submit"
+                      disabled={!newMessage.trim() || isLoading}
+                      size="sm"
+                      className={`ml-2 p-2 rounded-lg flex-shrink-0 transition-all ${
+                        newMessage.trim() && !isLoading
+                          ? 'bg-mediai-primary hover:bg-mediai-primary/90 text-white' 
+                          : 'bg-surface-muted text-content-tertiary cursor-not-allowed'
+                      }`}
+                      title="Envoyer le message"
+                    >
+                      {isLoading ? (
+                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <Icon icon={ActionIcons.Send} size="w-5 h-5" />
+                      )}
+                    </Button>
                   </div>
                   
-                  <Button
-                    type="submit"
-                    disabled={!newMessage.trim() || isLoading}
-                    loading={isLoading}
-                    className="px-4 py-3 sm:px-6 sm:py-4 h-12 sm:h-14"
-                  >
-                    <Icon icon={ActionIcons.Send} size="w-4 h-4 sm:w-5 sm:h-5" />
-                  </Button>
+                  {/* Texte d'information en bas */}
+                  <p className="text-xs text-content-tertiary text-center mt-2">
+                    L'IA peut commettre des erreurs. Vérifiez les informations importantes.
+                  </p>
                 </form>
               </div>
             </div>
@@ -960,6 +1322,181 @@ const DoctorChatIa = () => {
           </div>
         )}
       </div>
+
+      {/* Modales de confirmation */}
+      {/* Modale de suppression */}
+      <ConfirmModal
+        isOpen={showDeleteModal}
+        onClose={() => {
+          setShowDeleteModal(false);
+          setSelectedConversationForAction(null);
+        }}
+        onConfirm={confirmDeleteConversation}
+        title="Supprimer la conversation"
+        message={`Êtes-vous sûr de vouloir supprimer la conversation "${selectedConversationForAction?.titre || selectedConversationForAction?.nom || 'Sans nom'}" ? Cette action est irréversible.`}
+        confirmText="Supprimer"
+        cancelText="Annuler"
+        variant="danger"
+      />
+
+      {/* Modale d'édition */}
+      <Modal
+        isOpen={showEditModal}
+        onClose={() => {
+          setShowEditModal(false);
+          setSelectedConversationForAction(null);
+          setTempEditName('');
+        }}
+        title="Modifier le nom de la conversation"
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-content-primary mb-2">
+              Nouveau nom de la conversation
+            </label>
+            <Input
+              value={tempEditName}
+              onChange={(e) => setTempEditName(e.target.value)}
+              placeholder="Entrez le nouveau nom..."
+              autoFocus
+            />
+          </div>
+          
+          <div className="flex justify-end space-x-3">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowEditModal(false);
+                setSelectedConversationForAction(null);
+                setTempEditName('');
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={confirmEditConversationName}
+              disabled={!tempEditName.trim()}
+            >
+              Modifier
+            </Button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modale de partage */}
+      <ConfirmModal
+        isOpen={showShareModal}
+        onClose={() => {
+          setShowShareModal(false);
+          setSelectedConversationForAction(null);
+        }}
+        onConfirm={confirmShareConversation}
+        title="Partager la conversation"
+        message={`Voulez-vous partager la conversation "${selectedConversationForAction?.titre || selectedConversationForAction?.nom || 'Sans nom'}" ?`}
+        confirmText="Partager"
+        cancelText="Annuler"
+        variant="primary"
+      />
+
+      {/* Modale d'import d'images */}
+      <Modal
+        isOpen={showPhotoModal}
+        onClose={() => {
+          setShowPhotoModal(false);
+          setSelectedFiles([]);
+        }}
+        title="Importer des images"
+      >
+        <div className="space-y-4">
+          {/* Zone de glisser-déposer */}
+          <div className="border-2 border-dashed border-border-primary rounded-lg p-6 text-center hover:border-mediai-primary transition-colors">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={handleFileSelect}
+              className="hidden"
+              id="file-input"
+            />
+            <label
+              htmlFor="file-input"
+              className="cursor-pointer block"
+            >
+              <div className="w-12 h-12 mx-auto mb-4 bg-mediai-primary/10 rounded-full flex items-center justify-center">
+                <Icon icon={ActionIcons.Upload} size="w-6 h-6" className="text-mediai-primary" />
+              </div>
+              <p className="text-base font-medium text-content-primary mb-2">
+                Cliquez pour sélectionner des images
+              </p>
+              <p className="text-sm text-content-secondary">
+                ou glissez-déposez vos fichiers ici
+              </p>
+              <p className="text-xs text-content-tertiary mt-2">
+                Formats acceptés : JPG, PNG, GIF (max 10MB par image)
+              </p>
+            </label>
+          </div>
+
+          {/* Liste des fichiers sélectionnés */}
+          {selectedFiles.length > 0 && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-medium text-content-primary">
+                Images sélectionnées ({selectedFiles.length})
+              </h4>
+              <div className="max-h-48 overflow-y-auto space-y-2">
+                {selectedFiles.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between p-3 bg-surface-muted rounded-lg"
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className="w-10 h-10 bg-mediai-primary/10 rounded-lg flex items-center justify-center">
+                        <Icon icon={ActionIcons.Upload} size="w-5 h-5" className="text-mediai-primary" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-content-primary truncate">
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-content-secondary">
+                          {(file.size / 1024 / 1024).toFixed(2)} MB
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => removeSelectedFile(index)}
+                      className="text-content-tertiary hover:text-danger transition-colors p-1"
+                      title="Supprimer"
+                    >
+                      <Icon icon={ActionIcons.Close} size="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Boutons d'action */}
+          <div className="flex justify-end space-x-3 pt-4 border-t border-border-primary">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPhotoModal(false);
+                setSelectedFiles([]);
+              }}
+            >
+              Annuler
+            </Button>
+            <Button
+              onClick={confirmSendPhotos}
+              disabled={selectedFiles.length === 0}
+              className="flex items-center space-x-2"
+            >
+              <Icon icon={ActionIcons.Send} size="w-4 h-4" />
+              <span>Envoyer {selectedFiles.length > 0 ? `(${selectedFiles.length})` : ''}</span>
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
