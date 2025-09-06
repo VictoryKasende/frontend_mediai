@@ -48,8 +48,69 @@ body {
 
 .font-heading {
   font-family: 'Inter', system-ui, sans-serif;
-  font-weight: 600;
-  letter-spacing: -0.025em;
+}
+
+/* ===== ANIMATIONS PERSONNALISÉES ===== */
+
+/* Animation de vague pour les points de chargement */
+@keyframes loadingWave {
+  0%, 60%, 100% {
+    transform: translateY(0);
+    opacity: 0.4;
+  }
+  30% {
+    transform: translateY(-10px);
+    opacity: 1;
+  }
+}
+
+/* Animation de pulsation */
+@keyframes loadingPulse {
+  0%, 100% {
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+/* Animation de barre de progression */
+@keyframes loadingBar {
+  0% {
+    width: 0%;
+    opacity: 0.7;
+  }
+  50% {
+    width: 70%;
+    opacity: 1;
+  }
+  100% {
+    width: 100%;
+    opacity: 0.7;
+  }
+}
+
+/* Classes d'animation pour les points de chargement */
+.loading-dot-1 {
+  animation: loadingWave 1.8s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.loading-dot-2 {
+  animation: loadingWave 1.8s ease-in-out infinite;
+  animation-delay: 0.3s;
+}
+
+.loading-dot-3 {
+  animation: loadingWave 1.8s ease-in-out infinite;
+  animation-delay: 0.6s;
+}
+
+/* Classe d'animation pour la barre de progression */
+.loading-bar {
+  animation: loadingBar 2.5s ease-in-out infinite;
 }
 
 .font-subheading {

@@ -9,72 +9,6 @@ import Modal from '../../components/Modal';
 import ConfirmModal from '../../components/ConfirmModal';
 import api, { iaService } from '../../services/api';
 
-// Styles CSS pour les animations personnalisées
-const loadingStyles = `
-  @keyframes loadingWave {
-    0%, 60%, 100% {
-      transform: translateY(0);
-      opacity: 0.4;
-    }
-    30% {
-      transform: translateY(-10px);
-      opacity: 1;
-    }
-  }
-  
-  @keyframes loadingPulse {
-    0%, 100% {
-      transform: scale(0.8);
-      opacity: 0.5;
-    }
-    50% {
-      transform: scale(1.2);
-      opacity: 1;
-    }
-  }
-  
-  @keyframes loadingBar {
-    0% {
-      width: 0%;
-      opacity: 0.7;
-    }
-    50% {
-      width: 70%;
-      opacity: 1;
-    }
-    100% {
-      width: 100%;
-      opacity: 0.7;
-    }
-  }
-  
-  .loading-dot-1 {
-    animation: loadingWave 1.8s ease-in-out infinite;
-    animation-delay: 0s;
-  }
-  
-  .loading-dot-2 {
-    animation: loadingWave 1.8s ease-in-out infinite;
-    animation-delay: 0.3s;
-  }
-  
-  .loading-dot-3 {
-    animation: loadingWave 1.8s ease-in-out infinite;
-    animation-delay: 0.6s;
-  }
-  
-  .loading-bar {
-    animation: loadingBar 2.5s ease-in-out infinite;
-  }
-`;
-
-// Injecter les styles dans le document
-if (typeof document !== 'undefined') {
-  const styleSheet = document.createElement('style');
-  styleSheet.textContent = loadingStyles;
-  document.head.appendChild(styleSheet);
-}
-
 /**
  * Page Chat IA Médecin - Interface similaire à ChatGPT avec API réelle
  */
@@ -627,11 +561,19 @@ const DoctorChatIa = () => {
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
       
-      // Message d'erreur en cas d'échec de l'API
+      // Message d'erreur adapté selon le type d'erreur
+      let errorContent = 'Désolé, une erreur s\'est produite lors de l\'analyse. Veuillez réessayer.';
+      
+      if (error.message && error.message.includes('Délai d\'attente dépassé')) {
+        errorContent = '⏳ L\'analyse prend plus de temps que prévu. Votre demande est en cours de traitement, veuillez actualiser la page dans quelques instants pour voir le résultat.';
+      } else if (error.message && error.message.includes('Impossible de récupérer')) {
+        errorContent = '⏳ L\'analyse est en cours de traitement. Veuillez actualiser la page dans quelques instants pour voir le résultat.';
+      }
+      
       const errorMessage = {
         id: `error-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         sender: 'assistant',
-        content: 'Désolé, une erreur s\'est produite lors de l\'analyse. Veuillez réessayer.',
+        content: errorContent,
         timestamp: new Date(),
         type: 'text'
       };
@@ -653,7 +595,6 @@ const DoctorChatIa = () => {
       );
       
       if (messageExists) {
-        console.log('Message en doublon détecté, ignoré:', newMessage.content.substring(0, 50));
         return prev;
       }
       
@@ -662,7 +603,7 @@ const DoctorChatIa = () => {
   };
 
   // Fonction pour surveiller le statut d'une tâche Celery
-  const pollTaskStatus = async (taskId, cacheKey, maxAttempts = 30) => {
+  const pollTaskStatus = async (taskId, cacheKey, maxAttempts = 60) => { // Augmenté à 60 tentatives (4 minutes)
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const statusResponse = await iaService.getTaskStatus(taskId);
@@ -672,6 +613,7 @@ const DoctorChatIa = () => {
           const resultResponse = await iaService.getAnalyseResult(cacheKey);
           
           if (resultResponse.status === 'done' && resultResponse.response) {
+            
             // Ajouter uniquement le message final
             const assistantResponse = {
               id: `assistant-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
@@ -699,23 +641,33 @@ const DoctorChatIa = () => {
           }
           return;
         } else if (statusResponse.state === 'FAILURE') {
+          console.error('❌ Échec de l\'analyse IA');
           throw new Error('Échec de l\'analyse IA');
+        } else if (statusResponse.state === 'PENDING' || statusResponse.state === 'PROGRESS') {
+          // Analyse en cours, continuer le polling
         }
         
-        // Attendre 2 secondes avant la prochaine vérification
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        // Attendre 4 secondes avant la prochaine vérification (augmenté)
+        await new Promise(resolve => setTimeout(resolve, 4000));
       } catch (error) {
         console.error('Erreur lors de la vérification du statut:', error);
+        
+        // Ne pas abandonner immédiatement en cas d'erreur réseau
+        if (attempt < maxAttempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          continue;
+        }
         break;
       }
     }
     
     // Timeout ou erreur
-    throw new Error('Délai d\'attente dépassé pour l\'analyse IA');
+    console.error('❌ Délai d\'attente dépassé pour l\'analyse IA');
+    throw new Error('Délai d\'attente dépassé pour l\'analyse IA. L\'analyse peut prendre plus de temps que prévu, veuillez actualiser la page dans quelques instants.');
   };
 
   // Fonction pour récupérer le résultat d'analyse (polling direct)
-  const pollAnalysisResult = async (cacheKey, maxAttempts = 15) => {
+  const pollAnalysisResult = async (cacheKey, maxAttempts = 30) => { // Augmenté à 30 tentatives (2.5 minutes)
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       try {
         const resultResponse = await iaService.getAnalyseResult(cacheKey);
@@ -727,7 +679,8 @@ const DoctorChatIa = () => {
             sender: 'assistant',
             content: resultResponse.response,
             timestamp: new Date(),
-            type: 'text'
+            type: 'text',
+            role: 'synthese' // Marquer comme message de synthèse
           };
 
           addUniqueMessage(assistantResponse);
@@ -746,18 +699,30 @@ const DoctorChatIa = () => {
           );
           
           return;
+        } else if (resultResponse.status === 'processing') {
+          // Analyse encore en cours
+        } else if (resultResponse.status === 'error') {
+          console.error('❌ Erreur lors de l\'analyse IA');
+          throw new Error('Erreur lors de l\'analyse IA');
         }
         
-        // Attendre 3 secondes avant la prochaine vérification
-        await new Promise(resolve => setTimeout(resolve, 3000));
+        // Attendre 5 secondes avant la prochaine vérification (augmenté)
+        await new Promise(resolve => setTimeout(resolve, 5000));
       } catch (error) {
         console.error('Erreur lors de la récupération du résultat:', error);
+        
+        // Ne pas abandonner immédiatement en cas d'erreur réseau
+        if (attempt < maxAttempts - 1) {
+          await new Promise(resolve => setTimeout(resolve, 6000));
+          continue;
+        }
         break;
       }
     }
     
     // Timeout ou erreur
-    throw new Error('Impossible de récupérer le résultat de l\'analyse IA');
+    console.error('❌ Impossible de récupérer le résultat de l\'analyse IA');
+    throw new Error('Impossible de récupérer le résultat de l\'analyse IA. L\'analyse peut prendre plus de temps que prévu, veuillez actualiser la page dans quelques instants.');
   };
 
   // Formater l'heure pour les messages
@@ -1046,7 +1011,7 @@ const DoctorChatIa = () => {
             <div
               key={`conv-${conversation.id}-${refreshKey}-${conversation.nom || ''}`}
               onClick={() => selectConversation(conversation)}
-              className={`p-3 cursor-pointer border-b border-border-primary hover:bg-surface-muted transition-all duration-200 group ${
+              className={`p-3 cursor-pointer border-b border-border-primary hover:bg-surface-muted transition-all duration-200 group relative ${
                 selectedConversation?.id === conversation.id 
                   ? 'bg-mediai-primary/10 border-r-4 border-r-mediai-primary shadow-sm' 
                   : 'hover:bg-gray-50'
@@ -1066,47 +1031,19 @@ const DoctorChatIa = () => {
                 </div>
                 
                 {!sidebarCollapsed && (
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <h3 className={`text-sm font-medium truncate font-heading transition-colors duration-200 ${
-                          selectedConversation?.id === conversation.id 
-                            ? 'text-mediai-primary font-semibold' 
-                            : 'text-content-primary'
-                        }`}>
-                          {/* Priorité : nom modifié, puis titre, puis titre généré */}
-                          {conversation.nom || conversation.titre || generateConversationTitle(conversation)}
-                        </h3>
-                      </div>
-                      
-                      <div className="flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-all">
-                        <button
-                          onClick={(e) => startEditingConversationName(conversation, e)}
-                          className="text-content-tertiary hover:text-mediai-primary transition-all p-1"
-                          title="Éditer le nom"
-                        >
-                          <Icon icon={ActionIcons.Edit} size="w-3 h-3" />
-                        </button>
-                        
-                        <button
-                          onClick={(e) => shareConversation(conversation, e)}
-                          className="text-content-tertiary hover:text-mediai-primary transition-all p-1"
-                          title="Partager la conversation"
-                        >
-                          <Icon icon={ActionIcons.Share} size="w-3 h-3" />
-                        </button>
-                        
-                        <button
-                          onClick={(e) => deleteConversation(conversation.id, e)}
-                          className="text-content-tertiary hover:text-danger transition-all p-1"
-                          title="Supprimer la conversation"
-                        >
-                          <Icon icon={ActionIcons.Delete} size="w-3 h-3" />
-                        </button>
-                      </div>
+                  <div className="flex-1 min-w-0 pr-6"> {/* Espace réservé pour les boutons - minimal */}
+                    <div className="w-full">
+                      <h3 className={`text-sm font-medium font-heading transition-colors duration-200 truncate ${
+                        selectedConversation?.id === conversation.id 
+                          ? 'text-mediai-primary font-semibold' 
+                          : 'text-content-primary'
+                      }`} title={conversation.nom || conversation.titre || generateConversationTitle(conversation)}>
+                        {/* Priorité : nom modifié, puis titre, puis titre généré */}
+                        {conversation.nom || conversation.titre || generateConversationTitle(conversation)}
+                      </h3>
                     </div>
                     
-                    <p className="text-xs text-content-secondary truncate mt-1 font-body">
+                    <p className="text-xs text-content-secondary truncate mt-1 font-body" title={conversation.first_message || conversation.last_message || 'Aucun message'}>
                       {conversation.first_message || conversation.last_message || 'Aucun message'}
                     </p>
                     
@@ -1131,6 +1068,33 @@ const DoctorChatIa = () => {
                     </div>
                   </div>
                 )}
+              </div>
+              
+              {/* Boutons d'actions en position absolue pour éviter le scroll horizontal */}
+              <div className="absolute top-3 right-3 flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-white/90 rounded-lg p-1 shadow-sm">
+                <button
+                  onClick={(e) => startEditingConversationName(conversation, e)}
+                  className="text-content-tertiary hover:text-mediai-primary transition-all p-1.5 rounded-md hover:bg-white"
+                  title="Éditer le nom"
+                >
+                  <Icon icon={ActionIcons.Edit} size="w-3.5 h-3.5" />
+                </button>
+                
+                <button
+                  onClick={(e) => shareConversation(conversation, e)}
+                  className="text-content-tertiary hover:text-mediai-primary transition-all p-1.5 rounded-md hover:bg-white"
+                  title="Partager la conversation"
+                >
+                  <Icon icon={ActionIcons.Share} size="w-3.5 h-3.5" />
+                </button>
+                
+                <button
+                  onClick={(e) => deleteConversation(conversation.id, e)}
+                  className="text-content-tertiary hover:text-danger transition-all p-1.5 rounded-md hover:bg-white"
+                  title="Supprimer la conversation"
+                >
+                  <Icon icon={ActionIcons.Delete} size="w-3.5 h-3.5" />
+                </button>
               </div>
             </div>
           ))
@@ -1274,27 +1238,9 @@ const DoctorChatIa = () => {
                       <div className="flex items-center space-x-3">
                         {/* Animation des trois points qui nagent */}
                         <div className="flex space-x-1">
-                          <div 
-                            className="w-2 h-2 bg-mediai-primary rounded-full animate-pulse"
-                            style={{
-                              animation: 'loadingDot 1.5s ease-in-out infinite',
-                              animationDelay: '0s'
-                            }}
-                          ></div>
-                          <div 
-                            className="w-2 h-2 bg-mediai-primary rounded-full animate-pulse"
-                            style={{
-                              animation: 'loadingDot 1.5s ease-in-out infinite',
-                              animationDelay: '0.3s'
-                            }}
-                          ></div>
-                          <div 
-                            className="w-2 h-2 bg-mediai-primary rounded-full animate-pulse"
-                            style={{
-                              animation: 'loadingDot 1.5s ease-in-out infinite',
-                              animationDelay: '0.6s'
-                            }}
-                          ></div>
+                          <div className="w-2 h-2 bg-mediai-primary rounded-full loading-dot-1"></div>
+                          <div className="w-2 h-2 bg-mediai-primary rounded-full loading-dot-2"></div>
+                          <div className="w-2 h-2 bg-mediai-primary rounded-full loading-dot-3"></div>
                         </div>
                         <span className="text-sm text-mediai-primary font-body-medium">
                           Analyse médicale en cours
@@ -1303,13 +1249,7 @@ const DoctorChatIa = () => {
                       
                       {/* Barre de progression animée */}
                       <div className="mt-2 w-full bg-surface-muted rounded-full h-1">
-                        <div 
-                          className="bg-gradient-to-r from-mediai-primary to-mediai-primary/70 h-1 rounded-full animate-pulse"
-                          style={{
-                            animation: 'loadingBar 2s ease-in-out infinite',
-                            width: '0%'
-                          }}
-                        ></div>
+                        <div className="bg-gradient-to-r from-mediai-primary to-mediai-primary/70 h-1 rounded-full loading-bar"></div>
                       </div>
                     </div>
                   </div>
