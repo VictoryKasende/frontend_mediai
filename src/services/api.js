@@ -2,17 +2,15 @@ import axios from 'axios';
 
 // Configuration des URL selon l'environnement
 const getBaseURL = () => {
-  if (process.env.NODE_ENV === 'production') {
-    return 'https://medi-ai-app-t7r39.ondigitalocean.app/api/v1';
-  }
-  return 'https://medi-ai-app-t7r39.ondigitalocean.app';
+  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
 };
 
 // Configuration de base
 const API_CONFIG = {
-  LOCAL_URL: 'https://medi-ai-app-t7r39.ondigitalocean.app/api/v1',
-  PRODUCTION_URL: 'https://medi-ai-app-t7r39.ondigitalocean.app/api/v1',
-  TIMEOUT: 30000
+  LOCAL_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1',
+  PRODUCTION_URL: import.meta.env.VITE_API_BASE_URL || 'https://medi-ai-app-t7r39.ondigitalocean.app/api/v1',
+  TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT) || 30000,
+  BASE_URL: import.meta.env.VITE_BASE_URL || 'http://127.0.0.1:8000'
 };
 
 // Créer l'instance axios
@@ -566,7 +564,7 @@ export const iaService = {
   async startAnalyse(analyseData) {
     try {
       const token = localStorage.getItem('mediai_access_token');
-      const baseURL = getBaseURL().replace('/api/v1', ''); // Retirer /api/v1 pour avoir la base
+      const baseURL = API_CONFIG.BASE_URL; // Utiliser directement la variable d'environnement
       
       const response = await fetch(`${baseURL}/api/ia/analyse/`, {
         method: 'POST',
@@ -598,7 +596,7 @@ export const iaService = {
   async getTaskStatus(taskId) {
     try {
       const token = localStorage.getItem('mediai_access_token');
-      const baseURL = getBaseURL().replace('/api/v1', '');
+      const baseURL = API_CONFIG.BASE_URL;
       
       const response = await fetch(`${baseURL}/api/ia/status/${taskId}/`, {
         headers: { 'Authorization': `Bearer ${token}` }
@@ -622,7 +620,7 @@ export const iaService = {
   async getAnalyseResult(cacheKey) {
     try {
       const token = localStorage.getItem('mediai_access_token');
-      const baseURL = getBaseURL().replace('/api/v1', '');
+      const baseURL = API_CONFIG.BASE_URL;
       
       const response = await fetch(`${baseURL}/api/ia/result/?cache_key=${cacheKey}`, {
         headers: { 'Authorization': `Bearer ${token}` }
