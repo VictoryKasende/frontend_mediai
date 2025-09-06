@@ -1,21 +1,15 @@
 import axios from 'axios';
 
-// Configuration des URL selon l'environnement
-const getBaseURL = () => {
-  return import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1';
-};
-
-// Configuration de base
+// Configuration de base depuis les variables d'environnement
 const API_CONFIG = {
-  LOCAL_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1',
-  PRODUCTION_URL: import.meta.env.VITE_API_BASE_URL || 'https://medi-ai-app-t7r39.ondigitalocean.app/api/v1',
-  TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT) || 30000,
-  BASE_URL: import.meta.env.VITE_BASE_URL || 'http://127.0.0.1:8000'
+  BASE_URL: import.meta.env.VITE_BASE_URL || 'http://127.0.0.1:8000',
+  API_BASE_URL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000/api/v1',
+  TIMEOUT: parseInt(import.meta.env.VITE_API_TIMEOUT) || 30000
 };
 
 // Créer l'instance axios
 const api = axios.create({
-  baseURL: getBaseURL(),
+  baseURL: API_CONFIG.API_BASE_URL,
   timeout: API_CONFIG.TIMEOUT,
   headers: {
     'Content-Type': 'application/json',
@@ -50,7 +44,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('mediai_refresh_token');
       if (refreshToken) {
         try {
-          const response = await axios.post(`${getBaseURL()}/auth/refresh/`, {
+          const response = await axios.post(`${API_CONFIG.API_BASE_URL}/auth/refresh/`, {
             refresh: refreshToken
           });
           
