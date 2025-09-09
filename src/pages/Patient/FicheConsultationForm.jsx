@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MedicalIcons, NavigationIcons } from '../../components/Icons';
+import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -209,6 +209,49 @@ const FicheConsultationForm = ({ onBack }) => {
     }
   };
 
+  // Validation par étape
+  const validateStep = (step) => {
+    const errors = [];
+    
+    switch (step) {
+      case 1: // Informations personnelles
+        if (!formData.nom?.trim()) errors.push('Nom du patient');
+        if (!formData.postnom?.trim()) errors.push('Post-nom du patient');
+        if (!formData.prenom?.trim()) errors.push('Prénom du patient');
+        if (!formData.date_naissance?.trim()) errors.push('Date de naissance');
+        if (!formData.age?.trim()) errors.push('Âge du patient');
+        if (!formData.telephone?.trim()) errors.push('Numéro de téléphone');
+        if (!formData.etat_civil?.trim()) errors.push('État civil');
+        if (!formData.occupation?.trim()) errors.push('Profession/occupation');
+        break;
+        
+      case 2: // Contact & Adresse
+        if (!formData.avenue?.trim()) errors.push('Avenue/rue');
+        if (!formData.quartier?.trim()) errors.push('Quartier');
+        if (!formData.commune?.trim()) errors.push('Commune');
+        if (!formData.contact_nom?.trim()) errors.push('Nom de la personne à contacter');
+        if (!formData.contact_telephone?.trim()) errors.push('Téléphone du contact');
+        if (!formData.contact_adresse?.trim()) errors.push('Adresse du contact');
+        break;
+        
+      case 9: // Examen clinique
+        if (!formData.etat?.trim()) errors.push('État général');
+        if (!formData.capacite_physique?.trim()) errors.push('Capacité physique');
+        if (!formData.capacite_psychologique?.trim()) errors.push('Capacité psychologique');
+        if (!formData.febrile?.trim()) errors.push('État fébrile');
+        if (!formData.coloration_bulbaire?.trim()) errors.push('Coloration bulbaire');
+        if (!formData.coloration_palpebrale?.trim()) errors.push('Coloration palpébrale');
+        if (!formData.tegument?.trim()) errors.push('État du tégument');
+        break;
+        
+      default:
+        // Pas de validation spécifique pour les autres étapes
+        break;
+    }
+    
+    return errors;
+  };
+
   const handleInputChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
@@ -217,6 +260,17 @@ const FicheConsultationForm = ({ onBack }) => {
   };
 
   const handleNext = () => {
+    // Valider l'étape actuelle avant de passer à la suivante
+    const errors = validateStep(currentStep);
+    
+    if (errors.length > 0) {
+      showError(
+        'Champs obligatoires manquants',
+        `Veuillez remplir les champs suivants : ${errors.join(', ')}`
+      );
+      return;
+    }
+    
     if (currentStep < steps.length) {
       setCurrentStep(currentStep + 1);
     }
@@ -232,25 +286,51 @@ const FicheConsultationForm = ({ onBack }) => {
     try {
       setIsSubmitting(true);
       
-      // Validation des champs requis
+      // Validation complète des champs obligatoires
       const requiredFields = {
-        nom: 'Nom',
-        prenom: 'Prénom',
-        sexe: 'Sexe',
-        telephone: 'Téléphone',
-        motif_consultation: 'Motif de consultation'
+        // Informations Patient (Obligatoires)
+        nom: 'Nom du patient',
+        postnom: 'Post-nom du patient',
+        prenom: 'Prénom du patient',
+        date_naissance: 'Date de naissance',
+        age: 'Âge du patient',
+        telephone: 'Numéro de téléphone',
+        
+        // État Civil et Profession (Obligatoires)
+        etat_civil: 'État civil',
+        occupation: 'Profession/occupation',
+        
+        // Adresse (Obligatoire)
+        avenue: 'Avenue/rue',
+        quartier: 'Quartier',
+        commune: 'Commune',
+        
+        // Contact d'Urgence (Obligatoire)
+        contact_nom: 'Nom de la personne à contacter',
+        contact_telephone: 'Téléphone du contact',
+        contact_adresse: 'Adresse du contact',
+        
+        // Examen Clinique (Obligatoires)
+        etat: 'État général',
+        capacite_physique: 'Capacité physique',
+        capacite_psychologique: 'Capacité psychologique',
+        febrile: 'État fébrile',
+        coloration_bulbaire: 'Coloration bulbaire',
+        coloration_palpebrale: 'Coloration palpébrale',
+        tegument: 'État du tégument'
       };
       
       const missingFields = [];
       Object.keys(requiredFields).forEach(field => {
-        if (!formData[field] || formData[field].trim() === '') {
+        const value = formData[field];
+        if (!value || (typeof value === 'string' && value.trim() === '')) {
           missingFields.push(requiredFields[field]);
         }
       });
       
       if (missingFields.length > 0) {
         showError(
-          'Champs requis manquants',
+          'Champs obligatoires manquants',
           `Veuillez remplir les champs suivants : ${missingFields.join(', ')}`
         );
         return;
@@ -485,43 +565,46 @@ const FicheConsultationForm = ({ onBack }) => {
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Input
-            label="Nom *"
+            label={<span>Nom <span className="text-red-500">*</span></span>}
             value={formData.nom}
             onChange={(e) => handleInputChange('nom', e.target.value)}
             placeholder="Votre nom de famille"
             required
           />
           <Input
-            label="Post-nom"
+            label={<span>Post-nom <span className="text-red-500">*</span></span>}
             value={formData.postnom}
             onChange={(e) => handleInputChange('postnom', e.target.value)}
             placeholder="Votre post-nom"
+            required
           />
           <Input
-            label="Prénom *"
+            label={<span>Prénom <span className="text-red-500">*</span></span>}
             value={formData.prenom}
             onChange={(e) => handleInputChange('prenom', e.target.value)}
             placeholder="Votre prénom"
             required
           />
           <Input
-            label="Date de naissance"
+            label={<span>Date de naissance <span className="text-red-500">*</span></span>}
             type="date"
             value={formData.date_naissance}
             onChange={(e) => handleInputChange('date_naissance', e.target.value)}
+            required
           />
           <Input
-            label="Âge"
+            label={<span>Âge <span className="text-red-500">*</span></span>}
             type="number"
             value={formData.age}
             onChange={(e) => handleInputChange('age', e.target.value)}
             placeholder="Votre âge"
             min="0"
             max="120"
+            required
           />
           <div>
             <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
-              Sexe *
+              Sexe <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select
@@ -545,20 +628,22 @@ const FicheConsultationForm = ({ onBack }) => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-4">
           <PhoneInput
-            label="Téléphone"
+            label={<span>Téléphone <span className="text-red-500">*</span></span>}
             value={formData.telephone}
             onChange={(value) => handleInputChange('telephone', value)}
             placeholder="Votre numéro de téléphone"
+            required
           />
           <div>
             <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
-              État civil
+              État civil <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <select
                 value={formData.etat_civil}
                 onChange={(e) => handleInputChange('etat_civil', e.target.value)}
                 className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-mediai-medium rounded-lg focus:border-mediai-primary focus:ring-1 focus:ring-mediai-primary transition-all duration-200 text-xs lg:text-sm text-mediai-dark cursor-pointer hover:border-mediai-primary"
+                required
               >
                 <option value="Célibataire">Célibataire</option>
                 <option value="Marié(e)">Marié(e)</option>
@@ -574,10 +659,11 @@ const FicheConsultationForm = ({ onBack }) => {
             </div>
           </div>
           <Input
-            label="Profession/Occupation"
+            label={<span>Profession/Occupation <span className="text-red-500">*</span></span>}
             value={formData.occupation}
             onChange={(e) => handleInputChange('occupation', e.target.value)}
             placeholder="Votre profession"
+            required
           />
         </div>
 
@@ -605,22 +691,25 @@ const FicheConsultationForm = ({ onBack }) => {
         <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Adresse personnelle</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
           <Input
-            label="Avenue/Rue"
+            label={<span>Avenue/Rue <span className="text-red-500">*</span></span>}
             value={formData.avenue}
             onChange={(e) => handleInputChange('avenue', e.target.value)}
             placeholder="Nom de l'avenue ou rue"
+            required
           />
           <Input
-            label="Quartier"
+            label={<span>Quartier <span className="text-red-500">*</span></span>}
             value={formData.quartier}
             onChange={(e) => handleInputChange('quartier', e.target.value)}
             placeholder="Votre quartier"
+            required
           />
           <Input
-            label="Commune"
+            label={<span>Commune <span className="text-red-500">*</span></span>}
             value={formData.commune}
             onChange={(e) => handleInputChange('commune', e.target.value)}
             placeholder="Votre commune"
+            required
           />
         </div>
       </div>
@@ -629,7 +718,7 @@ const FicheConsultationForm = ({ onBack }) => {
         <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Personne à contacter en cas d'urgence</h3>
         <div className="space-y-4">
           <Input
-            label="Nom complet *"
+            label={<span>Nom complet <span className="text-red-500">*</span></span>}
             value={formData.contact_nom}
             onChange={(e) => handleInputChange('contact_nom', e.target.value)}
             placeholder="Nom de la personne à contacter"
@@ -637,17 +726,18 @@ const FicheConsultationForm = ({ onBack }) => {
           />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
             <PhoneInput
-              label="Téléphone *"
+              label={<span>Téléphone <span className="text-red-500">*</span></span>}
               value={formData.contact_telephone}
               onChange={(value) => handleInputChange('contact_telephone', value)}
               placeholder="Numéro de téléphone"
               required
             />
             <Input
-              label="Adresse"
+              label={<span>Adresse <span className="text-red-500">*</span></span>}
               value={formData.contact_adresse}
               onChange={(e) => handleInputChange('contact_adresse', e.target.value)}
               placeholder="Adresse complète"
+              required
             />
           </div>
         </div>
@@ -1283,11 +1373,14 @@ const FicheConsultationForm = ({ onBack }) => {
         <h3 className="text-medical-subtitle text-lg mb-4">État général</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-dark mb-2">État général</label>
+            <label className="block text-sm font-medium text-dark mb-2">
+              État général <span className="text-red-500">*</span>
+            </label>
             <select
               value={formData.etat}
               onChange={(e) => handleInputChange('etat', e.target.value)}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
+              required
             >
               <option value="Conservé">Conservé</option>
               <option value="Altéré">Altéré</option>
@@ -1295,11 +1388,14 @@ const FicheConsultationForm = ({ onBack }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-dark mb-2">Fébrile</label>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Fébrile <span className="text-red-500">*</span>
+            </label>
             <select
               value={formData.febrile}
               onChange={(e) => handleInputChange('febrile', e.target.value)}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
+              required
             >
               <option value="Non">Non</option>
               <option value="Oui">Oui</option>
@@ -1327,11 +1423,14 @@ const FicheConsultationForm = ({ onBack }) => {
         <h3 className="text-medical-subtitle text-lg mb-4">Capacités</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-dark mb-2">Capacité physique</label>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Capacité physique <span className="text-red-500">*</span>
+            </label>
             <select
               value={formData.capacite_physique}
               onChange={(e) => handleInputChange('capacite_physique', e.target.value)}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
+              required
             >
               <option value="Top">Top</option>
               <option value="Moyen">Moyen</option>
@@ -1340,15 +1439,69 @@ const FicheConsultationForm = ({ onBack }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-dark mb-2">Capacité psychologique</label>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Capacité psychologique <span className="text-red-500">*</span>
+            </label>
             <select
               value={formData.capacite_psychologique}
               onChange={(e) => handleInputChange('capacite_psychologique', e.target.value)}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
+              required
             >
               <option value="Top">Top</option>
               <option value="Moyen">Moyen</option>
               <option value="Bas">Bas</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Nouvelle section pour les examens obligatoires */}
+      <div className="bg-light rounded-lg p-4 mb-6">
+        <h3 className="text-medical-subtitle text-lg mb-4">Examens cliniques obligatoires</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Coloration bulbaire <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.coloration_bulbaire}
+              onChange={(e) => handleInputChange('coloration_bulbaire', e.target.value)}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
+              required
+            >
+              <option value="Normale">Normale</option>
+              <option value="Anormale">Anormale</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Coloration palpébrale <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.coloration_palpebrale}
+              onChange={(e) => handleInputChange('coloration_palpebrale', e.target.value)}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
+              required
+            >
+              <option value="Normale">Normale</option>
+              <option value="Anormale">Anormale</option>
+            </select>
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">
+              État du tégument <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={formData.tegument}
+              onChange={(e) => handleInputChange('tegument', e.target.value)}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
+              required
+            >
+              <option value="Normal">Normal</option>
+              <option value="Anormal">Anormal</option>
             </select>
           </div>
         </div>
@@ -1579,12 +1732,29 @@ const FicheConsultationForm = ({ onBack }) => {
         </div>
 
         {/* Form Content */}
-        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-sm border border-gray-200 p-4 lg:p-6 xl:p-8 hover:shadow-lg transition-all duration-300">
-          <h2 className="text-medical-subtitle text-lg sm:text-xl lg:text-2xl mb-4 lg:mb-6 font-bold text-mediai-dark">
-            {steps[currentStep - 1]?.title}
-          </h2>
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-300">
+          {/* Information sur les champs obligatoires */}
+          <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-t-2xl p-4 m-0">
+            <div className="flex items-center space-x-2">
+              <StatusIcons.Warning className="w-4 h-4 lg:w-5 lg:h-5 text-orange-600 flex-shrink-0" />
+              <div>
+                <span className="text-orange-800 font-medium text-sm lg:text-base">
+                  Champs obligatoires
+                </span>
+                <p className="text-orange-600 text-xs lg:text-sm mt-1">
+                  Les champs marqués d'une <span className="text-red-500 font-bold">*</span> rouge sont obligatoires et doivent être remplis pour pouvoir continuer.
+                </p>
+              </div>
+            </div>
+          </div>
           
-          {renderStepContent()}
+          <div className="p-4 lg:p-6 xl:p-8">
+            <h2 className="text-medical-subtitle text-lg sm:text-xl lg:text-2xl mb-4 lg:mb-6 font-bold text-mediai-dark">
+              {steps[currentStep - 1]?.title}
+            </h2>
+            
+            {renderStepContent()}
+          </div>
           
           {/* Navigation Buttons */}
           <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-mediai-light">
