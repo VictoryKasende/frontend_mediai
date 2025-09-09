@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import { consultationService } from '../../services/api';
+import { useNotification } from '../../contexts/NotificationContext';
 
 /**
  * Liste des consultations du patient avec filtres et recherche
@@ -11,100 +13,50 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date_desc');
+  const [consultations, setConsultations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { showError } = useNotification();
 
-  // Données factices des consultations
-  const consultations = [
-    {
-      id: 1,
-      numero_dossier: 'CONS-2025-001',
-      date_soumission: '2025-08-12',
-      date_consultation: '2025-08-15',
-      heure_debut: '14:30',
-      medecin: {
-        nom: 'Dr. Martin Dubois',
-        specialite: 'Cardiologie',
-        photo: null
-      },
-      motif_consultation: 'Douleurs thoraciques et essoufflement',
-      statut: 'confirmee',
-      reponse_medecin: {
-        date: '2025-08-12',
-        diagnostic: 'Examen cardiaque de routine nécessaire',
-        recommandations: 'Éviter les efforts intenses, prendre RDV pour ECG',
-        prescription: 'Repos, surveillance tension artérielle'
-      },
-      urgence: 'normale'
-    },
-    {
-      id: 2,
-      numero_dossier: 'CONS-2025-002',
-      date_soumission: '2025-08-11',
-      date_consultation: '2025-08-20',
-      heure_debut: '10:00',
-      medecin: {
-        nom: 'Dr. Sophie Laurent',
-        specialite: 'Médecine générale',
-        photo: null
-      },
-      motif_consultation: 'Fièvre persistante depuis 3 jours',
-      statut: 'en_attente',
-      reponse_medecin: null,
-      urgence: 'moyenne'
-    },
-    {
-      id: 3,
-      numero_dossier: 'CONS-2025-003',
-      date_soumission: '2025-08-10',
-      date_consultation: '2025-08-18',
-      heure_debut: '16:15',
-      medecin: {
-        nom: 'Dr. Jean Moreau',
-        specialite: 'Neurologie',
-        photo: null
-      },
-      motif_consultation: 'Maux de tête fréquents et vertiges',
-      statut: 'annulee',
-      reponse_medecin: {
-        date: '2025-08-11',
-        motif_annulation: 'Indisponibilité du médecin - report proposé',
-        nouveau_rdv: '2025-08-25'
-      },
-      urgence: 'normale'
-    },
-    {
-      id: 4,
-      numero_dossier: 'CONS-2025-004',
-      date_soumission: '2025-08-08',
-      date_consultation: '2025-08-12',
-      heure_debut: '09:30',
-      medecin: {
-        nom: 'Dr. Marie Durand',
-        specialite: 'Dermatologie',
-        photo: null
-      },
-      motif_consultation: 'Éruption cutanée sur les bras',
-      statut: 'terminee',
-      reponse_medecin: {
-        date: '2025-08-12',
-        diagnostic: 'Dermatite de contact allergique',
-        recommandations: 'Éviter les allergènes identifiés, hygiène stricte',
-        prescription: 'Crème corticoïde, antihistaminique',
-        suivi: 'Contrôle dans 2 semaines si pas d\'amélioration'
-      },
-      urgence: 'faible'
+  // Charger les consultations depuis l'API
+  useEffect(() => {
+    loadConsultations();
+  }, []);
+
+  const loadConsultations = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      // Récupérer les consultations avec vue simplifiée pour patients
+      const response = await consultationService.getConsultations({
+        is_patient_distance: true
+      });
+      
+      // Extraire le tableau des consultations depuis la réponse
+      const consultationsData = response.results || [];
+      setConsultations(consultationsData);
+      console.log('Consultations chargées:', consultationsData);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des consultations:', error);
+      setError('Impossible de charger les consultations');
+      showError('Erreur de chargement', 'Impossible de charger les consultations');
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
 
   const getStatusColor = (statut) => {
     const baseClasses = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-sm";
     switch (statut) {
-      case 'confirmee':
+      case 'en_analyse':
         return `${baseClasses} bg-gradient-to-r from-blue-100 to-cyan-100 text-blue-800 border border-blue-200`;
-      case 'en_attente':
+      case 'analyse_terminee':
         return `${baseClasses} bg-gradient-to-r from-yellow-100 to-orange-100 text-yellow-800 border border-yellow-200`;
-      case 'terminee':
+      case 'valide_medecin':
         return `${baseClasses} bg-gradient-to-r from-green-100 to-emerald-100 text-green-800 border border-green-200`;
-      case 'annulee':
+      case 'rejete_medecin':
         return `${baseClasses} bg-gradient-to-r from-red-100 to-pink-100 text-red-800 border border-red-200`;
       default:
         return `${baseClasses} bg-gradient-to-r from-gray-100 to-slate-100 text-gray-800 border border-gray-200`;
@@ -113,16 +65,16 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
 
   const getStatusLabel = (statut) => {
     switch (statut) {
-      case 'confirmee':
-        return 'Confirmée';
-      case 'en_attente':
-        return 'En attente';
-      case 'terminee':
-        return 'Terminée';
-      case 'annulee':
-        return 'Annulée';
+      case 'en_analyse':
+        return 'En analyse IA';
+      case 'analyse_terminee':
+        return 'Analyse terminée';
+      case 'valide_medecin':
+        return 'Validée par médecin';
+      case 'rejete_medecin':
+        return 'Rejetée par médecin';
       default:
-        return statut;
+        return statut || 'En attente';
     }
   };
 
@@ -143,24 +95,24 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
 
   const filteredConsultations = consultations
     .filter(consultation => {
-      const matchesSearch = consultation.medecin.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           consultation.motif_consultation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           consultation.numero_dossier.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = (consultation.medecin_nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (consultation.motif_consultation || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           (consultation.id ? `CONS-${consultation.id}` : '').toLowerCase().includes(searchTerm.toLowerCase());
       
-      const matchesStatus = statusFilter === 'all' || consultation.statut === statusFilter;
+      const matchesStatus = statusFilter === 'all' || consultation.status === statusFilter;
       
       return matchesSearch && matchesStatus;
     })
     .sort((a, b) => {
       switch (sortBy) {
         case 'date_desc':
-          return new Date(b.date_soumission) - new Date(a.date_soumission);
+          return new Date(b.date_creation || b.date_soumission) - new Date(a.date_creation || a.date_soumission);
         case 'date_asc':
-          return new Date(a.date_soumission) - new Date(b.date_soumission);
+          return new Date(a.date_creation || a.date_soumission) - new Date(b.date_creation || b.date_soumission);
         case 'medecin':
-          return a.medecin.nom.localeCompare(b.medecin.nom);
+          return (a.medecin_nom || '').localeCompare(b.medecin_nom || '');
         case 'statut':
-          return a.statut.localeCompare(b.statut);
+          return (a.status || '').localeCompare(b.status || '');
         default:
           return 0;
       }
@@ -198,10 +150,10 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                   className="w-full appearance-none bg-white px-4 py-3 pr-10 border-2 border-mediai-medium rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-blue-100 transition-all duration-300 text-xs lg:text-sm cursor-pointer hover:border-mediai-primary"
                 >
                   <option value="all">Tous les statuts</option>
-                  <option value="en_attente">En attente</option>
-                  <option value="confirmee">Confirmée</option>
-                  <option value="terminee">Terminée</option>
-                  <option value="annulee">Annulée</option>
+                  <option value="en_analyse">En analyse IA</option>
+                  <option value="analyse_terminee">Analyse terminée</option>
+                  <option value="valide_medecin">Validée par médecin</option>
+                  <option value="rejete_medecin">Rejetée par médecin</option>
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                   <svg className="w-4 h-4 text-mediai-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -232,26 +184,31 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
         </div>
 
         {/* Statistiques rapides */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-4 lg:mb-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4 mb-6 lg:mb-8">
           {[
-            { label: 'Total', value: consultations.length, color: 'gradient-primary', textColor: 'text-mediai-primary' },
             { 
-              label: 'En attente', 
-              value: consultations.filter(c => c.statut === 'en_attente').length,
-              color: 'bg-gradient-to-r from-yellow-500 to-orange-500',
+              label: 'En analyse', 
+              value: consultations.filter(c => c.status === 'en_analyse').length,
+              color: 'bg-gradient-to-r from-blue-500 to-blue-600',
+              textColor: 'text-blue-700'
+            },
+            { 
+              label: 'Analyse terminée', 
+              value: consultations.filter(c => c.status === 'analyse_terminee').length,
+              color: 'bg-gradient-to-r from-yellow-500 to-yellow-600',
               textColor: 'text-yellow-700'
             },
             { 
-              label: 'Confirmées', 
-              value: consultations.filter(c => c.statut === 'confirmee').length,
-              color: 'gradient-primary',
-              textColor: 'text-mediai-primary'
-            },
-            { 
-              label: 'Terminées', 
-              value: consultations.filter(c => c.statut === 'terminee').length,
+              label: 'Validées', 
+              value: consultations.filter(c => c.status === 'valide_medecin').length,
               color: 'bg-gradient-to-r from-green-500 to-green-600',
               textColor: 'text-green-700'
+            },
+            { 
+              label: 'Rejetées', 
+              value: consultations.filter(c => c.status === 'rejete_medecin').length,
+              color: 'bg-gradient-to-r from-red-500 to-red-600',
+              textColor: 'text-red-700'
             }
           ].map((stat, index) => (
             <div key={index} className="group bg-gradient-to-br from-white to-gray-50 rounded-xl p-3 lg:p-4 shadow-sm border border-gray-100 hover:shadow-lg hover:scale-105 transition-all duration-300 cursor-pointer">
@@ -265,9 +222,35 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
           ))}
         </div>
 
+        {/* État de chargement */}
+        {loading && (
+          <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 shadow-sm border border-gray-200 text-center">
+            <div className="w-16 h-16 border-4 border-mediai-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <h3 className="text-lg font-bold text-mediai-dark mb-2">Chargement des consultations...</h3>
+            <p className="text-mediai-medium">Veuillez patienter</p>
+          </div>
+        )}
+
+        {/* Erreur */}
+        {error && (
+          <div className="bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 shadow-sm border border-red-200 text-center">
+            <div className="w-16 h-16 bg-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <StatusIcons.Error className="w-8 h-8 text-white" />
+            </div>
+            <h3 className="text-lg font-bold text-red-800 mb-2">Erreur de chargement</h3>
+            <p className="text-red-600 mb-4">{error}</p>
+            <Button
+              onClick={loadConsultations}
+              className="bg-red-500 hover:bg-red-600 text-white"
+            >
+              Réessayer
+            </Button>
+          </div>
+        )}
+
         {/* Liste des consultations */}
-        <div className="space-y-3 lg:space-y-4">
-          {filteredConsultations.length === 0 ? (
+        {!loading && !error && (
+          <div className="space-y-3 lg:space-y-4">{filteredConsultations.length === 0 ? (
             <div className="bg-gradient-to-br from-white to-gray-50 rounded-2xl p-6 lg:p-8 shadow-sm border border-gray-200 text-center hover:shadow-lg transition-all duration-300">
               <div className="w-16 h-16 bg-gradient-to-br from-gray-400 to-gray-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <MedicalIcons.Files className="w-8 h-8 text-white" />
@@ -292,22 +275,22 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="flex-1">
                       <h3 className="text-medical-subtitle text-base lg:text-lg mb-1 font-bold text-mediai-dark group-hover:text-mediai-primary transition-colors duration-300">
-                        {consultation.medecin.nom}
+                        {consultation.medecin_nom || 'Médecin non assigné'}
                       </h3>
                       <p className="text-mediai-primary text-sm font-semibold mb-1">
-                        {consultation.medecin.specialite}
+                        {consultation.medecin_specialite || 'Médecine générale'}
                       </p>
                       <p className="text-xs lg:text-sm text-mediai-medium">
-                        Dossier: {consultation.numero_dossier}
+                        Dossier: CONS-{consultation.id}
                       </p>
                     </div>
                     
                     <div className="flex sm:flex-col sm:items-end gap-2">
-                      <span className={getStatusColor(consultation.statut)}>
-                        {getStatusLabel(consultation.statut)}
+                      <span className={getStatusColor(consultation.status)}>
+                        {getStatusLabel(consultation.status)}
                       </span>
                       <p className="text-xs lg:text-sm text-mediai-medium">
-                        Soumis le {new Date(consultation.date_soumission).toLocaleDateString('fr-FR')}
+                        Soumis le {new Date(consultation.date_creation || consultation.date_soumission).toLocaleDateString('fr-FR')}
                       </p>
                     </div>
                   </div>
@@ -316,7 +299,7 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                   <div>
                     <h4 className="font-semibold text-mediai-dark mb-2 text-sm lg:text-base">Motif de consultation</h4>
                     <p className="text-medical-body text-sm lg:text-base line-clamp-2 text-gray-700 leading-relaxed">
-                      {consultation.motif_consultation}
+                      {consultation.motif_consultation || 'Aucun motif spécifié'}
                     </p>
                   </div>
 
@@ -348,7 +331,7 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onViewDetails(consultation)}
+                      onClick={() => onViewDetails(consultation.id)}
                       className="group/btn flex items-center justify-center space-x-2 w-full sm:w-auto justify-center text-xs lg:text-sm border-2 border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light transform hover:scale-105 transition-all duration-300"
                     >
                       <MedicalIcons.Eye className="w-4 h-4 group-hover/btn:rotate-12 transition-transform duration-300" />
@@ -392,7 +375,8 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
               </div>
             ))
           )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

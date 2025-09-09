@@ -25,16 +25,22 @@ const ProtectedRoute = ({ children }) => {
 
 /**
  * Composant pour rediriger les utilisateurs déjà connectés
+ * Seulement si l'utilisateur est authentifié de manière stable
  */
 const PublicRoute = ({ children }) => {
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user, isLoading } = useAuth();
   
-  if (isAuthenticated) {
-    // Rediriger selon le rôle de l'utilisateur
-    if (user?.role === 'patient') {
+  // Ne pas rediriger pendant le chargement pour éviter les redirections prématurées
+  if (isLoading) {
+    return children;
+  }
+  
+  if (isAuthenticated && user) {
+    // Rediriger selon le rôle de l'utilisateur seulement si on a un utilisateur stable
+    if (user.role === 'patient') {
       return <Navigate to="/patient" replace />;
     }
-    if (user?.role === 'medecin' || user?.role === 'doctor') {
+    if (user.role === 'medecin' || user.role === 'doctor') {
       return <Navigate to="/doctor" replace />;
     }
     return <Navigate to="/doctor" replace />;

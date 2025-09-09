@@ -1,15 +1,57 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
+import { consultationService } from '../../services/api';
+import { useNotification } from '../../contexts/NotificationContext';
 
 /**
  * Détails d'une consultation avec réponse du médecin
  */
-const ConsultationDetails = ({ consultation, onBack }) => {
+const ConsultationDetails = ({ consultationId, onBack }) => {
   const [activeTab, setActiveTab] = useState('fiche');
+  const [consultation, setConsultation] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const { showError } = useNotification();
 
-  if (!consultation) {
+  useEffect(() => {
+    if (consultationId) {
+      loadConsultation();
+    }
+  }, [consultationId]);
+
+  const loadConsultation = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const data = await consultationService.getConsultation(consultationId);
+      setConsultation(data);
+      console.log('Consultation chargée:', data);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement de la consultation:', error);
+      setError('Impossible de charger les détails de la consultation');
+      showError('Erreur de chargement', 'Impossible de charger les détails');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-light flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-mediai-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <h2 className="text-medical-subtitle text-xl mb-2">Chargement...</h2>
+          <p className="text-medical-body">Récupération des détails de la consultation</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !consultation) {
     return (
       <div className="min-h-screen bg-light flex items-center justify-center">
         <div className="text-center">
@@ -30,13 +72,13 @@ const ConsultationDetails = ({ consultation, onBack }) => {
 
   const getStatusColor = (statut) => {
     switch (statut) {
-      case 'confirmee':
+      case 'en_analyse':
         return 'bg-blue-100 text-blue-800';
-      case 'en_attente':
+      case 'analyse_terminee':
         return 'bg-yellow-100 text-yellow-800';
-      case 'terminee':
+      case 'valide_medecin':
         return 'bg-green-100 text-green-800';
-      case 'annulee':
+      case 'rejete_medecin':
         return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
@@ -45,16 +87,16 @@ const ConsultationDetails = ({ consultation, onBack }) => {
 
   const getStatusLabel = (statut) => {
     switch (statut) {
-      case 'confirmee':
-        return 'Confirmée';
-      case 'en_attente':
-        return 'En attente';
-      case 'terminee':
-        return 'Terminée';
-      case 'annulee':
-        return 'Annulée';
+      case 'en_analyse':
+        return 'En analyse IA';
+      case 'analyse_terminee':
+        return 'Analyse terminée';
+      case 'valide_medecin':
+        return 'Validée par médecin';
+      case 'rejete_medecin':
+        return 'Rejetée par médecin';
       default:
-        return statut;
+        return statut || 'En attente';
     }
   };
 
@@ -91,8 +133,8 @@ const ConsultationDetails = ({ consultation, onBack }) => {
             <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-primary" />
           </div>
           <div>
-            <h4 className="text-medical-subtitle text-base lg:text-lg">{consultation.medecin.nom}</h4>
-            <p className="text-primary text-sm lg:text-base">{consultation.medecin.specialite}</p>
+            <h4 className="text-medical-subtitle text-base lg:text-lg">{consultation.medecin_nom || 'Médecin non assigné'}</h4>
+            <p className="text-primary text-sm lg:text-base">{consultation.medecin_specialite || 'Médecine générale'}</p>
           </div>
         </div>
       </div>
@@ -100,7 +142,7 @@ const ConsultationDetails = ({ consultation, onBack }) => {
       {/* Motif de consultation */}
       <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-light">
         <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Motif de consultation</h3>
-        <p className="text-medical-body text-sm lg:text-base">{consultation.motif_consultation}</p>
+        <p className="text-medical-body text-sm lg:text-base">{consultation.motif_consultation || 'Aucun motif spécifié'}</p>
       </div>
 
       {/* Actions */}
@@ -313,14 +355,14 @@ const ConsultationDetails = ({ consultation, onBack }) => {
               <div className="min-w-0 flex-1">
                 <h1 className="text-medical-title text-base sm:text-lg lg:text-xl truncate">Détails de la consultation</h1>
                 <p className="text-medical-caption text-xs sm:text-sm truncate">
-                  {consultation.numero_dossier} - {consultation.medecin.nom}
+                  CONS-{consultation.id} - {consultation.medecin_nom || 'Médecin non assigné'}
                 </p>
               </div>
             </div>
             
             <div className="flex items-center space-x-2">
-              <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(consultation.statut)}`}>
-                {getStatusLabel(consultation.statut)}
+              <span className={`inline-flex items-center px-2 sm:px-3 py-1 rounded-full text-xs font-medium ${getStatusColor(consultation.status)}`}>
+                {getStatusLabel(consultation.status)}
               </span>
             </div>
           </div>

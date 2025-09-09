@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PhoneInput from '../../components/PhoneInput';
@@ -29,6 +30,7 @@ import {
  */
 const Register = () => {
   const { register } = useAuth();
+  const { showSuccess, showError } = useNotification();
   const navigate = useNavigate();
   
   // État du formulaire multi-étapes
@@ -99,6 +101,12 @@ const Register = () => {
           newErrors.lastName = 'Le nom doit contenir au moins 2 caractères';
         }
         
+        if (!formData.username.trim()) {
+          newErrors.username = 'Le nom d\'utilisateur est requis';
+        } else if (formData.username.trim().length < 2) {
+          newErrors.username = 'Choisissez un nom d\'utilisateur unique';
+        }
+        
         if (!formData.email) {
           newErrors.email = 'L\'adresse email est requise';
         } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
@@ -125,7 +133,9 @@ const Register = () => {
         if (!formData.gender) {
           newErrors.gender = 'Le genre est requis';
         }
-        break;      case 2:
+        break;
+        
+      case 2:
         if (!formData.address.trim()) {
           newErrors.address = 'L\'adresse est requise';
         }
@@ -180,6 +190,14 @@ const Register = () => {
   const nextStep = () => {
     if (validateStep(currentStep)) {
       setCurrentStep(prev => Math.min(prev + 1, totalSteps));
+    } else {
+      // Afficher un toast d'erreur pour les erreurs de validation
+      const stepErrors = Object.values(errors);
+      if (stepErrors.length > 0) {
+        showError(stepErrors[0]); // Afficher la première erreur
+      } else {
+        showError('Veuillez corriger les erreurs dans le formulaire');
+      }
     }
   };
   
@@ -192,6 +210,13 @@ const Register = () => {
     e.preventDefault();
     
     if (!validateStep(currentStep)) {
+      // Afficher un toast d'erreur pour les erreurs de validation
+      const stepErrors = Object.values(errors);
+      if (stepErrors.length > 0) {
+        showError(stepErrors[0]); // Afficher la première erreur
+      } else {
+        showError('Veuillez corriger les erreurs dans le formulaire');
+      }
       return;
     }
 
@@ -201,18 +226,52 @@ const Register = () => {
       const result = await register(formData);
       
       if (result.success) {
-        // Rediriger vers la page de connexion avec un message de succès
-        navigate('/auth/login', {
-          state: {
-            message: 'Inscription réussie ! Vous pouvez maintenant vous connecter avec vos identifiants.'
-          }
-        });
+        // Afficher un toast de succès pour l'inscription
+        showSuccess(`🎉 Bienvenue ${formData.firstName} ! Votre compte a été créé avec succès.`);
+        
+        // Rediriger vers la page de connexion avec un délai pour laisser voir le toast
+        setTimeout(() => {
+          navigate('/auth/login', {
+            state: {
+              message: 'Inscription réussie ! Vous pouvez maintenant vous connecter avec vos identifiants.'
+            }
+          });
+        }, 2000); // Délai de 2 secondes pour voir le toast
+        
+        // Garder l'état de chargement pendant la redirection
+        return;
       } else {
-        setErrors({ submit: result.error });
+        // Gestion des erreurs spécifiques d'inscription
+        let errorMessage = 'Une erreur est survenue lors de l\'inscription';
+        
+        if (result.error) {
+          const error = result.error.toLowerCase();
+          
+          if (error.includes('username') && error.includes('already exists')) {
+            errorMessage = 'Ce nom d\'utilisateur existe déjà. Veuillez en choisir un autre.';
+          } else if (error.includes('email') && error.includes('already exists')) {
+            errorMessage = 'Cette adresse email est déjà utilisée. Connectez-vous ou utilisez une autre adresse.';
+          } else if (error.includes('phone') && error.includes('already exists')) {
+            errorMessage = 'Ce numéro de téléphone est déjà associé à un compte.';
+          } else if (error.includes('invalid') && error.includes('email')) {
+            errorMessage = 'Adresse email invalide. Veuillez vérifier votre saisie.';
+          } else if (error.includes('invalid') && error.includes('phone')) {
+            errorMessage = 'Numéro de téléphone invalide. Veuillez vérifier votre saisie.';
+          } else if (error.includes('password') && error.includes('weak')) {
+            errorMessage = 'Mot de passe trop faible. Utilisez au moins 4 caractères.';
+          } else {
+            errorMessage = result.error;
+          }
+        }
+        
+        setErrors({ submit: errorMessage });
+        showError(errorMessage);
+        setIsLoading(false);
       }
     } catch (error) {
-      setErrors({ submit: 'Une erreur est survenue lors de l\'inscription. Veuillez réessayer.' });
-    } finally {
+      const errorMessage = 'Une erreur technique est survenue lors de l\'inscription. Veuillez réessayer.';
+      setErrors({ submit: errorMessage });
+      showError(errorMessage);
       setIsLoading(false);
     }
   };
@@ -318,7 +377,7 @@ const Register = () => {
           ))}
         </div>
         {errors.gender && (
-          <p className="mt-1 text-sm text-medium">{errors.gender}</p>
+          <p className="mt-1 text-sm text-red-600">{errors.gender}</p>
         )}
       </div>
     </div>
@@ -444,7 +503,7 @@ const Register = () => {
               de Mediai <span className="text-medium">*</span>
             </label>
             {errors.acceptTerms && (
-              <p className="mt-1 text-medium">{errors.acceptTerms}</p>
+              <p className="mt-1 text-red-600">{errors.acceptTerms}</p>
             )}
           </div>
         </div>
@@ -537,15 +596,18 @@ const Register = () => {
 
             {/* Erreur de soumission */}
             {errors.submit && (
-              <div className="bg-light border border-medium rounded-md p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <svg className="h-5 w-5 text-medium" viewBox="0 0 20 20" fill="currentColor">
+                    <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                       <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                     </svg>
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-dark">{errors.submit}</p>
+                    <h3 className="text-sm font-medium text-red-800">
+                      Erreur d'inscription
+                    </h3>
+                    <p className="mt-1 text-sm text-red-700">{errors.submit}</p>
                   </div>
                 </div>
               </div>
@@ -584,8 +646,18 @@ const Register = () => {
                   className="flex items-center justify-center bg-primary hover:bg-secondary text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2"
                 >
                   <CheckCircleIcon className="h-4 w-4 mr-1 sm:mr-2" />
-                  <span className="hidden sm:inline">Créer mon compte</span>
-                  <span className="sm:hidden">Créer</span>
+                  {!isLoading && (
+                    <>
+                      <span className="hidden sm:inline">Créer mon compte</span>
+                      <span className="sm:hidden">Créer</span>
+                    </>
+                  )}
+                  {isLoading && (
+                    <>
+                      <span className="hidden sm:inline">Création en cours...</span>
+                      <span className="sm:hidden">Création...</span>
+                    </>
+                  )}
                 </Button>
               )}
             </div>

@@ -53,12 +53,13 @@ const Login = () => {
       ...prev,
       [name]: value
     }));
-    // Effacer l'erreur du champ modifié
+    // Effacer seulement l'erreur du champ modifié, pas l'erreur de soumission
     if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
@@ -66,49 +67,119 @@ const Login = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.username) {
-      newErrors.username = 'Le nom d\'utilisateur est requis';
+    if (!formData.username.trim()) {
+      newErrors.username = 'Veuillez saisir votre nom d\'utilisateur';
+    } else if (formData.username.trim().length < 2) {
+      newErrors.username = 'Le nom d\'utilisateur doit contenir au moins 2 caractères';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Le mot de passe est requis';
+      newErrors.password = 'Veuillez saisir votre mot de passe';
     } else if (formData.password.length < 4) {
       newErrors.password = 'Le mot de passe doit contenir au moins 4 caractères';
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
   };
 
   // Soumission du formulaire
   const handleSubmit = async (e) => {
     e.preventDefault();
+    e.stopPropagation();
     
-    if (!validateForm()) {
-      return;
+    // Empêcher tout rechargement de page
+    if (isLoading) {
+      return false;
+    }
+    
+    // Réinitialiser les erreurs avant la validation
+    setErrors({});
+    
+    const validation = validateForm();
+    if (!validation.isValid) {
+      // Afficher un toast d'erreur spécifique pour la validation qui disparaît après 4 secondes
+      const validationErrors = Object.values(validation.errors);
+      if (validationErrors.length > 0) {
+        showError(validationErrors[0]); // Afficher la première erreur
+        // Le toast disparaîtra automatiquement, mais l'erreur reste dans le formulaire
+      } else {
+        showError('Veuillez corriger les erreurs dans le formulaire');
+      }
+      return false;
     }
 
     try {
       const result = await login(formData);
       if (result.success) {
         // Toast de succès
-        showSuccess(`Bienvenue ${result.user?.first_name || 'sur Mediai'} ! Connexion réussie.`);
+        showSuccess(`Bienvenue ${result.user?.first_name || result.user?.nom || 'sur Mediai'} ! Connexion réussie.`);
         
         // Rediriger selon le rôle de l'utilisateur
         const userRole = result.user?.role;
         if (userRole === 'medecin') {
-          navigate('/doctor/dashboard');
+          navigate('/doctor/dashboard', { replace: true });
         } else {
-          navigate('/patient/dashboard');
+          navigate('/patient/dashboard', { replace: true });
         }
       } else {
-        setErrors({ submit: result.error });
-        showError(result.error || 'Identifiants incorrects');
+        // Gestion des erreurs spécifiques
+        let errorMessage = 'Une erreur est survenue lors de la connexion';
+        
+        if (result.error) {
+          const error = result.error.toLowerCase();
+          
+          if (error.includes('invalid') || error.includes('incorrect') || error.includes('wrong') || error.includes('credentials')) {
+            errorMessage = 'Nom d\'utilisateur ou mot de passe incorrect. Veuillez vérifier vos identifiants.';
+          } else if (error.includes('user') && (error.includes('not found') || error.includes('does not exist'))) {
+            errorMessage = 'Aucun compte trouvé avec ce nom d\'utilisateur. Vérifiez votre saisie ou créez un compte.';
+          } else if (error.includes('password')) {
+            errorMessage = 'Mot de passe incorrect. Avez-vous oublié votre mot de passe ?';
+          } else if (error.includes('account') && error.includes('disabled')) {
+            errorMessage = 'Votre compte a été désactivé. Contactez l\'administrateur pour plus d\'informations.';
+          } else if (error.includes('too many') || error.includes('rate limit')) {
+            errorMessage = 'Trop de tentatives de connexion. Veuillez réessayer dans quelques minutes.';
+          } else if (error.includes('network') || error.includes('connection')) {
+            errorMessage = 'Problème de connexion réseau. Vérifiez votre connexion internet et réessayez.';
+          } else if (error.includes('authentication') || error.includes('login')) {
+            errorMessage = 'Échec de l\'authentification. Vérifiez vos identifiants et réessayez.';
+          } else {
+            errorMessage = result.error;
+          }
+        }
+        
+        console.log('Erreur de connexion:', result.error); // Pour debug
+        
+        // Afficher l'erreur avec un toast qui disparaît automatiquement
+        setErrors({ submit: errorMessage });
+        showError(errorMessage); // Le toast disparaîtra automatiquement après 4 secondes
+        
+        return false;
       }
     } catch (error) {
-      const errorMessage = 'Une erreur est survenue lors de la connexion';
+      console.error('Erreur lors de la connexion:', error); // Pour debug
+      
+      let errorMessage = 'Une erreur technique est survenue. Veuillez réessayer dans quelques instants.';
+      
+      if (error.message) {
+        if (error.message.includes('network') || error.message.includes('fetch')) {
+          errorMessage = 'Impossible de se connecter au serveur. Vérifiez votre connexion internet.';
+        } else if (error.message.includes('timeout')) {
+          errorMessage = 'La connexion a pris trop de temps. Veuillez réessayer.';
+        } else if (error.message.includes('401') || error.message.includes('unauthorized')) {
+          errorMessage = 'Nom d\'utilisateur ou mot de passe incorrect.';
+        } else if (error.message.includes('404')) {
+          errorMessage = 'Service de connexion indisponible. Réessayez plus tard.';
+        } else if (error.message.includes('500')) {
+          errorMessage = 'Erreur du serveur. Veuillez réessayer plus tard.';
+        }
+      }
+      
+      // Afficher l'erreur avec un toast qui disparaît automatiquement
       setErrors({ submit: errorMessage });
-      showError(errorMessage);
+      showError(errorMessage); // Le toast disparaîtra automatiquement après 4 secondes
+      
+      return false;
     }
   };
 
@@ -139,11 +210,11 @@ const Login = () => {
                 name="username"
                 value={formData.username}
                 onChange={handleChange}
-                placeholder="Votre nom d'utilisateur"
+                placeholder="Exemple: Deborah, Jean"
                 required
                 error={errors.username}
                 icon={UserIcon}
-                helperText="Votre identifiant de connexion"
+                helperText="Votre nom d'utilisateur (prénom, nom ou identifiant)"
               />
 
               <PasswordInput
@@ -151,23 +222,54 @@ const Login = () => {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Votre mot de passe"
+                placeholder="Saisissez votre mot de passe"
                 required
                 error={errors.password}
                 showPassword={showPassword}
                 toggleShowPassword={() => setShowPassword(!showPassword)}
+                helperText="Minimum 4 caractères requis"
               />
             </div>
 
             {/* Erreur de soumission */}
             {errors.submit && (
-              <div className="bg-light border border-medium rounded-md p-4">
+              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                 <div className="flex">
                   <div className="flex-shrink-0">
-                    <ExclamationTriangleIcon className="h-5 w-5 text-medium" />
+                    <ExclamationTriangleIcon className="h-5 w-5 text-red-400" />
                   </div>
                   <div className="ml-3">
-                    <p className="text-sm text-dark">{errors.submit}</p>
+                    <h3 className="text-sm font-medium text-red-800">
+                      Erreur de connexion
+                    </h3>
+                    <p className="mt-1 text-sm text-red-700">{errors.submit}</p>
+                    <div className="mt-3">
+                      <div className="-mx-2 -my-1.5 flex">
+                        <button
+                          type="button"
+                          onClick={() => setErrors({})}
+                          className="bg-red-50 px-2 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                        >
+                          Fermer
+                        </button>
+                        {errors.submit.includes('mot de passe') && (
+                          <Link
+                            to="/auth/forgot-password"
+                            className="ml-3 bg-red-50 px-2 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                          >
+                            Mot de passe oublié ?
+                          </Link>
+                        )}
+                        {errors.submit.includes('compte') && !errors.submit.includes('désactivé') && (
+                          <Link
+                            to="/auth/register"
+                            className="ml-3 bg-red-50 px-2 py-1.5 rounded-md text-sm font-medium text-red-800 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-red-50 focus:ring-red-600"
+                          >
+                            Créer un compte
+                          </Link>
+                        )}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -200,6 +302,14 @@ const Login = () => {
               className="w-full flex items-center justify-center text-sm sm:text-base px-3 py-2 sm:px-4 sm:py-2 bg-primary hover:bg-secondary"
               loading={isLoading}
               disabled={isLoading}
+              onClick={(e) => {
+                // Empêcher le comportement par défaut si le bouton est dans un état de chargement
+                if (isLoading) {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  return false;
+                }
+              }}
             >
               {!isLoading && (
                 <ArrowRightIcon className="h-4 w-4 mr-2" />

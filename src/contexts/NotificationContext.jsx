@@ -80,7 +80,7 @@ export const NotificationProvider = ({ children }) => {
       type: 'error',
       title,
       message,
-      duration: 0, // Les erreurs restent jusqu'à fermeture manuelle
+      duration: 4000, // Les erreurs disparaissent après 4 secondes
       ...options
     });
   }, [addNotification]);

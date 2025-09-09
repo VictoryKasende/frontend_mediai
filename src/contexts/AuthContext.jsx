@@ -23,7 +23,7 @@ const AUTH_ACTIONS = {
 const initialState = {
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true, // Commencer par true pour éviter les redirections prématurées
   error: null
 };
 
@@ -55,6 +55,7 @@ const authReducer = (state, action) => {
     case AUTH_ACTIONS.LOGOUT:
       return {
         ...state,
+        isLoading: false,
         isAuthenticated: false,
         user: null,
         error: null
@@ -62,6 +63,7 @@ const authReducer = (state, action) => {
     case AUTH_ACTIONS.SET_USER:
       return {
         ...state,
+        isLoading: false, // Marquer comme terminé après l'initialisation
         user: action.payload,
         isAuthenticated: !!action.payload
       };
@@ -112,14 +114,41 @@ export const AuthProvider = ({ children }) => {
     dispatch({ type: AUTH_ACTIONS.LOGIN_START });
     
     try {
-      await authService.register({
-        username: userData.username,
-        email: userData.email,
+      // Préparer seulement les données requises par l'API
+      const registrationData = {
+        username: userData.username?.trim(),
+        email: userData.email?.trim(),
         password: userData.password,
-        first_name: userData.firstName,
-        last_name: userData.lastName,
+        first_name: userData.firstName?.trim(),
+        last_name: userData.lastName?.trim(),
         role: USER_ROLES.PATIENT // Toujours patient pour cette interface
-      });
+      };
+      
+      // Validation côté client avant envoi
+      if (!registrationData.username || registrationData.username.length < 2) {
+        throw new Error('Le nom d\'utilisateur doit contenir au moins 2 caractères');
+      }
+      
+      if (!registrationData.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(registrationData.email)) {
+        throw new Error('Adresse email invalide');
+      }
+      
+      if (!registrationData.password || registrationData.password.length < 4) {
+        throw new Error('Le mot de passe doit contenir au moins 4 caractères');
+      }
+      
+      if (!registrationData.first_name || registrationData.first_name.length < 1) {
+        throw new Error('Le prénom est requis');
+      }
+      
+      if (!registrationData.last_name || registrationData.last_name.length < 1) {
+        throw new Error('Le nom est requis');
+      }
+      
+      console.log('Données d\'inscription envoyées:', registrationData); // Pour debug
+      
+      const registrationResult = await authService.register(registrationData);
+      console.log('Inscription réussie:', registrationResult); // Pour debug
       
       // Après inscription réussie, connecter automatiquement l'utilisateur
       return await login({
@@ -127,6 +156,7 @@ export const AuthProvider = ({ children }) => {
         password: userData.password
       });
     } catch (error) {
+      console.error('Erreur d\'inscription détaillée:', error); // Pour debug
       const errorMessage = error.message || 'Erreur lors de l\'inscription';
       dispatch({ type: AUTH_ACTIONS.LOGIN_FAILURE, payload: errorMessage });
       return { success: false, error: errorMessage };
@@ -163,39 +193,54 @@ export const AuthProvider = ({ children }) => {
       const savedUser = localStorage.getItem('mediai_user');
       const accessToken = localStorage.getItem('mediai_access_token');
       
-      if (savedUser && accessToken) {
-        try {
-          const user = JSON.parse(savedUser);
-          
-          // Vérifier si le token est toujours valide
-          const isValid = await authService.verifyToken(accessToken);
-          
-          if (isValid) {
-            dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
-          } else {
-            // Token invalide, essayer de le rafraîchir
-            const refreshToken = localStorage.getItem('mediai_refresh_token');
-            if (refreshToken) {
-              try {
-                const newTokens = await authService.refreshToken(refreshToken);
-                localStorage.setItem('mediai_access_token', newTokens.access);
-                
-                // Récupérer les informations utilisateur à jour
-                const updatedUser = await authService.getUserProfile();
-                localStorage.setItem('mediai_user', JSON.stringify(updatedUser));
-                dispatch({ type: AUTH_ACTIONS.SET_USER, payload: updatedUser });
-              } catch (error) {
-                console.warn('Impossible de rafraîchir le token:', error);
-                logout();
-              }
-            } else {
-              logout();
+      // Si pas de données sauvegardées, marquer comme terminé
+      if (!savedUser || !accessToken) {
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: null });
+        return;
+      }
+
+      try {
+        const user = JSON.parse(savedUser);
+        
+        // Vérifier si le token est toujours valide
+        const isValid = await authService.verifyToken(accessToken);
+        
+        if (isValid) {
+          dispatch({ type: AUTH_ACTIONS.SET_USER, payload: user });
+        } else {
+          // Token invalide, essayer de le rafraîchir
+          const refreshToken = localStorage.getItem('mediai_refresh_token');
+          if (refreshToken) {
+            try {
+              const newTokens = await authService.refreshToken(refreshToken);
+              localStorage.setItem('mediai_access_token', newTokens.access);
+              
+              // Récupérer les informations utilisateur à jour
+              const updatedUser = await authService.getUserProfile();
+              localStorage.setItem('mediai_user', JSON.stringify(updatedUser));
+              dispatch({ type: AUTH_ACTIONS.SET_USER, payload: updatedUser });
+            } catch (error) {
+              console.warn('Impossible de rafraîchir le token:', error);
+              // Nettoyer le localStorage et marquer comme non authentifié
+              localStorage.removeItem('mediai_user');
+              localStorage.removeItem('mediai_access_token');
+              localStorage.removeItem('mediai_refresh_token');
+              dispatch({ type: AUTH_ACTIONS.SET_USER, payload: null });
             }
+          } else {
+            // Pas de refresh token, nettoyer et marquer comme non authentifié
+            localStorage.removeItem('mediai_user');
+            localStorage.removeItem('mediai_access_token');
+            dispatch({ type: AUTH_ACTIONS.SET_USER, payload: null });
           }
-        } catch (error) {
-          console.error('Erreur lors de l\'initialisation de l\'authentification:', error);
-          logout();
         }
+      } catch (error) {
+        console.error('Erreur lors de l\'initialisation de l\'authentification:', error);
+        // Nettoyer le localStorage en cas d'erreur
+        localStorage.removeItem('mediai_user');
+        localStorage.removeItem('mediai_access_token');
+        localStorage.removeItem('mediai_refresh_token');
+        dispatch({ type: AUTH_ACTIONS.SET_USER, payload: null });
       }
     };
 

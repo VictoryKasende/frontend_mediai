@@ -9,6 +9,7 @@ import Input from '../../components/Input';
 import FicheConsultationForm from './FicheConsultationForm';
 import ConsultationsList from './ConsultationsList';
 import ConsultationDetails from './ConsultationDetails';
+import { consultationService } from '../../services/api';
 
 /**
  * Tableau de bord Patient - Point d'entrée pour les fonctionnalités patient
@@ -19,13 +20,66 @@ const PatientDashboard = () => {
   const { handleLogout } = useLogout();
   
   const [activeView, setActiveView] = useState('dashboard');
-  const [selectedConsultation, setSelectedConsultation] = useState(null);
+  const [selectedConsultationId, setSelectedConsultationId] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [recentConsultations, setRecentConsultations] = useState([]);
+  const [dashboardStats, setDashboardStats] = useState({
+    total: 0,
+    en_analyse: 0,
+    analyse_terminee: 0,
+    valide_medecin: 0,
+    rejete_medecin: 0
+  });
+  const [loadingDashboard, setLoadingDashboard] = useState(true);
   
   // États pour la section médecins
   const [searchTerm, setSearchTerm] = useState('');
   const [specialiteFilter, setSpecialiteFilter] = useState('all');
   const [disponibiliteFilter, setDisponibiliteFilter] = useState('all');
+
+  useEffect(() => {
+    if (activeView === 'dashboard') {
+      loadDashboardData();
+    }
+  }, [activeView]);
+
+  const loadDashboardData = async () => {
+    try {
+      setLoadingDashboard(true);
+      
+      // Charger les consultations récentes
+      const response = await consultationService.getConsultations({
+        is_patient_distance: true
+      });
+      
+      // Extraire le tableau des consultations depuis la réponse
+      const consultations = response.results || [];
+      
+      // Prendre les 5 plus récentes
+      const recent = consultations
+        .sort((a, b) => new Date(b.date_creation || b.date_soumission) - new Date(a.date_creation || a.date_soumission))
+        .slice(0, 5);
+      
+      setRecentConsultations(recent);
+      
+      // Calculer les statistiques
+      const stats = {
+        total: consultations.length,
+        en_analyse: consultations.filter(c => c.status === 'en_analyse').length,
+        analyse_terminee: consultations.filter(c => c.status === 'analyse_terminee').length,
+        valide_medecin: consultations.filter(c => c.status === 'valide_medecin').length,
+        rejete_medecin: consultations.filter(c => c.status === 'rejete_medecin').length
+      };
+      
+      setDashboardStats(stats);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement du dashboard:', error);
+      showError('Erreur lors du chargement des données');
+    } finally {
+      setLoadingDashboard(false);
+    }
+  };
 
   const menuItems = [
     { 
@@ -58,38 +112,34 @@ const PatientDashboard = () => {
     }
   ];
 
-  const recentConsultations = [
-    {
-      id: 1,
-      date: '2025-08-10',
-      medecin: 'Dr. Martin Dubois',
-      specialite: 'Cardiologie',
-      statut: 'En attente',
-      motif: 'Consultation de routine',
-      time: '14:30'
-    },
-    {
-      id: 2,
-      date: '2025-08-05',
-      medecin: 'Dr. Sophie Laurent',
-      specialite: 'Médecine générale',
-      statut: 'Répondu',
-      motif: 'Douleurs abdominales',
-      time: '09:15'
-    }
-  ];
-
   const getStatusBadge = (statut) => {
     const baseClasses = "px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide";
     switch (statut) {
-      case 'En attente':
-        return `${baseClasses} bg-warning text-white`;
-      case 'Répondu':
-        return `${baseClasses} bg-success text-white`;
-      case 'En cours':
-        return `${baseClasses} bg-mediai-primary text-white`;
+      case 'en_analyse':
+        return `${baseClasses} bg-blue-500 text-white`;
+      case 'analyse_terminee':
+        return `${baseClasses} bg-yellow-500 text-white`;
+      case 'valide_medecin':
+        return `${baseClasses} bg-green-500 text-white`;
+      case 'rejete_medecin':
+        return `${baseClasses} bg-red-500 text-white`;
       default:
-        return `${baseClasses} bg-medium text-white`;
+        return `${baseClasses} bg-gray-500 text-white`;
+    }
+  };
+
+  const getStatusLabel = (statut) => {
+    switch (statut) {
+      case 'en_analyse':
+        return 'En analyse';
+      case 'analyse_terminee':
+        return 'Analyse terminée';
+      case 'valide_medecin':
+        return 'Validée';
+      case 'rejete_medecin':
+        return 'Rejetée';
+      default:
+        return statut || 'En attente';
     }
   };
 
@@ -101,8 +151,8 @@ const PatientDashboard = () => {
         return (
           <ConsultationsList
             onBack={() => setActiveView('dashboard')}
-            onViewDetails={(consultation) => {
-              setSelectedConsultation(consultation);
+            onViewDetails={(consultationId) => {
+              setSelectedConsultationId(consultationId);
               setActiveView('consultation-details');
             }}
           />
@@ -110,7 +160,7 @@ const PatientDashboard = () => {
       case 'consultation-details':
         return (
           <ConsultationDetails
-            consultation={selectedConsultation}
+            consultationId={selectedConsultationId}
             onBack={() => setActiveView('mes-consultations')}
           />
         );
@@ -137,7 +187,7 @@ const PatientDashboard = () => {
                     Espace Patient
                   </h1>
                   <p className="text-white/70 text-lg font-body-medium">
-                    {user?.name || 'Patient'} • Plateforme Mediai
+                    {user?.first_name} {user?.last_name} • Plateforme Mediai
                   </p>
                 </div>
               </div>
@@ -154,181 +204,176 @@ const PatientDashboard = () => {
         </div>
       </div>
 
-      {/* Statistiques avec le même style que le dashboard médecin */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div className="gradient-primary overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
-          <div className="p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
-                  <MedicalIcon icon={MedicalIcons.Appointment} size="w-7 h-7" className="text-white" />
+      {/* État de chargement */}
+      {loadingDashboard && (
+        <div className="text-center py-12">
+          <div className="w-16 h-16 border-4 border-mediai-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-mediai-medium">Chargement de vos données...</p>
+        </div>
+      )}
+
+      {/* Statistiques avec les vraies données */}
+      {!loadingDashboard && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="gradient-primary overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
+                      <MedicalIcon icon={MedicalIcons.Document} size="w-7 h-7" className="text-white" />
+                    </div>
+                  </div>
+                  <div className="ml-6 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">Total consultations</dt>
+                      <dd className="text-3xl font-bold text-white font-mono tracking-tight">
+                        <span className="tabular-nums">{dashboardStats.total}</span>
+                      </dd>
+                    </dl>
+                  </div>
                 </div>
               </div>
-              <div className="ml-6 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">Consultations à venir</dt>
-                  <dd className="text-3xl font-bold text-white font-mono tracking-tight">
-                    <span className="tabular-nums">3</span>
-                  </dd>
-                </dl>
-              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-success overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
-          <div className="p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
-                  <MedicalIcon icon={StatusIcons.Success} size="w-7 h-7" className="text-white" />
+            <div className="bg-blue-500 overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
+                      <MedicalIcon icon={StatusIcons.Clock} size="w-7 h-7" className="text-white" />
+                    </div>
+                  </div>
+                  <div className="ml-6 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">En analyse IA</dt>
+                      <dd className="text-3xl font-bold text-white font-mono tracking-tight">
+                        <span className="tabular-nums">{dashboardStats.en_analyse}</span>
+                      </dd>
+                    </dl>
+                  </div>
                 </div>
               </div>
-              <div className="ml-6 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">Consultations terminées</dt>
-                  <dd className="text-3xl font-bold text-white font-mono tracking-tight">
-                    <span className="tabular-nums">12</span>
-                  </dd>
-                </dl>
-              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-warning overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
-          <div className="p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
-                  <MedicalIcon icon={StatusIcons.Warning} size="w-7 h-7" className="text-white" />
+            <div className="bg-green-500 overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
+                      <MedicalIcon icon={StatusIcons.Success} size="w-7 h-7" className="text-white" />
+                    </div>
+                  </div>
+                  <div className="ml-6 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">Validées médecin</dt>
+                      <dd className="text-3xl font-bold text-white font-mono tracking-tight">
+                        <span className="tabular-nums">{dashboardStats.valide_medecin}</span>
+                      </dd>
+                    </dl>
+                  </div>
                 </div>
               </div>
-              <div className="ml-6 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">En attente</dt>
-                  <dd className="text-3xl font-bold text-white font-mono tracking-tight">
-                    <span className="tabular-nums">2</span>
-                  </dd>
-                </dl>
-              </div>
             </div>
-          </div>
-        </div>
 
-        <div className="bg-mediai-secondary overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
-          <div className="p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
-                  <MedicalIcon icon={MedicalIcons.Doctor} size="w-7 h-7" className="text-white" />
+            <div className="bg-red-500 overflow-hidden shadow-lg rounded-xl border border-border-light hover:shadow-xl transition-all duration-300 hover-lift">
+              <div className="p-6">
+                <div className="flex items-center">
+                  <div className="flex-shrink-0">
+                    <div className="w-14 h-14 rounded-xl flex items-center justify-center bg-white/20 shadow-md">
+                      <MedicalIcon icon={StatusIcons.Error} size="w-7 h-7" className="text-white" />
+                    </div>
+                  </div>
+                  <div className="ml-6 w-0 flex-1">
+                    <dl>
+                      <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">Rejetées</dt>
+                      <dd className="text-3xl font-bold text-white font-mono tracking-tight">
+                        <span className="tabular-nums">{dashboardStats.rejete_medecin}</span>
+                      </dd>
+                    </dl>
+                  </div>
                 </div>
               </div>
-              <div className="ml-6 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-semibold text-white truncate font-medical tracking-wide uppercase">Médecins consultés</dt>
-                  <dd className="text-3xl font-bold text-white font-mono tracking-tight">
-                    <span className="tabular-nums">5</span>
-                  </dd>
-                </dl>
-              </div>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Actions rapides avec le même style */}
-      <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-        <div className="bg-light px-8 py-6 border-b border-border-light">
-          <div className="flex items-center">
-            <div className="w-10 h-10 bg-mediai-dark rounded-xl flex items-center justify-center mr-4">
-              <Icon icon={ActionIcons.Settings} size="w-5 h-5" className="text-white" />
-            </div>
-            <h2 className="text-xl font-bold text-mediai-dark font-heading">Actions rapides</h2>
-          </div>
-        </div>
-        <div className="p-8">
-          <div className="grid grid-cols-2 gap-4">
-            <button 
+          {/* Actions rapides */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Button
               onClick={() => setActiveView('nouvelle-fiche')}
-              className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
-              <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                <MedicalIcon icon={MedicalIcons.Document} size="w-6 h-6" className="text-white" />
+              className="gradient-primary text-white p-6 h-auto flex-col space-y-3 hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            >
+              <MedicalIcon icon={MedicalIcons.Document} size="w-8 h-8" />
+              <div className="text-center">
+                <h3 className="font-bold text-lg">Nouvelle fiche</h3>
+                <p className="text-sm opacity-90">Créer une consultation</p>
               </div>
-              <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Nouvelle fiche</span>
-            </button>
-            <button 
+            </Button>
+            
+            <Button
               onClick={() => setActiveView('mes-consultations')}
-              className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
-              <div className="w-12 h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                <MedicalIcon icon={MedicalIcons.History} size="w-6 h-6" className="text-white" />
+              className="bg-blue-500 hover:bg-blue-600 text-white p-6 h-auto flex-col space-y-3 hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            >
+              <MedicalIcon icon={MedicalIcons.History} size="w-8 h-8" />
+              <div className="text-center">
+                <h3 className="font-bold text-lg">Mes consultations</h3>
+                <p className="text-sm opacity-90">Voir l'historique</p>
               </div>
-              <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Mes consultations</span>
-            </button>
-            <button 
+            </Button>
+            
+            <Button
               onClick={() => setActiveView('medecins')}
-              className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
-              <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                <MedicalIcon icon={MedicalIcons.Doctor} size="w-6 h-6" className="text-white" />
+              className="bg-green-500 hover:bg-green-600 text-white p-6 h-auto flex-col space-y-3 hover:shadow-xl transform hover:scale-105 transition-all duration-300"
+            >
+              <MedicalIcon icon={MedicalIcons.Doctor} size="w-8 h-8" />
+              <div className="text-center">
+                <h3 className="font-bold text-lg">Nos médecins</h3>
+                <p className="text-sm opacity-90">Découvrir l'équipe</p>
               </div>
-              <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Médecins</span>
-            </button>
-            <button className="group flex flex-col items-center p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
-              <div className="w-12 h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform duration-300">
-                <MedicalIcon icon={NavigationIcons.Chat} size="w-6 h-6" className="text-white" />
-              </div>
-              <span className="text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Messages</span>
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
 
-      {/* Prochains rendez-vous avec le style médecin */}
-      <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-        <div className="bg-light px-8 py-6 border-b border-border-light">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="w-10 h-10 bg-mediai-dark rounded-xl flex items-center justify-center mr-4">
-                <Icon icon={MedicalIcons.Appointment} size="w-5 h-5" className="text-white" />
+          {/* Consultations récentes */}
+          {recentConsultations.length > 0 && (
+            <div className="bg-white rounded-2xl shadow-lg border border-gray-200 overflow-hidden">
+              <div className="px-6 py-4 bg-gray-50 border-b border-gray-200">
+                <h3 className="text-lg font-bold text-mediai-dark">Consultations récentes</h3>
               </div>
-              <h2 className="text-xl font-bold text-mediai-dark font-heading">Prochains rendez-vous</h2>
+              <div className="divide-y divide-gray-200">
+                {recentConsultations.map((consultation) => (
+                  <div
+                    key={consultation.id}
+                    className="p-6 hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                    onClick={() => {
+                      setSelectedConsultationId(consultation.id);
+                      setActiveView('consultation-details');
+                    }}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-mediai-dark">
+                          {consultation.medecin_nom || 'Médecin non assigné'}
+                        </h4>
+                        <p className="text-sm text-mediai-medium mt-1">
+                          {consultation.motif_consultation || 'Aucun motif spécifié'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-2">
+                          CONS-{consultation.id} • {new Date(consultation.date_creation || consultation.date_soumission).toLocaleDateString('fr-FR')}
+                        </p>
+                      </div>
+                      <div className="ml-4">
+                        <span className={getStatusBadge(consultation.status)}>
+                          {getStatusLabel(consultation.status)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
-            <button 
-              onClick={() => setActiveView('mes-consultations')}
-              className="text-sm font-semibold text-mediai-primary hover:text-mediai-secondary transition-colors font-body">
-              Voir toutes →
-            </button>
-          </div>
-        </div>
-        <div className="p-8">
-          <div className="space-y-4">
-            {recentConsultations.map((rdv) => (
-              <div key={rdv.id} className="flex items-center justify-between p-6 border border-border-light rounded-xl hover:bg-light transition-all duration-300 hover-lift">
-                <div className="flex items-center space-x-6">
-                  <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center shadow-sm">
-                    <MedicalIcon icon={MedicalIcons.Doctor} size="w-6 h-6" className="text-white" />
-                  </div>
-                  <div>
-                    <p className="font-bold text-mediai-dark text-lg font-heading">{rdv.medecin}</p>
-                    <p className="text-sm text-mediai-medium font-body">{rdv.specialite} • {rdv.motif}</p>
-                  </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                  <div className="text-right">
-                    <p className="text-lg font-bold text-mediai-primary font-mono">
-                      {new Date(rdv.date).toLocaleDateString('fr-FR')}
-                    </p>
-                    <p className="text-sm text-mediai-medium">{rdv.time}</p>
-                  </div>
-                  <span className={getStatusBadge(rdv.statut)}>
-                    {rdv.statut}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+          )}
+        </>
+      )}
     </div>
   );
 

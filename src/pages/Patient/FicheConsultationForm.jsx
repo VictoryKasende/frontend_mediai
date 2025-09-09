@@ -1,15 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MedicalIcons, NavigationIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PhoneInput from '../../components/PhoneInput';
+import { consultationService, authService } from '../../services/api';
+import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Formulaire de fiche de consultation - Étape par étape
  */
 const FicheConsultationForm = ({ onBack }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [medecins, setMedecins] = useState([]);
+  const [loadingMedecins, setLoadingMedecins] = useState(false);
+  const { showSuccess, showError } = useNotification();
+  const { user } = useAuth();
   const [formData, setFormData] = useState({
     // Informations patient
     nom: '',
@@ -158,6 +166,49 @@ const FicheConsultationForm = ({ onBack }) => {
     { id: 10, title: 'Finalisation', icon: MedicalIcons.Check }
   ];
 
+  // Pré-remplir les informations du patient connecté
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        // Informations de base du profil utilisateur
+        nom: user.last_name || prev.nom,
+        prenom: user.first_name || prev.prenom,
+        telephone: user.phone || user.patient_profile?.phone_number || prev.telephone,
+        
+        // Autres champs si disponibles dans le profil
+        date_naissance: user.patient_profile?.date_of_birth || user.birth_date || prev.date_naissance,
+        
+        // Adresse si disponible dans le profil patient
+        avenue: user.patient_profile?.address || user.avenue || prev.avenue,
+        quartier: user.patient_profile?.quartier || prev.quartier,
+        commune: user.patient_profile?.commune || prev.commune,
+      }));
+    }
+  }, [user]);
+
+  // Charger les médecins au démarrage
+  useEffect(() => {
+    loadMedecins();
+  }, []);
+
+  const loadMedecins = async () => {
+    try {
+      setLoadingMedecins(true);
+      
+      // Utiliser l'API service pour récupérer les médecins
+      const medecinsList = await authService.getMedecins();
+      setMedecins(medecinsList);
+      console.log('Médecins chargés:', medecinsList);
+      
+    } catch (error) {
+      console.error('Erreur lors du chargement des médecins:', error);
+      showError('Erreur', 'Impossible de charger la liste des médecins');
+    } finally {
+      setLoadingMedecins(false);
+    }
+  };
+
   const handleInputChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
@@ -177,10 +228,224 @@ const FicheConsultationForm = ({ onBack }) => {
     }
   };
 
-  const handleSubmit = () => {
-    console.log('Données de la fiche:', formData);
-    alert('Fiche de consultation soumise avec succès !');
-    if (onBack) onBack();
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // Validation des champs requis
+      const requiredFields = {
+        nom: 'Nom',
+        prenom: 'Prénom',
+        sexe: 'Sexe',
+        telephone: 'Téléphone',
+        motif_consultation: 'Motif de consultation'
+      };
+      
+      const missingFields = [];
+      Object.keys(requiredFields).forEach(field => {
+        if (!formData[field] || formData[field].trim() === '') {
+          missingFields.push(requiredFields[field]);
+        }
+      });
+      
+      if (missingFields.length > 0) {
+        showError(
+          'Champs requis manquants',
+          `Veuillez remplir les champs suivants : ${missingFields.join(', ')}`
+        );
+        return;
+      }
+      
+      // Préparer les données pour l'API
+      const consultationData = {
+        // Informations patient
+        nom: formData.nom || '',
+        postnom: formData.postnom || '',
+        prenom: formData.prenom || '',
+        date_naissance: formData.date_naissance || null,
+        age: formData.age ? parseInt(formData.age) : null,
+        sexe: formData.sexe || '',
+        telephone: formData.telephone || '',
+        etat_civil: formData.etat_civil || 'Célibataire',
+        occupation: formData.occupation || '',
+        
+        // Adresse
+        avenue: formData.avenue || '',
+        quartier: formData.quartier || '',
+        commune: formData.commune || '',
+        
+        // Personne à contacter
+        contact_nom: formData.contact_nom || '',
+        contact_telephone: formData.contact_telephone || '',
+        contact_adresse: formData.contact_adresse || '',
+        
+        // Médecin (si sélectionné)
+        medecin_id: formData.medecin_id ? parseInt(formData.medecin_id) : null,
+        
+        // Signes vitaux
+        temperature: formData.temperature ? parseFloat(formData.temperature) : null,
+        spo2: formData.spo2 ? parseFloat(formData.spo2) : null,
+        poids: formData.poids ? parseFloat(formData.poids) : null,
+        tension_arterielle: formData.tension_arterielle || '',
+        pouls: formData.pouls ? parseInt(formData.pouls) : null,
+        frequence_respiratoire: formData.frequence_respiratoire ? parseInt(formData.frequence_respiratoire) : null,
+        
+        // Présence (booléens) - "patient" indique si le patient est présent à la consultation
+        patient: Boolean(formData.patient), // Patient présent (booléen)
+        proche: Boolean(formData.proche),
+        soignant: Boolean(formData.soignant),
+        medecin: Boolean(formData.medecin),
+        autre: Boolean(formData.autre),
+        proche_lien: formData.proche_lien || '',
+        soignant_role: formData.soignant_role || '',
+        autre_precisions: formData.autre_precisions || '',
+        
+        // Anamnèse
+        motif_consultation: formData.motif_consultation || '',
+        histoire_maladie: formData.histoire_maladie || '',
+        
+        // Médicaments (booléens + détails)
+        maison_medicaments: Boolean(formData.maison_medicaments),
+        pharmacie_medicaments: Boolean(formData.pharmacie_medicaments),
+        centre_sante_medicaments: Boolean(formData.centre_sante_medicaments),
+        hopital_medicaments: Boolean(formData.hopital_medicaments),
+        medicaments_non_pris: Boolean(formData.medicaments_non_pris),
+        details_medicaments: formData.details_medicaments || '',
+        
+        // Symptômes (booléens)
+        cephalees: Boolean(formData.cephalees),
+        vertiges: Boolean(formData.vertiges),
+        palpitations: Boolean(formData.palpitations),
+        troubles_visuels: Boolean(formData.troubles_visuels),
+        nycturie: Boolean(formData.nycturie),
+        
+        // Antécédents (booléens)
+        hypertendu: Boolean(formData.hypertendu),
+        diabetique: Boolean(formData.diabetique),
+        epileptique: Boolean(formData.epileptique),
+        trouble_comportement: Boolean(formData.trouble_comportement),
+        gastritique: Boolean(formData.gastritique),
+        
+        // Habitudes
+        tabac: formData.tabac || 'non',
+        alcool: formData.alcool || 'non',
+        activite_physique: formData.activite_physique || 'rarement',
+        activite_physique_detail: formData.activite_physique_detail || '',
+        alimentation_habituelle: formData.alimentation_habituelle || '',
+        
+        // Allergies
+        allergie_medicamenteuse: Boolean(formData.allergie_medicamenteuse),
+        medicament_allergique: formData.medicament_allergique || '',
+        
+        // Antécédents familiaux (booléens)
+        familial_drepanocytaire: Boolean(formData.familial_drepanocytaire),
+        familial_diabetique: Boolean(formData.familial_diabetique),
+        familial_obese: Boolean(formData.familial_obese),
+        familial_hypertendu: Boolean(formData.familial_hypertendu),
+        familial_trouble_comportement: Boolean(formData.familial_trouble_comportement),
+        
+        // Liens familiaux
+        lien_pere: Boolean(formData.lien_pere),
+        lien_mere: Boolean(formData.lien_mere),
+        lien_frere: Boolean(formData.lien_frere),
+        lien_soeur: Boolean(formData.lien_soeur),
+        
+        // Traumatismes
+        evenement_traumatique: formData.evenement_traumatique || 'non',
+        trauma_divorce: Boolean(formData.trauma_divorce),
+        trauma_perte_parent: Boolean(formData.trauma_perte_parent),
+        trauma_deces_epoux: Boolean(formData.trauma_deces_epoux),
+        trauma_deces_enfant: Boolean(formData.trauma_deces_enfant),
+        
+        // Autres
+        etat_general: formData.etat_general || '',
+        autres_antecedents: formData.autres_antecedents || '',
+        
+        // Examen clinique
+        etat: formData.etat || 'Conservé',
+        par_quoi: formData.par_quoi || '',
+        capacite_physique: formData.capacite_physique || 'Top',
+        capacite_physique_score: formData.capacite_physique_score || '',
+        capacite_psychologique: formData.capacite_psychologique || 'Top',
+        capacite_psychologique_score: formData.capacite_psychologique_score || '',
+        febrile: formData.febrile || 'Non',
+        coloration_bulbaire: formData.coloration_bulbaire || 'Normale',
+        coloration_palpebrale: formData.coloration_palpebrale || 'Normale',
+        tegument: formData.tegument || 'Normal',
+        
+        // Régions examinées
+        tete: formData.tete || '',
+        cou: formData.cou || '',
+        paroi_thoracique: formData.paroi_thoracique || '',
+        poumons: formData.poumons || '',
+        coeur: formData.coeur || '',
+        epigastre_hypochondres: formData.epigastre_hypochondres || '',
+        peri_ombilical_flancs: formData.peri_ombilical_flancs || '',
+        hypogastre_fosses_iliaques: formData.hypogastre_fosses_iliaques || '',
+        membres: formData.membres || '',
+        colonne_bassin: formData.colonne_bassin || '',
+        examen_gynecologique: formData.examen_gynecologique || '',
+        
+        // Expériences patient
+        preoccupations: formData.preoccupations || '',
+        comprehension: formData.comprehension || '',
+        attentes: formData.attentes || '',
+        engagement: formData.engagement || ''
+      };
+      
+      // Note: L'ID du patient connecté est probablement géré automatiquement 
+      // par le backend via l'authentification (JWT token)
+
+      console.log('Envoi des données de consultation:', consultationData);
+      
+      // Appel API
+      const result = await consultationService.createConsultation(consultationData);
+      
+      console.log('Consultation créée avec succès:', result);
+      
+      showSuccess(
+        'Consultation créée avec succès !',
+        'L\'analyse IA va commencer automatiquement.'
+      );
+      
+      // Retour à la page précédente après succès
+      if (onBack) {
+        setTimeout(() => onBack(), 1500);
+      }
+      
+    } catch (error) {
+      console.error('Erreur lors de la création de la consultation:', error);
+      console.error('Détails de l\'erreur:', error.details);
+      
+      let errorMessage = 'Une erreur est survenue lors de la création de la consultation.';
+      
+      // Gestion spécifique des erreurs API
+      if (error.details && typeof error.details === 'object') {
+        // Erreurs de validation de champs
+        const fieldErrors = [];
+        Object.keys(error.details).forEach(field => {
+          if (Array.isArray(error.details[field])) {
+            fieldErrors.push(`${field}: ${error.details[field][0]}`);
+          } else if (typeof error.details[field] === 'string') {
+            fieldErrors.push(`${field}: ${error.details[field]}`);
+          }
+        });
+        if (fieldErrors.length > 0) {
+          errorMessage = fieldErrors.join('\n');
+        }
+      } else if (error.message && typeof error.message === 'string') {
+        errorMessage = error.message;
+      } else if (error.non_field_errors?.length > 0) {
+        errorMessage = error.non_field_errors[0];
+      }
+      
+      showError(
+        'Erreur de création',
+        errorMessage
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderStepContent = () => {
@@ -209,6 +474,130 @@ const FicheConsultationForm = ({ onBack }) => {
         return null;
     }
   };
+
+  const renderInformationsPersonnelles = () => (
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Informations personnelles</h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6 text-mediai-medium">
+          Vos informations ont été pré-remplies automatiquement. Vous pouvez les modifier si nécessaire.
+        </p>
+        
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+          <Input
+            label="Nom *"
+            value={formData.nom}
+            onChange={(e) => handleInputChange('nom', e.target.value)}
+            placeholder="Votre nom de famille"
+            required
+          />
+          <Input
+            label="Post-nom"
+            value={formData.postnom}
+            onChange={(e) => handleInputChange('postnom', e.target.value)}
+            placeholder="Votre post-nom"
+          />
+          <Input
+            label="Prénom *"
+            value={formData.prenom}
+            onChange={(e) => handleInputChange('prenom', e.target.value)}
+            placeholder="Votre prénom"
+            required
+          />
+          <Input
+            label="Date de naissance"
+            type="date"
+            value={formData.date_naissance}
+            onChange={(e) => handleInputChange('date_naissance', e.target.value)}
+          />
+          <Input
+            label="Âge"
+            type="number"
+            value={formData.age}
+            onChange={(e) => handleInputChange('age', e.target.value)}
+            placeholder="Votre âge"
+            min="0"
+            max="120"
+          />
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Sexe *
+            </label>
+            <div className="relative">
+              <select
+                value={formData.sexe}
+                onChange={(e) => handleInputChange('sexe', e.target.value)}
+                className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-mediai-medium rounded-lg focus:border-mediai-primary focus:ring-1 focus:ring-mediai-primary transition-all duration-200 text-xs lg:text-sm text-mediai-dark cursor-pointer hover:border-mediai-primary"
+                required
+              >
+                <option value="">Sélectionnez</option>
+                <option value="M">Masculin</option>
+                <option value="F">Féminin</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-4 h-4 text-mediai-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mt-4">
+          <PhoneInput
+            label="Téléphone"
+            value={formData.telephone}
+            onChange={(value) => handleInputChange('telephone', value)}
+            placeholder="Votre numéro de téléphone"
+          />
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              État civil
+            </label>
+            <div className="relative">
+              <select
+                value={formData.etat_civil}
+                onChange={(e) => handleInputChange('etat_civil', e.target.value)}
+                className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-mediai-medium rounded-lg focus:border-mediai-primary focus:ring-1 focus:ring-mediai-primary transition-all duration-200 text-xs lg:text-sm text-mediai-dark cursor-pointer hover:border-mediai-primary"
+              >
+                <option value="Célibataire">Célibataire</option>
+                <option value="Marié(e)">Marié(e)</option>
+                <option value="Divorcé(e)">Divorcé(e)</option>
+                <option value="Veuf/Veuve">Veuf/Veuve</option>
+                <option value="Union libre">Union libre</option>
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-4 h-4 text-mediai-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
+            </div>
+          </div>
+          <Input
+            label="Profession/Occupation"
+            value={formData.occupation}
+            onChange={(e) => handleInputChange('occupation', e.target.value)}
+            placeholder="Votre profession"
+          />
+        </div>
+
+        {/* Indicateur de pré-remplissage automatique */}
+        {user && (user.first_name || user.last_name) && (
+          <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg shadow-sm">
+            <div className="flex items-center space-x-2">
+              <MedicalIcons.Profile className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600" />
+              <span className="text-blue-800 font-medium text-sm lg:text-base">
+                Informations pré-remplies depuis votre profil
+              </span>
+            </div>
+            <p className="text-blue-600 text-xs lg:text-sm mt-1">
+              Vous pouvez modifier ces informations si nécessaire avant de continuer.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 
   const renderContactAdresse = () => (
     <div className="space-y-4 lg:space-y-6">
@@ -274,58 +663,77 @@ const FicheConsultationForm = ({ onBack }) => {
           Choisissez le médecin que vous souhaitez consulter. Vous pouvez rechercher par spécialité ou par nom.
         </p>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-          {[
-            { id: 1, nom: 'Dr. Martin Dubois', specialite: 'Cardiologie', disponible: true },
-            { id: 2, nom: 'Dr. Sophie Laurent', specialite: 'Médecine générale', disponible: true },
-            { id: 3, nom: 'Dr. Jean Moreau', specialite: 'Neurologie', disponible: false },
-            { id: 4, nom: 'Dr. Marie Durand', specialite: 'Dermatologie', disponible: true },
-            { id: 5, nom: 'Dr. Pierre Martin', specialite: 'Pédiatrie', disponible: true },
-            { id: 6, nom: 'Dr. Claire Bernard', specialite: 'Gynécologie', disponible: true }
-          ].map((medecin) => (
-            <div
-              key={medecin.id}
-              className={`border-2 rounded-xl p-3 lg:p-4 cursor-pointer transition-all duration-300 hover:shadow-md ${
-                formData.medecin_id === medecin.id.toString()
-                  ? 'border-mediai-primary bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg'
-                  : medecin.disponible
-                  ? 'border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light'
-                  : 'border-gray-200 bg-gray-50 cursor-not-allowed'
-              }`}
-              onClick={() => {
-                if (medecin.disponible) {
-                  handleInputChange('medecin_id', medecin.id.toString());
-                  handleInputChange('medecin_nom', medecin.nom);
-                }
-              }}
-            >
-              <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
-                <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-mediai-primary flex-shrink-0" />
-                <div className="flex-1 min-w-0">
-                  <h4 className="font-medium text-dark text-sm lg:text-base truncate">{medecin.nom}</h4>
-                  <p className="text-xs lg:text-sm text-medium truncate">{medecin.specialite}</p>
-                </div>
-                {formData.medecin_id === medecin.id.toString() && (
-                  <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-mediai-primary flex-shrink-0" />
-                )}
-              </div>
-              <div className="flex justify-between items-center">
-                <span className={`text-xs px-2 py-1 rounded-full ${
-                  medecin.disponible 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {medecin.disponible ? 'Disponible' : 'Indisponible'}
-                </span>
-                {medecin.disponible && (
-                  <span className="text-xs text-medium hidden sm:inline">Cliquez pour sélectionner</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* État de chargement */}
+        {loadingMedecins && (
+          <div className="text-center py-8">
+            <div className="w-8 h-8 border-4 border-mediai-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+            <p className="text-mediai-medium">Chargement des médecins...</p>
+          </div>
+        )}
 
-        {formData.medecin_id && (
+        {/* Liste des médecins */}
+        {!loadingMedecins && (
+          <>
+            {medecins.length === 0 ? (
+              <div className="text-center py-8">
+                <MedicalIcons.Doctor className="w-12 h-12 text-mediai-medium mx-auto mb-4" />
+                <p className="text-mediai-medium">Aucun médecin disponible pour le moment.</p>
+                <button
+                  onClick={loadMedecins}
+                  className="mt-2 text-mediai-primary hover:underline"
+                >
+                  Réessayer
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                {medecins.map((medecin) => (
+                  <div
+                    key={medecin.id}
+                    className={`border-2 rounded-xl p-3 lg:p-4 cursor-pointer transition-all duration-300 hover:shadow-md ${
+                      formData.medecin_id === medecin.id.toString()
+                        ? 'border-mediai-primary bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg'
+                        : 'border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light'
+                    }`}
+                    onClick={() => {
+                      handleInputChange('medecin_id', medecin.id.toString());
+                      handleInputChange('medecin_nom', `Dr. ${medecin.first_name} ${medecin.last_name}`);
+                    }}
+                  >
+                    <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
+                      <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-mediai-primary flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-dark text-sm lg:text-base truncate">
+                          Dr. {medecin.first_name} {medecin.last_name}
+                        </h4>
+                        <p className="text-xs lg:text-sm text-medium truncate">
+                          {medecin.specialite || 'Médecine générale'}
+                        </p>
+                        {medecin.phone && (
+                          <p className="text-xs text-gray-500 truncate">
+                            {medecin.phone}
+                          </p>
+                        )}
+                      </div>
+                      {formData.medecin_id === medecin.id.toString() && (
+                        <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-mediai-primary flex-shrink-0" />
+                      )}
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
+                        Disponible
+                      </span>
+                      <span className="text-xs text-medium hidden sm:inline">Cliquez pour sélectionner</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Médecin sélectionné */}
+        {formData.medecin_id && !loadingMedecins && (
           <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-sm">
             <div className="flex items-center space-x-2">
               <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
@@ -1094,121 +1502,7 @@ const FicheConsultationForm = ({ onBack }) => {
       </div>
     </div>
   );
-  // Informations personnelles (étape 1)
-  const renderInformationsPersonnelles = () => (
-    <div className="space-y-4 lg:space-y-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-        <Input
-          label="Nom *"
-          value={formData.nom}
-          onChange={(e) => handleInputChange('nom', e.target.value)}
-          placeholder="Votre nom de famille"
-          required
-        />
-        <Input
-          label="Post-nom"
-          value={formData.postnom}
-          onChange={(e) => handleInputChange('postnom', e.target.value)}
-          placeholder="Votre post-nom"
-        />
-        <Input
-          label="Prénom *"
-          value={formData.prenom}
-          onChange={(e) => handleInputChange('prenom', e.target.value)}
-          placeholder="Votre prénom"
-          required
-        />
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-        <Input
-          label="Date de naissance *"
-          type="date"
-          value={formData.date_naissance}
-          onChange={(e) => handleInputChange('date_naissance', e.target.value)}
-          required
-        />
-        <Input
-          label="Âge *"
-          type="number"
-          value={formData.age}
-          onChange={(e) => handleInputChange('age', e.target.value)}
-          placeholder="Votre âge"
-          min="0"
-          max="150"
-          required
-        />
-        <div>
-          <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
-            Sexe *
-          </label>
-          <div className="space-y-2">
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="sexe"
-                value="M"
-                checked={formData.sexe === 'M'}
-                onChange={(e) => handleInputChange('sexe', e.target.value)}
-                className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 cursor-pointer"
-              />
-              <span className="text-xs lg:text-sm text-dark">Masculin</span>
-            </label>
-            <label className="flex items-center space-x-2 cursor-pointer">
-              <input
-                type="radio"
-                name="sexe"
-                value="F"
-                checked={formData.sexe === 'F'}
-                onChange={(e) => handleInputChange('sexe', e.target.value)}
-                className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 cursor-pointer"
-              />
-              <span className="text-xs lg:text-sm text-dark">Féminin</span>
-            </label>
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-        <PhoneInput
-          label="Numéro de téléphone *"
-          value={formData.telephone}
-          onChange={(value) => handleInputChange('telephone', value)}
-          placeholder="Votre numéro de téléphone"
-          required
-        />
-        <div>
-          <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
-            État civil
-          </label>
-          <div className="relative">
-            <select
-              value={formData.etat_civil}
-              onChange={(e) => handleInputChange('etat_civil', e.target.value)}
-              className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 text-xs lg:text-sm text-dark cursor-pointer hover:border-primary"
-            >
-              <option value="Célibataire">Célibataire</option>
-              <option value="Marié(e)">Marié(e)</option>
-              <option value="Divorcé(e)">Divorcé(e)</option>
-              <option value="Veuf(ve)">Veuf(ve)</option>
-            </select>
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <svg className="w-4 h-4 text-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Input
-        label="Occupation/Profession"
-        value={formData.occupation}
-        onChange={(e) => handleInputChange('occupation', e.target.value)}
-        placeholder="Votre profession ou occupation"
-      />
-    </div>
-  );
   return (
     <div className="min-h-screen bg-light animate-fadeIn">
       {/* Header */}
@@ -1307,10 +1601,20 @@ const FicheConsultationForm = ({ onBack }) => {
             {currentStep === steps.length ? (
               <Button
                 onClick={handleSubmit}
-                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg"
+                disabled={isSubmitting}
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
               >
-                <MedicalIcons.Check className="w-4 h-4" />
-                <span>Soumettre la fiche</span>
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    <span>Création en cours...</span>
+                  </>
+                ) : (
+                  <>
+                    <MedicalIcons.Check className="w-4 h-4" />
+                    <span>Soumettre la fiche</span>
+                  </>
+                )}
               </Button>
             ) : (
               <Button

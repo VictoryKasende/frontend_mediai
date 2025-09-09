@@ -30,7 +30,7 @@ const Input = forwardRef(({
   
   // Classes conditionnelles selon l'état
   const inputStateClasses = error
-    ? 'border-medium focus:border-medium'
+    ? 'border-red-300 focus:border-red-500 focus:ring-red-500'
     : 'border-medium focus:border-primary';
     
   const disabledClasses = disabled ? 'bg-light cursor-not-allowed opacity-60' : 'bg-white hover:border-primary';
@@ -74,7 +74,7 @@ const Input = forwardRef(({
       
       {/* Message d'erreur */}
       {error && (
-        <p className="mt-2 text-sm text-medium flex items-center font-body">
+        <p className="mt-2 text-sm text-red-600 flex items-center font-body">
           <svg
             className="w-4 h-4 mr-1 flex-shrink-0"
             fill="currentColor"

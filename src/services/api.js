@@ -102,9 +102,24 @@ export const authService = {
    */
   async register(userData) {
     try {
+      console.log('Envoi des données d\'inscription:', userData);
+      console.log('URL d\'inscription:', '/auth/users/register/');
+      
       const response = await api.post('/auth/users/register/', userData);
+      console.log('Réponse d\'inscription réussie:', response.data);
       return response.data;
     } catch (error) {
+      console.error('Erreur lors de l\'inscription:', error);
+      console.error('Détails de l\'erreur:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          data: error.config?.data
+        }
+      });
       throw this.handleError(error);
     }
   },
@@ -199,6 +214,54 @@ export const authService = {
   },
 
   /**
+   * Récupérer la liste des médecins
+   * @returns {Promise<Array>} - Liste des médecins
+   */
+  async getMedecins() {
+    // Liste statique en attendant l'endpoint côté serveur
+    const medecins = [
+      {
+        id: 1,
+        first_name: "Dr. Jean",
+        last_name: "Mukendi",
+        email: "j.mukendi@mediai.com",
+        specialite: "Médecine générale",
+        phone: "+243 123 456 789",
+        role: "medecin"
+      },
+      {
+        id: 2,
+        first_name: "Dr. Marie",
+        last_name: "Kalala",
+        email: "m.kalala@mediai.com",
+        specialite: "Cardiologie",
+        phone: "+243 987 654 321",
+        role: "medecin"
+      },
+      {
+        id: 3,
+        first_name: "Dr. Paul",
+        last_name: "Tshimanga",
+        email: "p.tshimanga@mediai.com",
+        specialite: "Pédiatrie",
+        phone: "+243 555 123 456",
+        role: "medecin"
+      },
+      {
+        id: 4,
+        first_name: "Dr. Grace",
+        last_name: "Mbuyi",
+        email: "g.mbuyi@mediai.com",
+        specialite: "Gynécologie",
+        phone: "+243 777 888 999",
+        role: "medecin"
+      }
+    ];
+    
+    return medecins;
+  },
+
+  /**
    * Déconnexion utilisateur
    * @returns {Promise<void>}
    */
@@ -260,10 +323,39 @@ export const authService = {
     if (error.response) {
       const { status, data } = error.response;
       
+      console.error('Erreur API détaillée:', {
+        status,
+        data,
+        url: error.config?.url,
+        method: error.config?.method,
+        requestData: error.config?.data
+      });
+      
       switch (status) {
         case 400:
+          // Extraire le message d'erreur spécifique si disponible
+          let errorMessage = 'Données invalides';
+          if (data) {
+            if (typeof data === 'string') {
+              errorMessage = data;
+            } else if (data.detail) {
+              errorMessage = data.detail;
+            } else if (data.error) {
+              errorMessage = data.error;
+            } else if (data.message) {
+              errorMessage = data.message;
+            } else if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
+              errorMessage = data.non_field_errors[0];
+            } else {
+              // Chercher la première erreur de champ
+              const fieldErrors = Object.values(data).flat();
+              if (fieldErrors.length > 0) {
+                errorMessage = fieldErrors[0];
+              }
+            }
+          }
           return {
-            message: 'Données invalides',
+            message: errorMessage,
             details: data,
             status: 400
           };
@@ -317,78 +409,185 @@ export const authService = {
 // ==================== CONSULTATIONS ====================
 
 /**
- * Service de gestion des consultations
+ * Service de gestion des consultations médicales
+ * 
+ * Base URL: /api/v1/fiche-consultation/
+ * 
+ * Statuts disponibles:
+ * - en_analyse: Analyse IA en cours
+ * - analyse_terminee: IA a terminé l'analyse
+ * - valide_medecin: Validée par un médecin
+ * - rejete_medecin: Rejetée par un médecin
  */
 export const consultationService = {
   /**
-   * Récupérer toutes les consultations
-   * @param {Object} filters - Filtres de recherche
+   * Lister les consultations avec filtres optionnels
+   * @param {Object} params - Paramètres de requête
+   * @param {string} params.status - Filtrer par statut(s) - ex: "en_analyse,valide_medecin"
+   * @param {boolean} params.is_patient_distance - Vue simplifiée pour consultations à distance
    * @returns {Promise<Array>} - Liste des consultations
    */
-  getConsultations: async (filters = {}) => {
+  async getConsultations(params = {}) {
     try {
-      const response = await api.get('/consultations', { params: filters });
+      const queryParams = new URLSearchParams();
+      
+      if (params.status) {
+        queryParams.append('status', params.status);
+      }
+      
+      if (params.is_patient_distance) {
+        queryParams.append('is_patient_distance', 'true');
+      }
+
+      const url = `/fiche-consultation/${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
+      console.log('Récupération des consultations:', url);
+      
+      const response = await api.get(url);
+      console.log('Consultations récupérées:', response.data);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('Erreur lors de la récupération des consultations:', error);
+      throw this.handleError(error);
     }
   },
 
   /**
-   * Récupérer une consultation par ID
-   * @param {string} id - ID de la consultation
+   * Récupérer une consultation spécifique
+   * @param {number} id - ID de la consultation
    * @returns {Promise<Object>} - Détails de la consultation
    */
-  getConsultation: async (id) => {
+  async getConsultation(id) {
     try {
-      const response = await api.get(`/consultations/${id}`);
+      console.log('Récupération de la consultation:', id);
+      const response = await api.get(`/fiche-consultation/${id}/`);
+      console.log('Consultation récupérée:', response.data);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('Erreur lors de la récupération de la consultation:', error);
+      throw this.handleError(error);
     }
   },
 
   /**
    * Créer une nouvelle consultation
+   * ⚠️ Important: Lance automatiquement une analyse IA asynchrone!
    * @param {Object} consultationData - Données de la consultation
    * @returns {Promise<Object>} - Consultation créée
    */
-  createConsultation: async (consultationData) => {
+  async createConsultation(consultationData) {
     try {
-      const response = await api.post('/consultations', consultationData);
+      console.log('Création d\'une nouvelle consultation:', consultationData);
+      const response = await api.post('/fiche-consultation/', consultationData);
+      console.log('Consultation créée:', response.data);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('Erreur lors de la création de la consultation:', error);
+      throw this.handleError(error);
     }
   },
 
   /**
-   * Mettre à jour une consultation
-   * @param {string} id - ID de la consultation
-   * @param {Object} updateData - Données à mettre à jour
-   * @returns {Promise<Object>} - Consultation mise à jour
+   * Modifier une consultation existante
+   * ⚠️ Note: Le champ status est en lecture seule
+   * @param {number} id - ID de la consultation
+   * @param {Object} consultationData - Données à modifier
+   * @returns {Promise<Object>} - Consultation modifiée
    */
-  updateConsultation: async (id, updateData) => {
+  async updateConsultation(id, consultationData) {
     try {
-      const response = await api.put(`/consultations/${id}`, updateData);
+      console.log('Modification de la consultation:', id, consultationData);
+      const response = await api.patch(`/fiche-consultation/${id}/`, consultationData);
+      console.log('Consultation modifiée:', response.data);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('Erreur lors de la modification de la consultation:', error);
+      throw this.handleError(error);
     }
   },
 
   /**
-   * Annuler une consultation
-   * @param {string} id - ID de la consultation
-   * @returns {Promise<Object>} - Confirmation d'annulation
+   * Supprimer une consultation
+   * @param {number} id - ID de la consultation
+   * @returns {Promise<void>}
    */
-  cancelConsultation: async (id) => {
+  async deleteConsultation(id) {
     try {
-      const response = await api.delete(`/consultations/${id}`);
+      console.log('Suppression de la consultation:', id);
+      await api.delete(`/fiche-consultation/${id}/`);
+      console.log('Consultation supprimée avec succès');
+    } catch (error) {
+      console.error('Erreur lors de la suppression de la consultation:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Actions spéciales - Workflow IA
+   */
+
+  /**
+   * Valider une consultation (Médecin ou Admin uniquement)
+   * Conditions: Status doit être analyse_terminee, en_analyse ou valide_medecin
+   * @param {number} id - ID de la consultation
+   * @returns {Promise<Object>} - Consultation validée
+   */
+  async validateConsultation(id) {
+    try {
+      console.log('Validation de la consultation:', id);
+      const response = await api.post(`/fiche-consultation/${id}/validate/`);
+      console.log('Consultation validée:', response.data);
       return response.data;
     } catch (error) {
-      throw error.response?.data || error;
+      console.error('Erreur lors de la validation de la consultation:', error);
+      throw this.handleError(error);
     }
+  },
+
+  /**
+   * Rejeter une consultation (Médecin ou Admin uniquement)
+   * Conditions: Status doit être analyse_terminee ou en_analyse
+   * @param {number} id - ID de la consultation
+   * @param {string} commentaire - Motif détaillé du rejet (obligatoire)
+   * @returns {Promise<Object>} - Consultation rejetée
+   */
+  async rejectConsultation(id, commentaire) {
+    try {
+      console.log('Rejet de la consultation:', id, commentaire);
+      const response = await api.post(`/fiche-consultation/${id}/reject/`, {
+        commentaire
+      });
+      console.log('Consultation rejetée:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors du rejet de la consultation:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Relancer l'analyse IA (Médecin ou Admin uniquement)
+   * @param {number} id - ID de la consultation
+   * @returns {Promise<Object>} - Réponse de relance
+   */
+  async relancerAnalyse(id) {
+    try {
+      console.log('Relance de l\'analyse IA pour la consultation:', id);
+      const response = await api.post(`/fiche-consultation/${id}/relancer/`);
+      console.log('Analyse IA relancée:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la relance de l\'analyse IA:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs spécifique aux consultations
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
   }
 };
 
