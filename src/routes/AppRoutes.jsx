@@ -199,7 +199,7 @@ const AppRoutes = () => {
           } />
           <Route path="chat" element={
             <DoctorRoute>
-              <DoctorChatIa />
+              <DoctorChatIa /> 
             </DoctorRoute>
           } />
           <Route path="*" element={<Navigate to="/doctor" replace />} />

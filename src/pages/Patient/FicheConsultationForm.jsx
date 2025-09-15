@@ -16,6 +16,12 @@ const FicheConsultationForm = ({ onBack }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [medecins, setMedecins] = useState([]);
   const [loadingMedecins, setLoadingMedecins] = useState(false);
+  
+  // États pour la recherche et le filtrage des médecins
+  const [searchTerm, setSearchTerm] = useState('');
+  const [specialtyFilter, setSpecialtyFilter] = useState('');
+  const [showAvailableOnly, setShowAvailableOnly] = useState(true);
+  
   const { showSuccess, showError } = useNotification();
   const { user } = useAuth();
   const [formData, setFormData] = useState({
@@ -196,8 +202,9 @@ const FicheConsultationForm = ({ onBack }) => {
     try {
       setLoadingMedecins(true);
       
-      // Utiliser l'API service pour récupérer les médecins
-      const medecinsList = await authService.getMedecins();
+      // Utiliser la nouvelle API pour récupérer les médecins disponibles
+      const response = await authService.getAvailableMedecins();
+      const medecinsList = response.results || response;
       setMedecins(medecinsList);
       console.log('Médecins chargés:', medecinsList);
       
@@ -348,6 +355,9 @@ const FicheConsultationForm = ({ onBack }) => {
         telephone: formData.telephone || '',
         etat_civil: formData.etat_civil || 'Célibataire',
         occupation: formData.occupation || '',
+        
+        // Indicateur patient à distance (TOUJOURS TRUE pour les patients connectés)
+        is_patient_distance: true,
         
         // Adresse
         avenue: formData.avenue || '',
@@ -745,97 +755,261 @@ const FicheConsultationForm = ({ onBack }) => {
     </div>
   );
 
-  const renderChoixMedecin = () => (
-    <div className="space-y-4 lg:space-y-6">
-      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Sélectionnez un médecin</h3>
-        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6 text-mediai-medium">
-          Choisissez le médecin que vous souhaitez consulter. Vous pouvez rechercher par spécialité ou par nom.
-        </p>
-        
-        {/* État de chargement */}
-        {loadingMedecins && (
-          <div className="text-center py-8">
-            <div className="w-8 h-8 border-4 border-mediai-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-            <p className="text-mediai-medium">Chargement des médecins...</p>
-          </div>
-        )}
+  const renderChoixMedecin = () => {
+    // Filtrer les médecins selon les critères
+    const filteredMedecins = medecins.filter(medecin => {
+      const matchesSearch = searchTerm === '' || 
+        `${medecin.first_name} ${medecin.last_name}`.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        medecin.medecin_profile?.specialty?.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      const matchesSpecialty = specialtyFilter === '' ||
+        medecin.medecin_profile?.specialty?.toLowerCase().includes(specialtyFilter.toLowerCase());
+      
+      const matchesAvailability = !showAvailableOnly || 
+        medecin.medecin_profile?.is_available;
 
-        {/* Liste des médecins */}
-        {!loadingMedecins && (
-          <>
-            {medecins.length === 0 ? (
-              <div className="text-center py-8">
-                <MedicalIcons.Doctor className="w-12 h-12 text-mediai-medium mx-auto mb-4" />
-                <p className="text-mediai-medium">Aucun médecin disponible pour le moment.</p>
-                <button
-                  onClick={loadMedecins}
-                  className="mt-2 text-mediai-primary hover:underline"
-                >
-                  Réessayer
-                </button>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-                {medecins.map((medecin) => (
-                  <div
-                    key={medecin.id}
-                    className={`border-2 rounded-xl p-3 lg:p-4 cursor-pointer transition-all duration-300 hover:shadow-md ${
-                      formData.medecin_id === medecin.id.toString()
-                        ? 'border-mediai-primary bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg'
-                        : 'border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light'
-                    }`}
-                    onClick={() => {
-                      handleInputChange('medecin_id', medecin.id.toString());
-                      handleInputChange('medecin_nom', `Dr. ${medecin.first_name} ${medecin.last_name}`);
-                    }}
-                  >
-                    <div className="flex items-center space-x-2 lg:space-x-3 mb-2">
-                      <MedicalIcons.Doctor className="w-6 h-6 lg:w-8 lg:h-8 text-mediai-primary flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        <h4 className="font-medium text-dark text-sm lg:text-base truncate">
-                          Dr. {medecin.first_name} {medecin.last_name}
-                        </h4>
-                        <p className="text-xs lg:text-sm text-medium truncate">
-                          {medecin.specialite || 'Médecine générale'}
-                        </p>
-                        {medecin.phone && (
-                          <p className="text-xs text-gray-500 truncate">
-                            {medecin.phone}
-                          </p>
-                        )}
-                      </div>
-                      {formData.medecin_id === medecin.id.toString() && (
-                        <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-mediai-primary flex-shrink-0" />
-                      )}
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
-                        Disponible
-                      </span>
-                      <span className="text-xs text-medium hidden sm:inline">Cliquez pour sélectionner</span>
-                    </div>
-                  </div>
+      return matchesSearch && matchesSpecialty && matchesAvailability;
+    });
+
+    // Obtenir la liste des spécialités uniques
+    const specialties = [...new Set(medecins.map(m => m.medecin_profile?.specialty).filter(Boolean))];
+
+    return (
+      <div className="space-y-4 lg:space-y-6">
+        <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+          <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark flex items-center">
+            <MedicalIcons.Doctor className="w-5 h-5 mr-2 text-mediai-primary" />
+            Sélectionnez votre médecin
+          </h3>
+          <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6 text-mediai-medium">
+            Choisissez le médecin que vous souhaitez consulter. Vous pouvez rechercher par nom ou spécialité.
+          </p>
+          
+          {/* Barre de recherche et filtres */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4 mb-4 lg:mb-6">
+            {/* Recherche */}
+            <div className="relative">
+              <input
+                type="text"
+                placeholder="Rechercher un médecin..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-3 border border-mediai-medium rounded-lg focus:border-mediai-primary focus:ring-1 focus:ring-mediai-primary transition-all duration-200 text-xs lg:text-sm"
+              />
+              <MedicalIcons.Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-mediai-medium" />
+            </div>
+
+            {/* Filtre par spécialité */}
+            <div className="relative">
+              <select
+                value={specialtyFilter}
+                onChange={(e) => setSpecialtyFilter(e.target.value)}
+                className="w-full appearance-none bg-white px-4 py-3 pr-10 border border-mediai-medium rounded-lg focus:border-mediai-primary focus:ring-1 focus:ring-mediai-primary transition-all duration-200 text-xs lg:text-sm text-mediai-dark cursor-pointer hover:border-mediai-primary"
+              >
+                <option value="">Toutes les spécialités</option>
+                {specialties.map(specialty => (
+                  <option key={specialty} value={specialty}>{specialty}</option>
                 ))}
+              </select>
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <svg className="w-4 h-4 text-mediai-medium" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                </svg>
               </div>
-            )}
-          </>
-        )}
+            </div>
 
-        {/* Médecin sélectionné */}
-        {formData.medecin_id && !loadingMedecins && (
-          <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-sm">
-            <div className="flex items-center space-x-2">
-              <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
-              <span className="text-green-800 font-medium text-sm lg:text-base">
-                Médecin sélectionné : {formData.medecin_nom}
-              </span>
+            {/* Filtre disponibilité */}
+            <div className="flex items-center space-x-3">
+              <label className="flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={showAvailableOnly}
+                  onChange={(e) => setShowAvailableOnly(e.target.checked)}
+                  className="w-4 h-4 text-mediai-primary border-mediai-medium focus:ring-mediai-primary focus:ring-2 rounded cursor-pointer"
+                />
+                <span className="ml-2 text-xs lg:text-sm text-mediai-dark">Disponibles uniquement</span>
+              </label>
             </div>
           </div>
-        )}
+
+          {/* État de chargement */}
+          {loadingMedecins && (
+            <div className="text-center py-8">
+              <div className="w-8 h-8 border-4 border-mediai-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+              <p className="text-mediai-medium">Chargement des médecins...</p>
+            </div>
+          )}
+
+          {/* Liste des médecins */}
+          {!loadingMedecins && (
+            <>
+              {filteredMedecins.length === 0 ? (
+                <div className="text-center py-8">
+                  <MedicalIcons.Doctor className="w-12 h-12 text-mediai-medium mx-auto mb-4" />
+                  <p className="text-mediai-medium mb-2">
+                    {medecins.length === 0 
+                      ? 'Aucun médecin disponible pour le moment.' 
+                      : 'Aucun médecin ne correspond à vos critères de recherche.'
+                    }
+                  </p>
+                  {medecins.length === 0 && (
+                    <button
+                      onClick={loadMedecins}
+                      className="mt-2 text-mediai-primary hover:underline"
+                    >
+                      Réessayer
+                    </button>
+                  )}
+                  {filteredMedecins.length === 0 && medecins.length > 0 && (
+                    <button
+                      onClick={() => {
+                        setSearchTerm('');
+                        setSpecialtyFilter('');
+                        setShowAvailableOnly(false);
+                      }}
+                      className="mt-2 text-mediai-primary hover:underline"
+                    >
+                      Réinitialiser les filtres
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <>
+                  {/* Statistiques de recherche */}
+                  <div className="mb-4 text-xs lg:text-sm text-mediai-medium">
+                    {filteredMedecins.length} médecin{filteredMedecins.length > 1 ? 's' : ''} trouvé{filteredMedecins.length > 1 ? 's' : ''}
+                    {medecins.length !== filteredMedecins.length && ` sur ${medecins.length} total`}
+                  </div>
+
+                  {/* Grille des médecins */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                    {filteredMedecins.map((medecin) => {
+                      const isSelected = formData.medecin_id === medecin.id.toString();
+                      const isAvailable = medecin.medecin_profile?.is_available;
+                      
+                      return (
+                        <div
+                          key={medecin.id}
+                          className={`relative border-2 rounded-xl p-3 lg:p-4 cursor-pointer transition-all duration-300 hover:shadow-md ${
+                            isSelected
+                              ? 'border-mediai-primary bg-gradient-to-br from-blue-50 to-cyan-50 shadow-lg'
+                              : isAvailable
+                                ? 'border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light'
+                                : 'border-gray-300 bg-gray-50 hover:border-gray-400'
+                          } ${!isAvailable ? 'opacity-75' : ''}`}
+                          onClick={() => {
+                            if (isAvailable || !showAvailableOnly) {
+                              handleInputChange('medecin_id', medecin.id.toString());
+                              handleInputChange('medecin_nom', `Dr. ${medecin.first_name} ${medecin.last_name}`);
+                            }
+                          }}
+                        >
+                          {/* Badge de disponibilité */}
+                          <div className="absolute top-2 right-2">
+                            <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                              isAvailable 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-red-100 text-red-800'
+                            }`}>
+                              {isAvailable ? 'Disponible' : 'Indisponible'}
+                            </span>
+                          </div>
+
+                          <div className="flex items-start space-x-2 lg:space-x-3 mb-3">
+                            <div className={`flex-shrink-0 p-2 rounded-full ${
+                              isSelected ? 'bg-mediai-primary text-white' : 'bg-mediai-light text-mediai-primary'
+                            }`}>
+                              <MedicalIcons.Doctor className="w-5 h-5 lg:w-6 lg:h-6" />
+                            </div>
+                            <div className="flex-1 min-w-0 pt-1">
+                              <h4 className={`font-semibold text-sm lg:text-base truncate ${
+                                isSelected ? 'text-mediai-primary' : 'text-mediai-dark'
+                              }`}>
+                                Dr. {medecin.first_name} {medecin.last_name}
+                              </h4>
+                              <p className="text-xs lg:text-sm text-mediai-medium truncate">
+                                {medecin.medecin_profile?.specialty || 'Médecine générale'}
+                              </p>
+                            </div>
+                            {isSelected && (
+                              <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-mediai-primary flex-shrink-0 mt-1" />
+                            )}
+                          </div>
+
+                          {/* Informations de contact */}
+                          <div className="space-y-1 text-xs text-mediai-medium">
+                            {medecin.medecin_profile?.phone_number && (
+                              <div className="flex items-center space-x-1">
+                                <MedicalIcons.Phone className="w-3 h-3" />
+                                <span className="truncate">{medecin.medecin_profile.phone_number}</span>
+                              </div>
+                            )}
+                            {medecin.medecin_profile?.address && (
+                              <div className="flex items-start space-x-1">
+                                <MedicalIcons.Location className="w-3 h-3 mt-0.5 flex-shrink-0" />
+                                <span className="text-xs leading-tight">{medecin.medecin_profile.address}</span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Action */}
+                          <div className="mt-3 text-center">
+                            <span className={`text-xs font-medium ${
+                              isSelected 
+                                ? 'text-mediai-primary' 
+                                : isAvailable 
+                                  ? 'text-mediai-medium' 
+                                  : 'text-gray-400'
+                            }`}>
+                              {isSelected 
+                                ? '✓ Sélectionné' 
+                                : isAvailable 
+                                  ? 'Cliquez pour sélectionner' 
+                                  : 'Non disponible'
+                              }
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {/* Médecin sélectionné */}
+          {formData.medecin_id && !loadingMedecins && (
+            <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg shadow-sm">
+              <div className="flex items-center space-x-2">
+                <MedicalIcons.Check className="w-4 h-4 lg:w-5 lg:h-5 text-green-600" />
+                <span className="text-green-800 font-medium text-sm lg:text-base">
+                  Médecin sélectionné : {formData.medecin_nom}
+                </span>
+              </div>
+              <p className="text-green-700 text-xs lg:text-sm mt-1">
+                Vous pourrez confirmer ou modifier ce choix avant la finalisation.
+              </p>
+            </div>
+          )}
+
+          {/* Information importante */}
+          <div className="mt-4 lg:mt-6 p-3 lg:p-4 bg-blue-50 border border-blue-200 rounded-lg">
+            <div className="flex items-start space-x-2">
+              <MedicalIcons.Info className="w-4 h-4 lg:w-5 lg:h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-blue-800 text-xs lg:text-sm">
+                <p className="font-medium mb-1">Information importante :</p>
+                <p>
+                  La sélection d'un médecin est optionnelle. Si vous n'en choisissez pas, 
+                  un médecin sera automatiquement assigné selon votre cas après l'analyse IA.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderSignesVitaux = () => (
     <div className="space-y-4 lg:space-y-6">

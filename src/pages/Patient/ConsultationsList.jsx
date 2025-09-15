@@ -3,47 +3,163 @@ import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Ico
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import { consultationService } from '../../services/api';
+import { consultationService, authService } from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
+import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Liste des consultations du patient avec filtres et recherche
  */
 const ConsultationsList = ({ onBack, onViewDetails }) => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortBy, setSortBy] = useState('date_desc');
   const [consultations, setConsultations] = useState([]);
+  const [medecins, setMedecins] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [medecinsLoading, setMedecinsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { showError } = useNotification();
 
-  // Charger les consultations depuis l'API
+  // Charger les médecins et consultations depuis l'API
   useEffect(() => {
-    loadConsultations();
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      // Charger les médecins en premier
+      await loadMedecins();
+      // Puis charger les consultations
+      await loadConsultations();
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMedecins = async () => {
+    try {
+      setMedecinsLoading(true);
+      const response = await authService.getMedecins();
+      const medecinsList = response.results || response;
+      setMedecins(medecinsList);
+      console.log('Médecins chargés pour consultations:', medecinsList);
+    } catch (error) {
+      console.error('Erreur lors du chargement des médecins:', error);
+      // En cas d'erreur, on peut continuer sans la liste des médecins
+    } finally {
+      setMedecinsLoading(false);
+    }
+  };
+
+  // Fonction pour obtenir les informations du médecin assigné
+  const getMedecinInfo = (consultation) => {
+    // Essayer plusieurs champs possibles pour l'ID du médecin
+    const possibleMedecinIds = [
+      consultation.assigned_medecin,
+      consultation.medecin_assigned, 
+      consultation.medecin_id,
+      consultation.medecin,
+      consultation.doctor_id,
+      consultation.doctor,
+      consultation.medecin_responsable
+    ];
+    
+    for (const medecinId of possibleMedecinIds) {
+      if (medecinId !== undefined && medecinId !== null) {
+        const medecin = medecins.find(m => m.id === medecinId);
+        if (medecin) {
+          console.log(`Médecin trouvé pour consultation ${consultation.id}:`, medecin);
+          return `Dr ${medecin.first_name} ${medecin.last_name}`;
+        }
+      }
+    }
+    
+    // Fallback sur les données de la consultation
+    if (consultation.medecin_nom && consultation.medecin_prenom) {
+      return `Dr ${consultation.medecin_prenom} ${consultation.medecin_nom}`;
+    }
+    
+    if (consultation.medecin_nom) {
+      return consultation.medecin_nom;
+    }
+    
+    return 'Médecin non assigné';
+  };
 
   const loadConsultations = async () => {
     try {
-      setLoading(true);
       setError(null);
       
-      // Récupérer les consultations avec vue simplifiée pour patients
+      // Récupérer toutes les consultations avec vue simplifiée pour patients
       const response = await consultationService.getConsultations({
         is_patient_distance: true
       });
       
       // Extraire le tableau des consultations depuis la réponse
-      const consultationsData = response.results || [];
-      setConsultations(consultationsData);
-      console.log('Consultations chargées:', consultationsData);
+      const allConsultations = response.results || [];
+      
+      // Filtrer les consultations pour ne garder que celles de l'utilisateur connecté
+      const userConsultations = allConsultations.filter(consultation => {
+        // Si la consultation a un champ user qui correspond à l'ID utilisateur
+        if (consultation.user && user?.id) {
+          return consultation.user === user.id;
+        }
+        
+        // Sinon, filtrer par nom et prénom si disponibles
+        if (user?.nom && user?.prenom) {
+          return consultation.nom === user.nom && consultation.prenom === user.prenom;
+        }
+        
+        // Si pas de critères de filtrage clairs, inclure toutes les consultations pour éviter les erreurs
+        return true;
+      });
+
+      // Enrichir chaque consultation avec les détails complets (incluant médecin assigné)
+      console.log('Enrichissement des consultations avec les détails complets...');
+      const enrichedConsultations = await Promise.all(
+        userConsultations.map(async (consultation) => {
+          try {
+            const detailedConsultation = await consultationService.getConsultation(consultation.id);
+            console.log(`Consultation ${consultation.id} enrichie:`, detailedConsultation);
+            return detailedConsultation;
+          } catch (error) {
+            console.error(`Erreur lors de l'enrichissement de la consultation ${consultation.id}:`, error);
+            // En cas d'erreur, garder la consultation originale
+            return consultation;
+          }
+        })
+      );
+      
+      setConsultations(enrichedConsultations);
+      console.log('Consultations enrichies chargées:', enrichedConsultations);
+      console.log('Utilisateur connecté:', user);
+      
+      // Debug des consultations pour voir les données de médecin
+      enrichedConsultations.forEach((consultation, index) => {
+        console.log(`Consultation enrichie ${index + 1} - CHAMPS MÉDECIN:`, {
+          id: consultation.id,
+          assigned_medecin: consultation.assigned_medecin,
+          medecin_assigned: consultation.medecin_assigned,
+          medecin_id: consultation.medecin_id,
+          medecin: consultation.medecin,
+          medecin_nom: consultation.medecin_nom,
+          medecin_prenom: consultation.medecin_prenom,
+          doctor_id: consultation.doctor_id,
+          doctor: consultation.doctor,
+          medecin_responsable: consultation.medecin_responsable,
+          motif: consultation.motif_consultation
+        });
+      });
       
     } catch (error) {
       console.error('Erreur lors du chargement des consultations:', error);
       setError('Impossible de charger les consultations');
       showError('Erreur de chargement', 'Impossible de charger les consultations');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -95,9 +211,15 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
 
   const filteredConsultations = consultations
     .filter(consultation => {
-      const matchesSearch = (consultation.medecin_nom || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (consultation.motif_consultation || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (consultation.id ? `CONS-${consultation.id}` : '').toLowerCase().includes(searchTerm.toLowerCase());
+      const searchText = searchTerm.toLowerCase();
+      const medecinName = getMedecinInfo(consultation).toLowerCase();
+      const matchesSearch = 
+        medecinName.includes(searchText) ||
+        (consultation.medecin_specialite || '').toLowerCase().includes(searchText) ||
+        (consultation.motif_consultation || '').toLowerCase().includes(searchText) ||
+        (consultation.symptomes || '').toLowerCase().includes(searchText) ||
+        (consultation.numero_ordre || '').toLowerCase().includes(searchText) ||
+        (`CONS-${consultation.id}` || '').toLowerCase().includes(searchText);
       
       const matchesStatus = statusFilter === 'all' || consultation.status === statusFilter;
       
@@ -106,11 +228,54 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
     .sort((a, b) => {
       switch (sortBy) {
         case 'date_desc':
-          return new Date(b.date_creation || b.date_soumission) - new Date(a.date_creation || a.date_soumission);
+          // Fonction utilitaire pour obtenir une date valide
+          const getValidDate = (consultation) => {
+            const possibleDates = [
+              consultation.date_creation,
+              consultation.date_soumission,
+              consultation.created_at,
+              consultation.date_consultation,
+              consultation.updated_at
+            ];
+            
+            for (const dateStr of possibleDates) {
+              if (dateStr) {
+                const date = new Date(dateStr);
+                if (!isNaN(date.getTime())) {
+                  return date;
+                }
+              }
+            }
+            return new Date(0); // Date par défaut très ancienne
+          };
+          
+          return getValidDate(b) - getValidDate(a);
         case 'date_asc':
-          return new Date(a.date_creation || a.date_soumission) - new Date(b.date_creation || b.date_soumission);
+          const getValidDateAsc = (consultation) => {
+            const possibleDates = [
+              consultation.date_creation,
+              consultation.date_soumission,
+              consultation.created_at,
+              consultation.date_consultation,
+              consultation.updated_at
+            ];
+            
+            for (const dateStr of possibleDates) {
+              if (dateStr) {
+                const date = new Date(dateStr);
+                if (!isNaN(date.getTime())) {
+                  return date;
+                }
+              }
+            }
+            return new Date(0); // Date par défaut très ancienne
+          };
+          
+          return getValidDateAsc(a) - getValidDateAsc(b);
         case 'medecin':
-          return (a.medecin_nom || '').localeCompare(b.medecin_nom || '');
+          const nameA = getMedecinInfo(a);
+          const nameB = getMedecinInfo(b);
+          return nameA.localeCompare(nameB);
         case 'statut':
           return (a.status || '').localeCompare(b.status || '');
         default:
@@ -129,7 +294,7 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
             <div className="w-full">
               <div className="relative">
                 <Input
-                  placeholder="Rechercher par médecin, motif ou numéro de dossier..."
+                  placeholder="Rechercher par médecin, spécialité, motif, symptômes ou numéro de dossier..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 bg-white border-2 border-mediai-medium focus:border-mediai-primary focus:ring-2 focus:ring-blue-100 transition-all duration-300"
@@ -275,14 +440,20 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                   <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                     <div className="flex-1">
                       <h3 className="text-medical-subtitle text-base lg:text-lg mb-1 font-bold text-mediai-dark group-hover:text-mediai-primary transition-colors duration-300">
-                        {consultation.medecin_nom || 'Médecin non assigné'}
+                        {getMedecinInfo(consultation)}
                       </h3>
                       <p className="text-mediai-primary text-sm font-semibold mb-1">
                         {consultation.medecin_specialite || 'Médecine générale'}
                       </p>
-                      <p className="text-xs lg:text-sm text-mediai-medium">
-                        Dossier: CONS-{consultation.id}
-                      </p>
+                      <div className="flex items-center gap-2 text-xs lg:text-sm text-mediai-medium">
+                        <span>Dossier: CONS-{consultation.id}</span>
+                        {consultation.numero_ordre && (
+                          <>
+                            <span>•</span>
+                            <span>N° ordre: {consultation.numero_ordre}</span>
+                          </>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="flex sm:flex-col sm:items-end gap-2">
@@ -290,42 +461,94 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                         {getStatusLabel(consultation.status)}
                       </span>
                       <p className="text-xs lg:text-sm text-mediai-medium">
-                        Soumis le {new Date(consultation.date_creation || consultation.date_soumission).toLocaleDateString('fr-FR')}
+                        Soumis le {(() => {
+                          // Essayer plusieurs champs de date possibles
+                          const possibleDates = [
+                            consultation.date_creation,
+                            consultation.date_soumission,
+                            consultation.created_at,
+                            consultation.date_consultation,
+                            consultation.updated_at
+                          ];
+                          
+                          for (const dateStr of possibleDates) {
+                            if (dateStr) {
+                              const date = new Date(dateStr);
+                              if (!isNaN(date.getTime())) {
+                                return date.toLocaleDateString('fr-FR');
+                              }
+                            }
+                          }
+                          
+                          return 'Date non disponible';
+                        })()}
                       </p>
                     </div>
                   </div>
 
-                  {/* Motif de consultation */}
-                  <div>
-                    <h4 className="font-semibold text-mediai-dark mb-2 text-sm lg:text-base">Motif de consultation</h4>
-                    <p className="text-medical-body text-sm lg:text-base line-clamp-2 text-gray-700 leading-relaxed">
-                      {consultation.motif_consultation || 'Aucun motif spécifié'}
-                    </p>
+                  {/* Motif et symptômes */}
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-mediai-dark mb-2 text-sm lg:text-base">Motif de consultation</h4>
+                      <p className="text-medical-body text-sm lg:text-base line-clamp-2 text-gray-700 leading-relaxed">
+                        {consultation.motif_consultation || 'Aucun motif spécifié'}
+                      </p>
+                    </div>
+                    
+                    {consultation.symptomes && (
+                      <div>
+                        <h4 className="font-semibold text-mediai-dark mb-2 text-sm lg:text-base">Symptômes décrits</h4>
+                        <p className="text-medical-body text-sm lg:text-base line-clamp-2 text-gray-700 leading-relaxed">
+                          {consultation.symptomes}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   {/* Informations de RDV et actions */}
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div className="flex flex-wrap items-center gap-3 lg:gap-4">
-                      <div className="flex items-center space-x-2 p-2 bg-white rounded-lg border border-gray-100">
-                        <MedicalIcons.Calendar className="w-4 h-4 text-mediai-primary" />
-                        <span className="text-xs lg:text-sm text-gray-700 font-medium">
-                          {new Date(consultation.date_consultation).toLocaleDateString('fr-FR')}
-                        </span>
-                      </div>
+                      {consultation.date_consultation && (
+                        <div className="flex items-center space-x-2 p-2 bg-white rounded-lg border border-gray-100">
+                          <MedicalIcons.Calendar className="w-4 h-4 text-mediai-primary" />
+                          <span className="text-xs lg:text-sm text-gray-700 font-medium">
+                            {(() => {
+                              const date = new Date(consultation.date_consultation);
+                              return !isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR') : 'Date invalide';
+                            })()}
+                          </span>
+                        </div>
+                      )}
                       
-                      <div className="flex items-center space-x-2 p-2 bg-white rounded-lg border border-gray-100">
-                        <MedicalIcons.Clock className="w-4 h-4 text-green-500" />
-                        <span className="text-xs lg:text-sm text-gray-700 font-medium">
-                          {consultation.heure_debut}
-                        </span>
-                      </div>
+                      {consultation.heure_debut && (
+                        <div className="flex items-center space-x-2 p-2 bg-white rounded-lg border border-gray-100">
+                          <MedicalIcons.Clock className="w-4 h-4 text-green-500" />
+                          <span className="text-xs lg:text-sm text-gray-700 font-medium">
+                            {consultation.heure_debut}
+                          </span>
+                        </div>
+                      )}
 
-                      <div className={`flex items-center space-x-1 p-2 bg-white rounded-lg border border-gray-100 ${getUrgenceColor(consultation.urgence)}`}>
-                        <StatusIcons.Info className="w-4 h-4" />
-                        <span className="text-xs lg:text-sm capitalize font-medium">
-                          {consultation.urgence}
-                        </span>
-                      </div>
+                      {consultation.urgence && (
+                        <div className={`flex items-center space-x-1 p-2 bg-white rounded-lg border border-gray-100 ${getUrgenceColor(consultation.urgence)}`}>
+                          <StatusIcons.Info className="w-4 h-4" />
+                          <span className="text-xs lg:text-sm capitalize font-medium">
+                            {consultation.urgence}
+                          </span>
+                        </div>
+                      )}
+
+                      {consultation.is_patient_distance && (
+                        <div className="flex items-center space-x-1 p-2 bg-blue-50 text-blue-700 rounded-lg border border-blue-200">
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.75 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 013.75 9.375v-4.5zM3.75 14.625c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5a1.125 1.125 0 01-1.125-1.125v-4.5zM13.5 4.875c0-.621.504-1.125 1.125-1.125h4.5c.621 0 1.125.504 1.125 1.125v4.5c0 .621-.504 1.125-1.125 1.125h-4.5A1.125 1.125 0 0113.5 9.375v-4.5z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6.75 6.75h.75v.75h-.75v-.75zM6.75 16.5h.75v.75h-.75v-.75zM16.5 6.75h.75v.75h-.75v-.75zM13.5 13.5h8.25a1.125 1.125 0 001.125-1.125V8.625a1.125 1.125 0 00-1.125-1.125H13.5m0 6.75v2.25a1.125 1.125 0 001.125 1.125H16.5a1.125 1.125 0 001.125-1.125v-2.25m-8.25-6.75h2.25A1.125 1.125 0 007.5 4.875v2.25m8.25 0V4.875c0-.621-.504-1.125-1.125-1.125H13.5m0 0V2.625c0-.621.504-1.125 1.125-1.125h1.875c.621 0 1.125.504 1.125 1.125v8.25" />
+                          </svg>
+                          <span className="text-xs lg:text-sm font-medium">
+                            À distance
+                          </span>
+                        </div>
+                      )}
                     </div>
 
                     <Button
@@ -350,7 +573,10 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                           </span>
                         </div>
                         <span className="text-xs text-green-600">
-                          ({new Date(consultation.reponse_medecin.date).toLocaleDateString('fr-FR')})
+                          ({(() => {
+                            const date = new Date(consultation.reponse_medecin.date);
+                            return !isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR') : 'Date invalide';
+                          })()})
                         </span>
                       </div>
                     </div>
@@ -366,7 +592,10 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
                           </span>
                         </div>
                         <span className="text-xs text-orange-600">
-                          {new Date(consultation.reponse_medecin.nouveau_rdv).toLocaleDateString('fr-FR')}
+                          {(() => {
+                            const date = new Date(consultation.reponse_medecin.nouveau_rdv);
+                            return !isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR') : 'Date invalide';
+                          })()}
                         </span>
                       </div>
                     </div>

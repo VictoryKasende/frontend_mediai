@@ -131,7 +131,8 @@ import {
   Printer,
   BarChart3,
   Calendar as CalendarIcon,
-  Grid3X3
+  Grid3X3,
+  StickyNote
 } from 'lucide-react';
 
 // Icônes pour la navigation principale
@@ -234,7 +235,14 @@ export const MedicalIcons = {
   // Ajouts pour le dashboard médecin
   Process: RefreshCw,
   Signature: Edit,
-  Send: Send
+  Send: Send,
+  
+  // Ajouts pour les détails de consultation
+  Users: Users,
+  Phone: Phone,
+  Notes: StickyNote,
+  Info: InformationCircleIcon,
+  Search: MagnifyingGlassIcon
 };
 
 // Icônes pour les statuts et états
@@ -251,6 +259,7 @@ export const StatusIcons = {
   Error: X,
   Bell: Bell,
   Mail: Mail,
+  Upload: Upload,
 };
 
 // Icônes pour les actions

@@ -214,51 +214,217 @@ export const authService = {
   },
 
   /**
-   * Récupérer la liste des médecins
-   * @returns {Promise<Array>} - Liste des médecins
+   * Récupérer la liste de tous les médecins
+   * @param {Object} filters - Filtres optionnels
+   * @param {boolean} filters.available - Filtrer par disponibilité
+   * @param {string} filters.specialty - Filtrer par spécialité
+   * @returns {Promise<Object>} - Liste paginée des médecins
    */
-  async getMedecins() {
-    // Liste statique en attendant l'endpoint côté serveur
+  async getMedecins(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      
+      if (filters.available !== undefined) {
+        params.append('available', filters.available);
+      }
+      if (filters.specialty) {
+        params.append('specialty', filters.specialty);
+      }
+      
+      const queryString = params.toString();
+      const url = queryString ? `/auth/medecins/?${queryString}` : '/auth/medecins/';
+      
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des médecins:', error);
+      // Fallback avec données statiques en cas d'erreur
+      return this.getMedecinsStatic(filters);
+    }
+  },
+
+  /**
+   * Récupérer uniquement les médecins disponibles
+   * @returns {Promise<Object>} - Liste des médecins disponibles
+   */
+  async getAvailableMedecins() {
+    try {
+      const response = await api.get('/auth/medecins/available/');
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des médecins disponibles:', error);
+      // Fallback avec données statiques filtrées
+      return this.getMedecinsStatic({ available: true });
+    }
+  },
+
+  /**
+   * Récupérer un médecin spécifique par son ID
+   * @param {number} medecinId - ID du médecin
+   * @returns {Promise<Object>} - Détails du médecin
+   */
+  async getMedecinById(medecinId) {
+    try {
+      const response = await api.get(`/auth/medecins/${medecinId}/`);
+      return response.data;
+    } catch (error) {
+      console.error(`Erreur lors de la récupération du médecin ${medecinId}:`, error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Rechercher des médecins par spécialité
+   * @param {string} specialty - Spécialité recherchée
+   * @param {boolean} availableOnly - Uniquement les médecins disponibles
+   * @returns {Promise<Object>} - Médecins correspondants
+   */
+  async searchMedecinsBySpecialty(specialty, availableOnly = true) {
+    try {
+      const filters = { specialty };
+      if (availableOnly) {
+        filters.available = true;
+      }
+      return await this.getMedecins(filters);
+    } catch (error) {
+      console.error('Erreur lors de la recherche par spécialité:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Données statiques de médecins (fallback)
+   * @param {Object} filters - Filtres à appliquer
+   * @returns {Object} - Liste filtrée des médecins statiques
+   */
+  getMedecinsStatic(filters = {}) {
     const medecins = [
       {
         id: 1,
-        first_name: "Dr. Jean",
+        username: "dr_mukendi",
+        first_name: "Jean",
         last_name: "Mukendi",
         email: "j.mukendi@mediai.com",
-        specialite: "Médecine générale",
-        phone: "+243 123 456 789",
-        role: "medecin"
+        role: "medecin",
+        phone: "+243123456789",
+        patient_profile: null,
+        medecin_profile: {
+          id: 1,
+          specialty: "Médecine générale",
+          phone_number: "+243123456789",
+          address: "Cabinet Médical, Av. Kabasele, Kinshasa",
+          is_available: true
+        }
       },
       {
         id: 2,
-        first_name: "Dr. Marie",
+        username: "dr_kalala",
+        first_name: "Marie",
         last_name: "Kalala",
         email: "m.kalala@mediai.com",
-        specialite: "Cardiologie",
-        phone: "+243 987 654 321",
-        role: "medecin"
+        role: "medecin",
+        phone: "+243987654321",
+        patient_profile: null,
+        medecin_profile: {
+          id: 2,
+          specialty: "Cardiologie",
+          phone_number: "+243987654321",
+          address: "Clinique Cardiologique, Bd. Lumumba, Kinshasa",
+          is_available: true
+        }
       },
       {
         id: 3,
-        first_name: "Dr. Paul",
+        username: "dr_tshimanga",
+        first_name: "Paul",
         last_name: "Tshimanga",
         email: "p.tshimanga@mediai.com",
-        specialite: "Pédiatrie",
-        phone: "+243 555 123 456",
-        role: "medecin"
+        role: "medecin",
+        phone: "+243555123456",
+        patient_profile: null,
+        medecin_profile: {
+          id: 3,
+          specialty: "Pédiatrie",
+          phone_number: "+243555123456",
+          address: "Clinique Pédiatrique, Av. Binza, Kinshasa",
+          is_available: false
+        }
       },
       {
         id: 4,
-        first_name: "Dr. Grace",
+        username: "dr_mbuyi",
+        first_name: "Grace",
         last_name: "Mbuyi",
         email: "g.mbuyi@mediai.com",
-        specialite: "Gynécologie",
-        phone: "+243 777 888 999",
-        role: "medecin"
+        role: "medecin",
+        phone: "+243777888999",
+        patient_profile: null,
+        medecin_profile: {
+          id: 4,
+          specialty: "Gynécologie",
+          phone_number: "+243777888999",
+          address: "Centre Gynécologique, Av. Kimbangu, Kinshasa",
+          is_available: true
+        }
+      },
+      {
+        id: 5,
+        username: "dr_lubaki",
+        first_name: "Joseph",
+        last_name: "Lubaki",
+        email: "j.lubaki@mediai.com",
+        role: "medecin",
+        phone: "+243444555666",
+        patient_profile: null,
+        medecin_profile: {
+          id: 5,
+          specialty: "Dermatologie",
+          phone_number: "+243444555666",
+          address: "Cabinet Dermatologique, Av. Kasavubu, Kinshasa",
+          is_available: true
+        }
+      },
+      {
+        id: 6,
+        username: "dr_mumbere",
+        first_name: "Sylvie",
+        last_name: "Mumbere",
+        email: "s.mumbere@mediai.com",
+        role: "medecin",
+        phone: "+243333444555",
+        patient_profile: null,
+        medecin_profile: {
+          id: 6,
+          specialty: "Psychiatrie",
+          phone_number: "+243333444555",
+          address: "Centre de Santé Mentale, Av. Tabora, Kinshasa",
+          is_available: true
+        }
       }
     ];
-    
-    return medecins;
+
+    // Appliquer les filtres
+    let filteredMedecins = [...medecins];
+
+    if (filters.available !== undefined) {
+      filteredMedecins = filteredMedecins.filter(medecin => 
+        medecin.medecin_profile?.is_available === filters.available
+      );
+    }
+
+    if (filters.specialty) {
+      filteredMedecins = filteredMedecins.filter(medecin =>
+        medecin.medecin_profile?.specialty?.toLowerCase()
+          .includes(filters.specialty.toLowerCase())
+      );
+    }
+
+    return {
+      count: filteredMedecins.length,
+      next: null,
+      previous: null,
+      results: filteredMedecins
+    };
   },
 
   /**

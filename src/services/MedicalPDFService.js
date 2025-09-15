@@ -1,10 +1,242 @@
 // Service pour gérer l'export PDF et l'impression des consultations médicales
 import jsPDF from 'jspdf';
 
-// Export PDF professionnel de la consultation
+// Export PDF professionnel de la consultation avec le même design que l'impression
 export const exportToPDF = async (consultationData) => {
   console.log('Export PDF de la consultation:', consultationData);
   
+  try {
+    // Utiliser jsPDF avec un design amélioré similaire à l'impression
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+    const margin = 15;
+    const contentWidth = pageWidth - 2 * margin;
+    
+    // Couleurs Mediai
+    const primaryBlue = [35, 167, 246];
+    const darkBlue = [16, 36, 58];
+    const lightBlue = [248, 250, 252];
+    const mediumGray = [117, 122, 132];
+    const lightGray = [226, 232, 240];
+    
+    let currentY = margin;
+    
+    // En-tête avec gradient simulé
+    pdf.setFillColor(...primaryBlue);
+    pdf.rect(0, 0, pageWidth, 45, 'F');
+    
+    // Ajout d'un effet de dégradé avec une deuxième couleur
+    pdf.setFillColor(33, 148, 243);
+    pdf.rect(0, 35, pageWidth, 10, 'F');
+    
+    // Logo/Titre
+    pdf.setTextColor(255, 255, 255);
+    pdf.setFontSize(28);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('MEDIAI', margin, 22);
+    
+    pdf.setFontSize(16);
+    pdf.setFont('helvetica', 'normal');
+    pdf.text('Fiche de Consultation Médicale', margin, 38);
+    
+    currentY = 60;
+    
+    // Boîtes d'information avec fond coloré
+    const boxHeight = 35;
+    const boxWidth = (contentWidth - 10) / 2;
+    
+    // Boîte Patient
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, currentY, boxWidth, boxHeight, 'F');
+    pdf.setDrawColor(...lightGray);
+    pdf.rect(margin, currentY, boxWidth, boxHeight);
+    
+    pdf.setTextColor(...primaryBlue);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Informations Patient', margin + 5, currentY + 8);
+    
+    pdf.setTextColor(...darkBlue);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    pdf.text(`Nom: ${consultationData.patient.nom}`, margin + 5, currentY + 16);
+    pdf.text(`Âge: ${consultationData.patient.age} ans`, margin + 5, currentY + 22);
+    pdf.text(`Tél: ${consultationData.patient.telephone}`, margin + 5, currentY + 28);
+    
+    // Boîte Consultation
+    const boxX2 = margin + boxWidth + 10;
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(boxX2, currentY, boxWidth, boxHeight, 'F');
+    pdf.setDrawColor(...lightGray);
+    pdf.rect(boxX2, currentY, boxWidth, boxHeight);
+    
+    pdf.setTextColor(...primaryBlue);
+    pdf.setFontSize(12);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('Informations Consultation', boxX2 + 5, currentY + 8);
+    
+    pdf.setTextColor(...darkBlue);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(9);
+    const consultationDate = new Date(consultationData.date || consultationData.created_at).toLocaleDateString('fr-FR');
+    pdf.text(`Date: ${consultationDate}`, boxX2 + 5, currentY + 16);
+    pdf.text(`Heure: ${consultationData.heure || '10:00'}`, boxX2 + 5, currentY + 22);
+    pdf.text(`Réf: CONS-${consultationData.id}`, boxX2 + 5, currentY + 28);
+    
+    currentY += boxHeight + 20;
+    
+    // Sections principales avec design amélioré
+    const sections = [
+      { title: 'Diagnostic', content: consultationData.diagnostic || 'Non renseigné' },
+      { title: 'Recommandations Médicales', content: consultationData.recommandations || 'Non renseigné' },
+      { title: 'Traitement Proposé', content: consultationData.traitement || 'Non renseigné' },
+      { title: 'Examens Complémentaires', content: consultationData.examen_complementaire || 'Non renseigné' },
+      { title: 'Motif de Consultation', content: consultationData.motif_consultation || 'Non renseigné' },
+      { title: 'Histoire de la Maladie', content: consultationData.histoire_maladie || 'Non renseigné' }
+    ];
+    
+    sections.forEach((section, index) => {
+      // Vérifier si on a besoin d'une nouvelle page
+      if (currentY > pageHeight - 60) {
+        pdf.addPage();
+        currentY = margin;
+      }
+      
+      currentY = addEnhancedSection(pdf, section.title, section.content, margin, currentY, contentWidth, primaryBlue, darkBlue, lightBlue, lightGray);
+      currentY += 8;
+    });
+    
+    // Section médecin avec design spécial
+    if (currentY > pageHeight - 100) {
+      pdf.addPage();
+      currentY = margin;
+    }
+    
+    // Boîte médecin traitant (partie gauche)
+    const doctorBoxHeight = 40;
+    const doctorBoxWidth = contentWidth * 0.6; // 60% de la largeur pour le médecin
+    
+    pdf.setFillColor(248, 250, 252);
+    pdf.rect(margin, currentY, doctorBoxWidth, doctorBoxHeight, 'F');
+    pdf.setDrawColor(...primaryBlue);
+    pdf.setLineWidth(1);
+    pdf.rect(margin, currentY, doctorBoxWidth, doctorBoxHeight);
+    
+    pdf.setTextColor(...primaryBlue);
+    pdf.setFontSize(14);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('MÉDECIN TRAITANT', margin + 5, currentY + 12);
+    
+    const doctorName = consultationData.medecin?.nom || consultationData.medecin_nom || 'Dr. Jean Dupont';
+    const doctorSpecialty = consultationData.medecin?.specialite || consultationData.medecin_specialite || 'Médecine Générale';
+    
+    pdf.setTextColor(...darkBlue);
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(10);
+    pdf.text(`Nom: ${doctorName}`, margin + 5, currentY + 22);
+    pdf.text(`Spécialité: ${doctorSpecialty}`, margin + 5, currentY + 30);
+    
+    // Zone signature séparée (partie droite)
+    const signatureBoxX = margin + doctorBoxWidth + 10;
+    const signatureBoxWidth = contentWidth - doctorBoxWidth - 10;
+    const signatureBoxHeight = doctorBoxHeight;
+    
+    // Boîte signature
+    pdf.setFillColor(255, 255, 255);
+    pdf.rect(signatureBoxX, currentY, signatureBoxWidth, signatureBoxHeight, 'F');
+    pdf.setDrawColor(...mediumGray);
+    pdf.setLineWidth(0.5);
+    pdf.rect(signatureBoxX, currentY, signatureBoxWidth, signatureBoxHeight);
+    
+    // Titre de la section signature
+    pdf.setTextColor(...primaryBlue);
+    pdf.setFontSize(10);
+    pdf.setFont('helvetica', 'bold');
+    pdf.text('VALIDATION', signatureBoxX + 5, currentY + 10);
+    
+    // Date
+    pdf.setFontSize(8);
+    pdf.setTextColor(...mediumGray);
+    pdf.text(`Date: ${new Date().toLocaleDateString('fr-FR')}`, signatureBoxX + 5, currentY + 18);
+    
+    // Cadre signature interne
+    pdf.setDrawColor(...lightGray);
+    pdf.setLineWidth(0.3);
+    pdf.rect(signatureBoxX + 5, currentY + 22, signatureBoxWidth - 10, 15);
+    pdf.setFontSize(7);
+    pdf.text('Signature et cachet médical', signatureBoxX + 7, currentY + 37);
+    
+    currentY += doctorBoxHeight + 15;
+    
+    // Pied de page stylisé
+    const footerY = pageHeight - 20;
+    pdf.setDrawColor(...lightGray);
+    pdf.line(margin, footerY, pageWidth - margin, footerY);
+    
+    pdf.setFontSize(8);
+    pdf.setTextColor(...mediumGray);
+    pdf.text('Document généré par Mediai - Plateforme médicale numérique', margin, footerY + 8);
+    pdf.text(`Généré le ${new Date().toLocaleDateString('fr-FR')} à ${new Date().toLocaleTimeString('fr-FR')}`, pageWidth - margin - 80, footerY + 8);
+    
+    // Télécharger le PDF
+    const fileName = `consultation_${consultationData.patient.nom.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+    
+    return { success: true, fileName };
+    
+  } catch (error) {
+    console.error('Erreur lors de la génération du PDF:', error);
+    
+    // Fallback vers l'ancienne méthode en cas d'erreur
+    return await exportToPDFFallback(consultationData);
+  }
+};
+
+// Fonction pour ajouter une section avec design amélioré
+const addEnhancedSection = (pdf, title, content, margin, currentY, contentWidth, primaryBlue, darkBlue, lightBlue, lightGray) => {
+  const sectionHeight = 8 + Math.max(20, pdf.splitTextToSize(content, contentWidth - 10).length * 5);
+  
+  // Fond de section
+  pdf.setFillColor(255, 255, 255);
+  pdf.rect(margin, currentY, contentWidth, sectionHeight, 'F');
+  
+  // Bordure de section
+  pdf.setDrawColor(...lightGray);
+  pdf.setLineWidth(0.5);
+  pdf.rect(margin, currentY, contentWidth, sectionHeight);
+  
+  // Titre avec fond coloré
+  pdf.setFillColor(...lightBlue);
+  pdf.rect(margin, currentY, contentWidth, 12, 'F');
+  
+  pdf.setTextColor(...primaryBlue);
+  pdf.setFontSize(11);
+  pdf.setFont('helvetica', 'bold');
+  pdf.text(title, margin + 5, currentY + 8);
+  
+  // Ligne de séparation
+  pdf.setDrawColor(...primaryBlue);
+  pdf.setLineWidth(0.3);
+  pdf.line(margin + 5, currentY + 10, margin + contentWidth - 5, currentY + 10);
+  
+  // Contenu
+  pdf.setTextColor(...darkBlue);
+  pdf.setFont('helvetica', 'normal');
+  pdf.setFontSize(9);
+  
+  const lines = pdf.splitTextToSize(content, contentWidth - 10);
+  let textY = currentY + 18;
+  lines.forEach(line => {
+    pdf.text(line, margin + 5, textY);
+    textY += 5;
+  });
+  
+  return currentY + sectionHeight;
+};
+
+// Méthode de fallback pour l'export PDF (ancienne version)
+const exportToPDFFallback = async (consultationData) => {
   try {
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -123,7 +355,7 @@ export const exportToPDF = async (consultationData) => {
     }
     
     // Examens Complémentaires
-    currentY = addSection(pdf, 'EXAMENS COMPLÉMENTAIRES', consultationData.examensComplementaires || 'Non renseigné', margin, currentY, contentWidth, primaryBlue, darkBlue);
+    currentY = addSection(pdf, 'EXAMENS COMPLÉMENTAIRES', consultationData.examen_complementaire || 'Non renseigné', margin, currentY, contentWidth, primaryBlue, darkBlue);
     currentY += 10;
     
     // Conseils et Recommandations
@@ -165,9 +397,9 @@ export const exportToPDF = async (consultationData) => {
     pdf.text('Signature et cachet', signatureX, currentY + 30);
     
     // Intégrer la signature numérique si elle existe
-    if (consultationData.signature) {
+    if (consultationData.signature_medecin) {
       try {
-        const signatureImg = consultationData.signature;
+        const signatureImg = consultationData.signature_medecin;
         pdf.addImage(signatureImg, 'PNG', signatureX - 3, currentY + 2, 56, 21);
       } catch (error) {
         console.log('Erreur lors de l\'ajout de la signature:', error);
@@ -188,7 +420,7 @@ export const exportToPDF = async (consultationData) => {
     return { success: true, fileName };
     
   } catch (error) {
-    console.error('Erreur lors de la génération du PDF:', error);
+    console.error('Erreur lors de la génération du PDF (fallback):', error);
     return { success: false, error: error.message };
   }
 };
@@ -483,14 +715,21 @@ const generatePrintHTML = (consultationData) => {
         <div class="section">
           <h3>Examens Complémentaires</h3>
           <div class="section-content">
-            ${consultationData.examensComplementaires || 'Non renseigné'}
+            ${consultationData.examen_complementaire || 'Non renseigné'}
           </div>
         </div>
         
         <div class="section">
-          <h3>Conseils et Recommandations</h3>
+          <h3>Motif de Consultation</h3>
           <div class="section-content">
-            ${consultationData.conseils || 'Non renseigné'}
+            ${consultationData.motif_consultation || 'Non renseigné'}
+          </div>
+        </div>
+        
+        <div class="section">
+          <h3>Histoire de la Maladie</h3>
+          <div class="section-content">
+            ${consultationData.histoire_maladie || 'Non renseigné'}
           </div>
         </div>
         
@@ -510,7 +749,7 @@ const generatePrintHTML = (consultationData) => {
             
             <div class="signature-box">
               <div class="signature-label">Signature et cachet médical</div>
-              ${consultationData.signature ? `<img src="${consultationData.signature}" alt="Signature" style="max-width: 100%; max-height: 60px;">` : ''}
+              ${consultationData.signature_medecin ? `<img src="${consultationData.signature_medecin}" alt="Signature" style="max-width: 100%; max-height: 60px;">` : ''}
             </div>
           </div>
         </div>
