@@ -1,5 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotification } from '../../contexts/NotificationContext';
 import { useLogout } from '../../hooks/useLogout';
 import { useNavigate } from 'react-router-dom';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
@@ -7,6 +8,8 @@ import Logo from '../../components/Logo';
 import DoctorConsultations from './DoctorConsultations';
 import DoctorAppointments from './DoctorAppointments';
 import DoctorChatIa from './DoctorChatIa';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
+import api, { dashboardService, consultationService } from '../../services/api';
 
 /**
  * Tableau de bord Médecin - Gestion complète des consultations et patients
@@ -14,18 +17,22 @@ import DoctorChatIa from './DoctorChatIa';
  */
 const DoctorDashboard = () => {
   const { user } = useAuth();
+  const { showSuccess, showError } = useNotification();
   const { handleLogout } = useLogout();
   const navigate = useNavigate();
   const [stats, setStats] = useState({
     consultationsEnCours: 0,
     consultationsAujourdhui: 0,
-    patientsTotal: 0,
-    rendezVousEnAttente: 0
+    consultationsValidees: 0,
+    consultationsEnAttente: 0,
+    totalConsultations: 0,
+    patientsUniques: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState('overview');
   const [selectedConsultation, setSelectedConsultation] = useState(null);
   const [showChat, setShowChat] = useState(false);
+  const [recentConsultations, setRecentConsultations] = useState([]);
   
   // États pour la gestion des patients
   const [searchTerm, setSearchTerm] = useState('');
@@ -34,31 +41,56 @@ const DoctorDashboard = () => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [showPatientDetail, setShowPatientDetail] = useState(false);
 
-  // Simulation du chargement des données médicales
+  // Chargement des données médicales réelles
   useEffect(() => {
     const loadDoctorData = async () => {
       setIsLoading(true);
       try {
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        console.log('Chargement des statistiques du médecin...');
         
-        // Données factices pour le médecin
-        const mockStats = {
-          consultationsEnCours: 5,
-          consultationsAujourdhui: 8,
-          patientsTotal: 156,
-          rendezVousEnAttente: 12
-        };
+        // Charger les statistiques
+        const statsResponse = await dashboardService.getDoctorStats();
+        if (statsResponse.success) {
+          console.log('Statistiques reçues:', statsResponse.data);
+          setStats(statsResponse.data);
+        }
         
-        setStats(mockStats);
+        // Charger les consultations récentes
+        const consultationsResponse = await consultationService.getConsultations();
+        if (consultationsResponse && consultationsResponse.results && Array.isArray(consultationsResponse.results)) {
+          // Trier par date de création décroissante et prendre les 5 dernières
+          const sorted = consultationsResponse.results
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, 5);
+          setRecentConsultations(sorted);
+          console.log('Consultations récentes:', sorted);
+        }
+        
+        // Notification de succès uniquement en cas de premier chargement ou refresh
+        // showSuccess('Données chargées', 'Tableau de bord mis à jour avec succès');
       } catch (error) {
         console.error('Erreur lors du chargement des données:', error);
+        showError('Erreur', 'Erreur lors du chargement des données');
+        
+        // Fallback vers des données par défaut
+        setStats({
+          consultationsEnCours: 0,
+          consultationsAujourdhui: 0,
+          consultationsValidees: 0,
+          consultationsEnAttente: 0,
+          totalConsultations: 0,
+          patientsUniques: 0
+        });
+        setRecentConsultations([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    loadDoctorData();
-  }, [user]);
+    if (user && user.role === 'medecin') {
+      loadDoctorData();
+    }
+  }, [user, showSuccess, showError]);
 
   const menuItems = [
     { id: 'overview', label: 'Aperçu', icon: NavigationIcons.Dashboard, description: 'Vue générale de votre activité', color: 'text-mediai-primary' },
@@ -140,137 +172,247 @@ const DoctorDashboard = () => {
     );
   };
 
-  // Activités récentes médicales
-  const recentActivities = [
-    {
-      id: 1,
-      type: 'consultation',
-      message: 'Consultation avec Jean Kabila terminée',
-      time: 'Il y a 1 heure',
-      icon: MedicalIcons.Stethoscope,
-      variant: 'primary'
-    },
-    {
-      id: 2,
-      type: 'chat',
-      message: 'Nouvelle analyse IA pour Marie Luamba',
-      time: 'Il y a 2 heures',
-      icon: NavigationIcons.Chat,
-      variant: 'success'
-    },
-    {
-      id: 3,
-      type: 'appointment',
-      message: 'Nouveau rendez-vous confirmé à 14h30',
-      time: 'Il y a 3 heures',
-      icon: MedicalIcons.Appointment,
-      variant: 'warning'
-    }
-  ];
-  // Données des consultations organisées par statut (simplifiées pour l'overview)
-  const consultationsData = useMemo(() => ({
-    // Consultations en cours d'analyse IA
-    enAnalyse: [
-      { 
-        id: 'CONS-001', 
-        patient: 'Jean Kabila', 
-        age: 45,
-        dateConsultation: '2025-08-26T10:30:00',
-        motif: 'Douleurs thoraciques récurrentes',
-        urgence: 'haute',
-        statut: 'en_analyse',
-        tempsRestant: '2 min',
-        chatId: 'chat-001'
-      },
-      { 
-        id: 'CONS-002', 
-        patient: 'Marie Luamba', 
-        age: 32,
-        dateConsultation: '2025-08-26T11:15:00',
-        motif: 'Éruption cutanée persistante',
-        urgence: 'moyenne',
-        statut: 'analyse_terminee',
-        chatId: 'chat-002'
-      }
-    ],
+  // Helper pour formater les activités récentes à partir des consultations
+  const getRecentActivities = () => {
+    return recentConsultations.map((consultation, index) => {
+      const getStatusInfo = (status) => {
+        switch(status) {
+          case 'en_analyse':
+            return {
+              message: `Consultation de ${consultation.nom || 'Patient'} ${consultation.prenom || ''} en analyse IA`,
+              icon: MedicalIcons.AI,
+              variant: 'primary'
+            };
+          case 'analyse_terminee':
+            return {
+              message: `Analyse IA terminée pour ${consultation.nom || 'Patient'} ${consultation.prenom || ''}`,
+              icon: MedicalIcons.Check,
+              variant: 'success'
+            };
+          case 'valide_medecin':
+            return {
+              message: `Consultation de ${consultation.nom || 'Patient'} ${consultation.prenom || ''} validée`,
+              icon: MedicalIcons.Doctor,
+              variant: 'success'
+            };
+          case 'rejete_medecin':
+            return {
+              message: `Consultation de ${consultation.nom || 'Patient'} ${consultation.prenom || ''} rejetée`,
+              icon: StatusIcons.Error,
+              variant: 'warning'
+            };
+          default:
+            return {
+              message: `Nouvelle consultation de ${consultation.nom || 'Patient'} ${consultation.prenom || ''}`,
+              icon: MedicalIcons.Stethoscope,
+              variant: 'primary'
+            };
+        }
+      };
 
-    // Consultations en attente de validation
-    enAttente: [
-      {
-        id: 'CONS-003',
-        patient: 'Chantal Bokele',
-        age: 28,
-        dateConsultation: '2025-08-26T09:45:00',
-        motif: 'Toux sèche persistante',
-        diagnostic: 'Probable infection respiratoire haute',
-        urgence: 'moyenne',
-        chatId: 'chat-003'
-      }
-    ],
+      const statusInfo = getStatusInfo(consultation.status);
+      const timeAgo = getTimeAgo(consultation.created_at);
 
-    // Consultations terminées
-    terminees: [
-      {
-        id: 'CONS-005',
-        patient: 'Sarah Kiala',
-        age: 29,
-        dateConsultation: '2025-08-25T10:00:00',
-        dateTerminee: '2025-08-25T17:30:00',
-        motif: 'Suivi post-opératoire',
-        diagnostic: 'Cicatrisation normale',
-        chatId: 'chat-005'
-      }
-    ]
-  }), []);
+      return {
+        id: consultation.id,
+        type: 'consultation',
+        message: statusInfo.message,
+        time: timeAgo,
+        icon: statusInfo.icon,
+        variant: statusInfo.variant,
+        consultation: consultation
+      };
+    });
+  };
 
-  const todayConsultations = [
-    { id: 1, patient: 'Jean K.', heure: '09:00', motif: 'Douleurs thoraciques', statut: 'confirmé', chatId: 'chat-001' },
-    { id: 2, patient: 'Marie D.', heure: '10:30', motif: 'Éruption cutanée', statut: 'en_cours', chatId: 'chat-002' },
-    { id: 3, patient: 'Patrick M.', heure: '14:00', motif: 'Céphalées', statut: 'terminé', chatId: 'chat-004' }
-  ];
+  // Helper pour calculer le temps écoulé
+  const getTimeAgo = (dateString) => {
+    const now = new Date();
+    const date = new Date(dateString);
+    const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffInMinutes < 1) return 'À l\'instant';
+    if (diffInMinutes < 60) return `Il y a ${diffInMinutes} min`;
+    
+    const diffInHours = Math.floor(diffInMinutes / 60);
+    if (diffInHours < 24) return `Il y a ${diffInHours}h`;
+    
+    const diffInDays = Math.floor(diffInHours / 24);
+    if (diffInDays < 7) return `Il y a ${diffInDays}j`;
+    
+    return date.toLocaleDateString('fr-FR');
+  };
 
-  const rendezVous = [
-    { id: 1, patient: 'David N.', date: '2025-08-27', heure: '09:00', type: 'Consultation', statut: 'confirmé' },
-    { id: 2, patient: 'Anne M.', date: '2025-08-27', heure: '10:30', type: 'Suivi', statut: 'confirmé' },
-    { id: 3, patient: 'Paul K.', date: 'Tomorrow', heure: '14:00', type: 'Urgence', statut: 'en_attente' },
-    { id: 4, patient: 'Julie B.', date: '2025-08-28', heure: '11:00', type: 'Consultation', statut: 'confirmé' }
-  ];
+  // Helper pour obtenir les consultations du jour réelles
+  const getTodayConsultations = () => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+
+    return recentConsultations.filter(consultation => {
+      const consultationDate = new Date(consultation.created_at);
+      return consultationDate >= today && consultationDate < tomorrow;
+    }).map(consultation => {
+      const date = new Date(consultation.created_at);
+      const heure = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+      
+      const getStatutFromStatus = (status) => {
+        switch(status) {
+          case 'en_analyse': return 'en_cours';
+          case 'analyse_terminee': return 'confirmé';
+          case 'valide_medecin': return 'terminé';
+          case 'rejete_medecin': return 'annulé';
+          default: return 'confirmé';
+        }
+      };
+
+      return {
+        id: consultation.id,
+        patient: `${consultation.nom || 'Patient'} ${consultation.prenom || ''}`.trim() || 'Patient',
+        heure: heure,
+        motif: consultation.symptomes || consultation.description || 'Consultation générale',
+        statut: getStatutFromStatus(consultation.status),
+        chatId: `chat-${consultation.id}`,
+        consultation: consultation
+      };
+    }).slice(0, 5); // Limiter à 5 consultations max
+  };
 
   // États du chat IA médical
   const [chatMessages, setChatMessages] = useState([]);
   const [currentChatId, setCurrentChatId] = useState(null);
   const [chatInput, setChatInput] = useState('');
 
-  // Simulation messages chat pour demo
-  const chatData = {
-    'chat-001': [
-      { id: 1, sender: 'system', message: 'Consultation de Jean Kabila analysée par IA', timestamp: '10:30' },
-      { id: 2, sender: 'ia', message: 'Analyse des symptômes : Douleurs thoraciques récurrentes chez homme 45 ans. Recommandations : ECG, bilan lipidique, consultation cardiologique.', timestamp: '10:31' },
-      { id: 3, sender: 'doctor', message: 'Diagnostic confirmé, prescription ajoutée', timestamp: '10:35' }
-    ],
-    'chat-002': [
-      { id: 1, sender: 'system', message: 'Nouvelle consultation de Marie Luamba', timestamp: '11:15' },
-      { id: 2, sender: 'ia', message: 'Éruption cutanée persistante : Probable dermatite de contact ou eczéma. Traitement topique recommandé.', timestamp: '11:16' }
-    ]
+  // Fonction pour charger les messages du chat depuis l'API
+  const loadChatMessages = async (consultationId) => {
+    try {
+      console.log('Chargement des messages pour la consultation:', consultationId);
+      
+      // D'abord chercher la conversation liée à cette consultation
+      const conversationsResponse = await api.get('/conversations/');
+      const conversationsData = conversationsResponse.data.results || conversationsResponse.data;
+      
+      if (Array.isArray(conversationsData)) {
+        // Trouver la conversation liée à cette consultation
+        const linkedConversation = conversationsData.find(conv => 
+          conv.fiche && conv.fiche.toString() === consultationId.toString()
+        );
+        
+        if (linkedConversation) {
+          // Charger les messages de la conversation trouvée
+          const response = await api.get(`/conversations/${linkedConversation.id}/messages/`);
+          
+          // Gérer les réponses paginées et directes
+          const messagesData = response.data.results || response.data;
+          
+          if (Array.isArray(messagesData) && messagesData.length > 0) {
+            // Transformer les messages pour correspondre au format UI
+            const formattedMessages = messagesData.map(message => ({
+              id: message.id,
+              sender: message.role === 'user' ? 'patient' : message.role === 'synthese' ? 'ia' : 'system',
+              message: message.content || '',
+              timestamp: new Date(message.timestamp).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }),
+              role: message.role
+            }));
+            
+            // Filtrer pour ne garder que les messages patient et les messages de synthèse IA
+            const filteredMessages = formattedMessages.filter(message => 
+              message.role === 'user' || message.role === 'synthese'
+            );
+            
+            // Supprimer les doublons
+            const uniqueMessages = filteredMessages.filter((message, index, self) =>
+              index === self.findIndex(m => m.id === message.id || 
+                (m.message === message.message && m.sender === message.sender))
+            );
+            
+            // Trier par timestamp
+            uniqueMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            setChatMessages(uniqueMessages);
+            console.log('Messages chargés:', uniqueMessages);
+          } else {
+            // Aucun message trouvé dans la conversation
+            const infoMessage = {
+              id: Date.now(),
+              sender: 'system',
+              message: `Aucun message trouvé dans la conversation liée à cette consultation`,
+              timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+            };
+            setChatMessages([infoMessage]);
+          }
+        } else {
+          // Pas de conversation trouvée pour cette consultation
+          const infoMessage = {
+            id: Date.now(),
+            sender: 'system',
+            message: `Aucune conversation liée à cette consultation. La conversation pourrait être en cours de création.`,
+            timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+          };
+          setChatMessages([infoMessage]);
+        }
+      } else {
+        // Erreur lors de la récupération des conversations
+        const errorMessage = {
+          id: Date.now(),
+          sender: 'system',
+          message: `Impossible de récupérer les conversations`,
+          timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+        };
+        setChatMessages([errorMessage]);
+      }
+    } catch (error) {
+      console.error('Erreur lors du chargement des messages:', error);
+      
+      // En cas d'erreur, afficher un message d'erreur informatif
+      const errorMessage = {
+        id: Date.now(),
+        sender: 'system',
+        message: error.response?.status === 404 
+          ? `Conversations non trouvées`
+          : `Erreur lors du chargement: ${error.message || 'Erreur inconnue'}`,
+        timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
+      };
+      setChatMessages([errorMessage]);
+    }
   };
 
   const openChat = (chatId, consultation) => {
     setCurrentChatId(chatId);
-    setChatMessages(chatData[chatId] || []);
     setSelectedConsultation(consultation);
     setShowChat(true);
+    
+    // Charger les messages du chat
+    if (consultation && consultation.id) {
+      loadChatMessages(consultation.id);
+    } else {
+      setChatMessages([]);
+    }
   };
 
-  const sendChatMessage = () => {
-    if (chatInput.trim()) {
+  const sendChatMessage = async () => {
+    if (chatInput.trim() && selectedConsultation) {
       const newMessage = {
         id: Date.now(),
         sender: 'doctor',
         message: chatInput,
         timestamp: new Date().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
       };
-      setChatMessages([...chatMessages, newMessage]);
+      
+      // Ajouter le message localement immédiatement
+      setChatMessages(prev => [...prev, newMessage]);
       setChatInput('');
+
+      try {
+        // TODO: Envoyer le message à l'API
+        // await chatService.sendMessage(selectedConsultation.id, chatInput);
+        
+        console.log('Message envoyé pour consultation:', selectedConsultation.id, chatInput);
+      } catch (error) {
+        console.error('Erreur lors de l\'envoi du message:', error);
+        showError('Erreur', 'Impossible d\'envoyer le message');
+      }
     }
   };
 
@@ -306,7 +448,9 @@ const DoctorDashboard = () => {
             </h3>
             {selectedConsultation && (
               <p className="text-white/80 text-sm mt-2 font-body-medium">
-                Patient: {selectedConsultation.patient} • {selectedConsultation.motif}
+                Patient: {selectedConsultation.nom && selectedConsultation.prenom 
+                  ? `${selectedConsultation.nom} ${selectedConsultation.prenom}` 
+                  : selectedConsultation.patient || 'Patient'} • {selectedConsultation.symptomes || selectedConsultation.motif || 'Consultation'}
               </p>
             )}
           </div>
@@ -326,22 +470,38 @@ const DoctorDashboard = () => {
                 <MedicalIcon icon={NavigationIcons.Chat} size="w-8 h-8" className="text-white" />
               </div>
               <h4 className="text-lg font-semibold text-mediai-dark mb-2 font-heading">Chat IA Médical</h4>
-              <p className="text-mediai-medium font-body">Consultation envoyée au système d'intelligence artificielle...</p>
+              <p className="text-mediai-medium font-body">Chargement des messages de la consultation...</p>
             </div>
           ) : (
             chatMessages.map((message) => (
-              <div key={message.id} className={`flex ${message.sender === 'doctor' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-lg px-6 py-4 rounded-2xl shadow-md transition-all ${
+              <div key={message.id} className={`flex mb-4 ${
+                message.sender === 'ia' ? 'justify-end' : 
+                message.sender === 'patient' ? 'justify-start' : 
+                message.sender === 'doctor' ? 'justify-end' : 
+                'justify-center'
+              }`}>
+                <div className={`max-w-[70%] px-4 py-3 rounded-2xl shadow-md transition-all ${
                   message.sender === 'doctor' 
                     ? 'gradient-mediai text-white' 
                     : message.sender === 'ia'
-                    ? 'bg-success text-white'
-                    : 'bg-light text-mediai-dark border border-border-light'
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                    : message.sender === 'patient'
+                    ? 'bg-blue-50 text-blue-900 border border-blue-200'
+                    : 'bg-gray-100 text-gray-700 border border-gray-200'
                 }`}>
                   <div className="text-xs opacity-75 mb-2 font-body-medium">
-                    {message.sender === 'doctor' ? '👨‍⚕️ Vous' : message.sender === 'ia' ? '🤖 IA Médicale' : '🏥 Système'}
+                    {message.sender === 'doctor' ? '👨‍⚕️ Vous' : 
+                     message.sender === 'ia' ? '🤖 IA Médicale' : 
+                     message.sender === 'patient' ? '👤 Patient' : 
+                     '🏥 Système'}
                   </div>
-                  <p className="text-sm leading-relaxed font-body">{message.message}</p>
+                  <div className="text-sm leading-relaxed font-body">
+                    {message.sender === 'ia' ? (
+                      <MarkdownRenderer content={message.message} />
+                    ) : (
+                      <p>{message.message}</p>
+                    )}
+                  </div>
                   <div className="text-xs opacity-75 mt-2 font-medium">{message.timestamp}</div>
                 </div>
               </div>
@@ -957,17 +1117,60 @@ const DoctorDashboard = () => {
           variant="success"
         />
         <StatCard
-          title="Patients total"
-          value={stats.patientsTotal}
-          icon={StatusIcons.Star}
+          title="Consultations validées"
+          value={stats.consultationsValidees}
+          icon={MedicalIcons.Check}
           variant="warning"
         />
         <StatCard
-          title="Rendez-vous en attente"
-          value={stats.rendezVousEnAttente}
-          icon={NavigationIcons.Calendar}
+          title="En attente de diagnostic"
+          value={stats.consultationsEnAttente}
+          icon={MedicalIcons.Clock}
           variant="medical"
         />
+      </div>
+
+      {/* Statistiques supplémentaires */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 sm:p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-blue-100 text-sm font-medium">Total consultations</p>
+              <p className="text-2xl sm:text-3xl font-bold">{stats.totalConsultations}</p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+              <MedicalIcon icon={MedicalIcons.Document} size="w-6 h-6" className="text-white" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-green-100 text-sm font-medium">Patients uniques</p>
+              <p className="text-2xl sm:text-3xl font-bold">{stats.patientsUniques}</p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+              <MedicalIcon icon={MedicalIcons.User} size="w-6 h-6" className="text-white" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 sm:p-6 text-white">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-purple-100 text-sm font-medium">Taux de validation</p>
+              <p className="text-2xl sm:text-3xl font-bold">
+                {stats.totalConsultations > 0 
+                  ? Math.round((stats.consultationsValidees / stats.totalConsultations) * 100)
+                  : 0}%
+              </p>
+            </div>
+            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
+              <MedicalIcon icon={StatusIcons.Success} size="w-6 h-6" className="text-white" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Contenu principal avec design amélioré et responsive */}
@@ -995,9 +1198,15 @@ const DoctorDashboard = () => {
                   </div>
                 ))}
               </div>
+            ) : recentConsultations.length === 0 ? (
+              <div className="text-center py-8">
+                <MedicalIcon icon={MedicalIcons.Document} size="w-12 h-12" className="text-mediai-medium mx-auto mb-3" />
+                <p className="text-mediai-medium">Aucune consultation récente</p>
+                <p className="text-sm text-mediai-light mt-1">Les nouvelles consultations apparaîtront ici</p>
+              </div>
             ) : (
               <ul className="space-y-4 sm:space-y-6">
-                {recentActivities.map((activity) => (
+                {getRecentActivities().map((activity) => (
                   <li key={activity.id} className="flex space-x-3 sm:space-x-4 items-start">
                     <div className="flex-shrink-0">
                       <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shadow-md ${
@@ -1013,6 +1222,22 @@ const DoctorDashboard = () => {
                         {activity.message}
                       </p>
                       <p className="text-xs text-mediai-medium font-medium mt-1 font-body">{activity.time}</p>
+                      {activity.consultation && (
+                        <div className="mt-2">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            activity.consultation.status === 'valide_medecin' ? 'bg-green-100 text-green-800' :
+                            activity.consultation.status === 'analyse_terminee' ? 'bg-blue-100 text-blue-800' :
+                            activity.consultation.status === 'en_analyse' ? 'bg-yellow-100 text-yellow-800' :
+                            activity.consultation.status === 'rejete_medecin' ? 'bg-red-100 text-red-800' :
+                            'bg-gray-100 text-gray-800'
+                          }`}>
+                            {activity.consultation.status === 'valide_medecin' ? 'Validée' :
+                             activity.consultation.status === 'analyse_terminee' ? 'Analyse terminée' :
+                             activity.consultation.status === 'en_analyse' ? 'En analyse' :
+                             activity.consultation.status === 'rejete_medecin' ? 'Rejetée' : 'En cours'}
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </li>
                 ))}
@@ -1092,9 +1317,15 @@ const DoctorDashboard = () => {
                 <div key={i} className="h-16 bg-medium rounded-xl w-full"></div>
               ))}
             </div>
+          ) : getTodayConsultations().length === 0 ? (
+            <div className="text-center py-8">
+              <MedicalIcon icon={MedicalIcons.Appointment} size="w-12 h-12" className="text-mediai-medium mx-auto mb-3" />
+              <p className="text-mediai-medium">Aucune consultation aujourd'hui</p>
+              <p className="text-sm text-mediai-light mt-1">Les consultations du jour apparaîtront ici</p>
+            </div>
           ) : (
             <div className="space-y-3 sm:space-y-4">
-              {todayConsultations.map((consultation) => (
+              {getTodayConsultations().map((consultation) => (
                 <div key={consultation.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 sm:p-6 border border-border-light rounded-xl hover:bg-light transition-all duration-300 hover-lift space-y-3 sm:space-y-0">
                   <div className="flex items-center space-x-3 sm:space-x-6">
                     <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-primary rounded-xl flex items-center justify-center shadow-sm flex-shrink-0">
@@ -1111,12 +1342,13 @@ const DoctorDashboard = () => {
                       consultation.statut === 'confirmé' ? 'bg-success text-white' :
                       consultation.statut === 'en_cours' ? 'bg-mediai-primary text-white' :
                       consultation.statut === 'terminé' ? 'bg-medium text-white' :
+                      consultation.statut === 'annulé' ? 'bg-danger text-white' :
                       'bg-warning text-white'
                     }`}>
                       {consultation.statut}
                     </span>
                     <button 
-                      onClick={() => openChat(consultation.chatId, consultation)}
+                      onClick={() => openChat(consultation.chatId, consultation.consultation)}
                       className="px-3 py-1 sm:px-4 sm:py-2 gradient-mediai text-white text-xs sm:text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-300">
                       Chat IA
                     </button>

@@ -1123,7 +1123,7 @@ export const iaService = {
  */
 export const dashboardService = {
   /**
-   * Récupérer les statistiques du tableau de bord
+   * Récupérer les statistiques du tableau de bord patient
    * @returns {Promise<Object>} - Statistiques
    */
   getStats: async () => {
@@ -1131,6 +1131,49 @@ export const dashboardService = {
       const response = await api.get('/dashboard/stats');
       return response.data;
     } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
+  /**
+   * Récupérer les statistiques du médecin
+   * @returns {Promise<Object>} - Statistiques médicales
+   */
+  getDoctorStats: async () => {
+    try {
+      // Utiliser l'endpoint des consultations pour calculer les stats
+      const consultationsResponse = await consultationService.getConsultations();
+      
+      // Extraire le tableau results de la réponse paginée
+      const consultations = consultationsResponse?.results || [];
+      console.log('Consultations extraites pour stats:', consultations);
+      
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      const stats = {
+        consultationsEnCours: consultations.filter(c => 
+          c.status === 'en_analyse' || c.status === 'analyse_terminee'
+        ).length,
+        consultationsAujourdhui: consultations.filter(c => {
+          const consultDate = new Date(c.created_at);
+          consultDate.setHours(0, 0, 0, 0);
+          return consultDate.getTime() === today.getTime();
+        }).length,
+        consultationsValidees: consultations.filter(c => 
+          c.status === 'valide_medecin'
+        ).length,
+        consultationsEnAttente: consultations.filter(c => 
+          c.status === 'analyse_terminee' && !c.diagnostic
+        ).length,
+        totalConsultations: consultations.length,
+        patientsUniques: new Set(consultations.map(c => c.email)).size
+      };
+      
+      console.log('Statistiques calculées:', stats);
+      return { success: true, data: stats };
+    } catch (error) {
+      console.error('Erreur lors de la récupération des stats médecin:', error);
       throw error.response?.data || error;
     }
   },
