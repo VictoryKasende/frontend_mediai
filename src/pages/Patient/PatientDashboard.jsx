@@ -2,10 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useLogout } from '../../hooks/useLogout';
+import { useSettingsModal } from '../../hooks/useSettingsModal';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import SettingsModal from '../../components/SettingsModal';
 import FicheConsultationForm from './FicheConsultationForm';
 import ConsultationsList from './ConsultationsList';
 import ConsultationDetails from './ConsultationDetails';
@@ -18,6 +20,7 @@ const PatientDashboard = () => {
   const { user } = useAuth();
   const { showSuccess, showError, showWarning, showInfo, notifications, removeNotification } = useNotification();
   const { handleLogout } = useLogout();
+  const { isOpen: isSettingsOpen, openModal: openSettings, closeModal: closeSettings } = useSettingsModal();
   
   const [activeView, setActiveView] = useState('dashboard');
   const [selectedConsultationId, setSelectedConsultationId] = useState(null);
@@ -870,6 +873,7 @@ const PatientDashboard = () => {
                 <Button 
                   variant="outline" 
                   size="sm"
+                  onClick={openSettings}
                   className="border-2 border-white/30 hover:border-white hover:bg-white/20 text-white hover:text-white transition-all duration-300"
                 >
                   <MedicalIcon icon={ActionIcons.Settings} size="w-4 h-4" className="mr-2" />
@@ -957,6 +961,7 @@ const PatientDashboard = () => {
               <Button 
                 variant="outline" 
                 size="sm" 
+                onClick={openSettings}
                 className="w-full text-sm border-2 border-mediai-medium hover:border-mediai-primary hover:bg-white transition-all duration-300"
               >
                 <MedicalIcon icon={ActionIcons.Settings} size="w-4 h-4" className="mr-2" />
@@ -1021,6 +1026,12 @@ const PatientDashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Modal de paramètres */}
+      <SettingsModal 
+        isOpen={isSettingsOpen} 
+        onClose={closeSettings} 
+      />
     </div>
   );
 };

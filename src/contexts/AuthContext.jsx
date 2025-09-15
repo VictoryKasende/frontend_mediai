@@ -176,6 +176,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Fonction pour mettre à jour les informations utilisateur
+  const updateUser = (userData) => {
+    // Mettre à jour l'utilisateur dans l'état
+    dispatch({ type: AUTH_ACTIONS.SET_USER, payload: userData });
+    
+    // Mettre à jour également dans le localStorage
+    localStorage.setItem('mediai_user', JSON.stringify(userData));
+  };
+
   // Fonction pour vérifier si l'utilisateur a un rôle spécifique
   const hasRole = (role) => {
     return state.user?.role === role;
@@ -253,6 +262,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    updateUser,
     hasRole,
     hasPermission,
     USER_ROLES

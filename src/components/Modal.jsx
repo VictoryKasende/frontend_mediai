@@ -6,7 +6,8 @@ import { Icon, ActionIcons } from './Icons';
  * @param {boolean} isOpen - État ouvert/fermé de la modal
  * @param {function} onClose - Fonction de fermeture
  * @param {string} title - Titre de la modal
- * @param {string} size - Taille de la modal (sm, md, lg, xl)
+ * @param {string} size - Taille de la modal (sm, md, lg, xl, 2xl, 3xl, 4xl, 5xl, 6xl, 7xl, full)
+ * @param {string} maxWidth - Taille maximale personnalisée (remplace size si fourni)
  * @param {boolean} closeOnOverlayClick - Fermer en cliquant sur l'overlay
  * @param {string} type - Type de modal (default, success, error, warning, info)
  * @param {React.ReactNode} children - Contenu de la modal
@@ -17,6 +18,7 @@ const Modal = ({
   onClose,
   title,
   size = 'md',
+  maxWidth,
   closeOnOverlayClick = true,
   type = 'default',
   children,
@@ -47,7 +49,14 @@ const Modal = ({
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
-    xl: 'max-w-4xl'
+    xl: 'max-w-4xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    '7xl': 'max-w-7xl',
+    full: 'max-w-full mx-4'
   };
 
   // Configuration des types de modal
@@ -98,7 +107,9 @@ const Modal = ({
 
         {/* Modal */}
         <div
-          className={`inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle w-full border border-border-primary ${sizeClasses[size] || sizeClasses.md}`}
+          className={`inline-block align-bottom bg-white rounded-xl text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle w-full border border-border-primary ${
+            maxWidth ? maxWidth : (sizeClasses[size] || sizeClasses.md)
+          }`}
         >
           {/* Header */}
           {title && (
