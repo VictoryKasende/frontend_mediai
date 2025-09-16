@@ -688,6 +688,23 @@ export const consultationService = {
   },
 
   /**
+   * Récupérer une consultation par son ID
+   * @param {number} id - ID de la consultation
+   * @returns {Promise<Object>} - Consultation complète
+   */
+  async getConsultationById(id) {
+    try {
+      console.log('Récupération de la consultation:', id);
+      const response = await api.get(`/fiche-consultation/${id}/`);
+      console.log('Consultation récupérée:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la consultation:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Actions spéciales - Workflow IA
    */
 
@@ -695,12 +712,18 @@ export const consultationService = {
    * Valider une consultation (Médecin ou Admin uniquement)
    * Conditions: Status doit être analyse_terminee, en_analyse ou valide_medecin
    * @param {number} id - ID de la consultation
+   * @param {Object} validationData - Données de validation
+   * @param {string} validationData.diagnostic - Diagnostic (obligatoire)
+   * @param {string} validationData.traitement - Traitement recommandé
+   * @param {string} validationData.examen_complementaire - Examens complémentaires
+   * @param {string} validationData.recommandations - Recommandations
+   * @param {string} validationData.signature_medecin - Signature du médecin
    * @returns {Promise<Object>} - Consultation validée
    */
-  async validateConsultation(id) {
+  async validateConsultation(id, validationData) {
     try {
-      console.log('Validation de la consultation:', id);
-      const response = await api.post(`/fiche-consultation/${id}/validate/`);
+      console.log('Validation de la consultation:', id, validationData);
+      const response = await api.post(`/fiche-consultation/${id}/validate/`, validationData);
       console.log('Consultation validée:', response.data);
       return response.data;
     } catch (error) {
@@ -743,6 +766,82 @@ export const consultationService = {
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la relance de l\'analyse IA:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Envoyer via WhatsApp (Médecin ou Admin uniquement)
+   * @param {number} id - ID de la consultation
+   * @param {Object} whatsappData - Données pour WhatsApp
+   * @param {string} whatsappData.message_template - Template du message (optionnel)
+   * @param {string} whatsappData.additional_info - Informations supplémentaires (optionnel)
+   * @returns {Promise<Object>} - Réponse d'envoi WhatsApp
+   */
+  async sendWhatsApp(id, whatsappData = {}) {
+    try {
+      console.log('Envoi WhatsApp pour la consultation:', id, whatsappData);
+      const response = await api.post(`/fiche-consultation/${id}/send-whatsapp/`, whatsappData);
+      console.log('Message WhatsApp envoyé:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'envoi WhatsApp:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Récupérer les messages d'une consultation
+   * @param {number} id - ID de la consultation
+   * @returns {Promise<Array>} - Messages de la consultation
+   */
+  async getConsultationMessages(id) {
+    try {
+      console.log('Récupération des messages pour la consultation:', id);
+      const response = await api.get(`/fiche-consultation/${id}/messages/`);
+      console.log('Messages récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des messages:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Ajouter un message à une consultation
+   * @param {number} id - ID de la consultation
+   * @param {Object} messageData - Données du message
+   * @param {string} messageData.content - Contenu du message
+   * @returns {Promise<Object>} - Message ajouté
+   */
+  async addConsultationMessage(id, messageData) {
+    try {
+      console.log('Ajout d\'un message à la consultation:', id, messageData);
+      const response = await api.post(`/fiche-consultation/${id}/messages/`, messageData);
+      console.log('Message ajouté:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'ajout du message:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Assigner un médecin à une consultation (Staff/Admin uniquement)
+   * @param {number} id - ID de la consultation
+   * @param {number} medecinId - ID du médecin à assigner
+   * @returns {Promise<Object>} - Consultation avec médecin assigné
+   */
+  async assignMedecin(id, medecinId) {
+    try {
+      console.log('Assignation du médecin:', medecinId, 'à la consultation:', id);
+      const response = await api.post(`/fiche-consultation/${id}/assign-medecin/`, {
+        medecin_id: medecinId
+      });
+      console.log('Médecin assigné:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'assignation du médecin:', error);
       throw this.handleError(error);
     }
   },
@@ -1260,6 +1359,179 @@ export const uploadService = {
     } catch (error) {
       throw error.response?.data || error;
     }
+  }
+};
+
+// ==================== MESSAGERIE FICHES ====================
+
+/**
+ * Service de messagerie pour les fiches de consultation
+ */
+export const ficheMessagingService = {
+  /**
+   * Lister les messages d'une fiche de consultation
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} filters - Filtres optionnels (author, created_at__gte, created_at__lte)
+   * @returns {Promise<Array>} - Liste des messages
+   */
+  async getMessages(ficheId, filters = {}) {
+    try {
+      const params = new URLSearchParams(filters);
+      const response = await api.get(`/fiche-consultation/${ficheId}/messages/?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Ajouter un message à une fiche de consultation
+   * @param {number} ficheId - ID de la fiche
+   * @param {string} content - Contenu du message (max 2000 caractères)
+   * @returns {Promise<Object>} - Message créé
+   */
+  async addMessage(ficheId, content) {
+    try {
+      const response = await api.post(`/fiche-consultation/${ficheId}/messages/`, {
+        content: content
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs pour le service de messagerie
+   * @param {Object} error - Erreur axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    if (error.response?.data) {
+      // Retourner directement les données d'erreur pour préserver la structure
+      return error.response.data;
+    }
+    return {
+      detail: error.message || 'Erreur lors de l\'opération de messagerie'
+    };
+  }
+};
+
+// ==================== RELANCE ANALYSE IA ====================
+
+/**
+ * Service de relance d'analyse IA pour les fiches
+ */
+export const ficheAIService = {
+  /**
+   * Relancer l'analyse IA d'une fiche de consultation
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} options - Options de relance
+   * @param {boolean} options.force_reanalysis - Forcer une nouvelle analyse
+   * @param {boolean} options.include_messages - Inclure les messages
+   * @param {string} options.analysis_type - Type d'analyse ('complete', 'diagnostic_only', 'recommendation_only')
+   * @returns {Promise<Object>} - Réponse de la tâche
+   */
+  async relanceAnalysis(ficheId, options = {}) {
+    try {
+      const payload = {
+        force_reanalysis: true,
+        include_messages: true,
+        analysis_type: 'complete',
+        ...options
+      };
+
+      const response = await api.post(`/fiche-consultation/${ficheId}/relancer/`, payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs pour le service IA
+   * @param {Object} error - Erreur axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    if (error.response?.data) {
+      return error.response.data;
+    }
+    return {
+      detail: error.message || 'Erreur lors de la relance d\'analyse IA'
+    };
+  }
+};
+
+// ==================== WHATSAPP ====================
+
+/**
+ * Service WhatsApp pour l'envoi de fiches
+ */
+export const whatsappService = {
+  /**
+   * Envoyer une fiche via WhatsApp
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} options - Options d'envoi
+   * @param {string} options.template_type - Type de template ('consultation_validee', 'consultation_rejetee', 'demande_informations', 'custom')
+   * @param {string} options.recipient_phone - Numéro du destinataire (optionnel)
+   * @param {string} options.custom_message - Message personnalisé (optionnel)
+   * @param {boolean} options.include_attachments - Inclure les documents
+   * @param {string} options.language - Langue ('fr', 'en', 'sw')
+   * @param {boolean} options.send_immediately - Envoyer immédiatement
+   * @returns {Promise<Object>} - Résultat de l'envoi
+   */
+  async sendFiche(ficheId, options = {}) {
+    try {
+      const payload = {
+        template_type: 'consultation_validee',
+        include_attachments: true,
+        language: 'fr',
+        send_immediately: true,
+        ...options
+      };
+
+      const response = await api.post(`/fiche-consultation/${ficheId}/send-whatsapp/`, payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Templates WhatsApp disponibles
+   */
+  templates: {
+    consultation_validee: {
+      name: 'Consultation Validée',
+      description: 'Template pour consultation validée avec diagnostic'
+    },
+    consultation_rejetee: {
+      name: 'Consultation Rejetée',
+      description: 'Template pour consultation rejetée avec motif'
+    },
+    demande_informations: {
+      name: 'Demande d\'informations',
+      description: 'Template pour demande d\'informations supplémentaires'
+    },
+    custom: {
+      name: 'Message personnalisé',
+      description: 'Template personnalisé'
+    }
+  },
+
+  /**
+   * Gestion des erreurs pour le service WhatsApp
+   * @param {Object} error - Erreur axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    if (error.response?.data) {
+      return error.response.data;
+    }
+    return {
+      detail: error.message || 'Erreur lors de l\'envoi WhatsApp'
+    };
   }
 };
 

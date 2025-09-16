@@ -484,7 +484,7 @@ const DoctorDashboard = () => {
                   message.sender === 'doctor' 
                     ? 'gradient-mediai text-white' 
                     : message.sender === 'ia'
-                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white'
+                    ? 'bg-blue-50 text-blue-900 border border-blue-200'
                     : message.sender === 'patient'
                     ? 'bg-blue-50 text-blue-900 border border-blue-200'
                     : 'bg-gray-100 text-gray-700 border border-gray-200'
@@ -1083,7 +1083,7 @@ const DoctorDashboard = () => {
                     Espace Médecin
                   </h1>
                   <p className="text-white/70 text-sm sm:text-base lg:text-lg font-body-medium">
-                    Dr. {user?.name || 'Médecin'} • Plateforme Mediai
+                    Dr. {user?.username || 'Médecin'} • Plateforme Mediai
                   </p>
                 </div>
               </div>
@@ -1339,13 +1339,19 @@ const DoctorDashboard = () => {
                   <div className="flex items-center justify-between sm:justify-end space-x-3 sm:space-x-4">
                     <span className="text-base sm:text-lg font-bold text-mediai-primary font-mono">{consultation.heure}</span>
                     <span className={`px-3 py-1 sm:px-4 sm:py-2 rounded-full text-xs font-bold uppercase tracking-wide ${
-                      consultation.statut === 'confirmé' ? 'bg-success text-white' :
-                      consultation.statut === 'en_cours' ? 'bg-mediai-primary text-white' :
-                      consultation.statut === 'terminé' ? 'bg-medium text-white' :
-                      consultation.statut === 'annulé' ? 'bg-danger text-white' :
-                      'bg-warning text-white'
+                      consultation.statut === 'en_analyse' ? 'bg-mediai-primary text-white' :
+                      consultation.statut === 'analyse_terminee' ? 'bg-success text-white' :
+                      consultation.statut === 'valide_medecin' ? 'bg-mediai-secondary text-white' :
+                      consultation.statut === 'rejete_medecin' ? 'bg-danger text-white' :
+                      consultation.statut === 'en_attente' ? 'bg-warning text-white' :
+                      'bg-gray-500 text-white'
                     }`}>
-                      {consultation.statut}
+                      {consultation.statut === 'en_analyse' ? 'EN ANALYSE' :
+                       consultation.statut === 'analyse_terminee' ? 'TERMINÉE' :
+                       consultation.statut === 'valide_medecin' ? 'VALIDÉE' :
+                       consultation.statut === 'rejete_medecin' ? 'REJETÉE' :
+                       consultation.statut === 'en_attente' ? 'EN ATTENTE' :
+                       consultation.statut}
                     </span>
                     <button 
                       onClick={() => openChat(consultation.chatId, consultation.consultation)}
@@ -1407,7 +1413,7 @@ const DoctorDashboard = () => {
             <div className="flex items-center space-x-2 sm:space-x-3">
               <div className="hidden md:flex items-center space-x-3">
                 <div className="text-right">
-                  <p className="text-sm font-bold text-mediai-dark font-heading">Dr. {user?.name || 'Médecin'}</p>
+                  <p className="text-sm font-bold text-mediai-dark font-heading">Dr. {user?.username || 'Médecin'}</p>
                   <p className="text-xs text-mediai-medium font-body">Médecin</p>
                 </div>
                 <div className="w-8 h-8 sm:w-10 sm:h-10 gradient-mediai rounded-xl flex items-center justify-center shadow-lg">
