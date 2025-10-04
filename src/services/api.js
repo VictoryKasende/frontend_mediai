@@ -15,15 +15,69 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  // Activer les cookies pour CSRF
+  withCredentials: true,
 });
 
-// Intercepteur pour ajouter le token d'authentification
+/**
+ * Récupérer le token CSRF depuis les cookies
+ * @returns {string|null} - Token CSRF
+ */
+function getCsrfToken() {
+  const name = 'csrftoken';
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+/**
+ * Récupérer le token CSRF depuis le serveur
+ * @returns {Promise<string>} - Token CSRF
+ */
+async function fetchCSRFToken() {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/csrf/`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.csrfToken;
+    }
+  } catch (error) {
+    console.warn('Impossible de récupérer le token CSRF:', error);
+  }
+  return null;
+}
+
+// Intercepteur pour ajouter le token d'authentification et CSRF
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Ajouter le token d'authentification
     const token = localStorage.getItem('mediai_access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Ajouter le token CSRF pour les requêtes POST/PUT/PATCH/DELETE
+    if (['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
+      // Récupérer le token CSRF depuis les cookies
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        config.headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -105,7 +159,25 @@ export const authService = {
       console.log('Envoi des données d\'inscription:', userData);
       console.log('URL d\'inscription:', '/auth/users/register/');
       
-      const response = await api.post('/auth/users/register/', userData);
+      // Essayer d'abord sans CSRF token
+      let response;
+      try {
+        response = await api.post('/auth/users/register/', userData);
+      } catch (csrfError) {
+        if (csrfError.response?.status === 403) {
+          // Si erreur CSRF, récupérer le token et réessayer
+          console.log('Erreur CSRF détectée lors de l\'inscription, récupération du token...');
+          
+          // Récupérer le token CSRF
+          await fetchCSRFToken();
+          
+          // Réessayer avec le token CSRF
+          response = await api.post('/auth/users/register/', userData);
+        } else {
+          throw csrfError;
+        }
+      }
+      
       console.log('Réponse d\'inscription réussie:', response.data);
       return response.data;
     } catch (error) {
@@ -133,7 +205,25 @@ export const authService = {
    */
   async login(credentials) {
     try {
-      const response = await api.post('/auth/jwt/token/', credentials);
+      // Essayer d'abord sans CSRF token
+      let response;
+      try {
+        response = await api.post('/auth/jwt/token/', credentials);
+      } catch (csrfError) {
+        if (csrfError.response?.status === 403) {
+          // Si erreur CSRF, récupérer le token et réessayer
+          console.log('Erreur CSRF détectée, récupération du token...');
+          
+          // Récupérer le token CSRF
+          await fetchCSRFToken();
+          
+          // Réessayer avec le token CSRF
+          response = await api.post('/auth/jwt/token/', credentials);
+        } else {
+          throw csrfError;
+        }
+      }
+      
       const { access, refresh } = response.data;
       
       // Stocker les tokens
@@ -235,11 +325,20 @@ export const authService = {
       const url = queryString ? `/auth/medecins/?${queryString}` : '/auth/medecins/';
       
       const response = await api.get(url);
+      console.log('Médecins récupérés depuis l\'API (backend uniquement):', response.data);
+      
+      // Retourner uniquement les données du backend
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des médecins:', error);
-      // Fallback avec données statiques en cas d'erreur
-      return this.getMedecinsStatic(filters);
+      console.log('Aucun médecin disponible - erreur backend');
+      // Retourner une structure vide en cas d'erreur
+      return {
+        results: [],
+        count: 0,
+        next: null,
+        previous: null
+      };
     }
   },
 
@@ -250,11 +349,20 @@ export const authService = {
   async getAvailableMedecins() {
     try {
       const response = await api.get('/auth/medecins/available/');
+      console.log('Médecins disponibles depuis l\'API (backend uniquement):', response.data);
+      
+      // Retourner uniquement les données du backend
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des médecins disponibles:', error);
-      // Fallback avec données statiques filtrées
-      return this.getMedecinsStatic({ available: true });
+      console.log('Aucun médecin disponible - erreur backend');
+      // Retourner une structure vide en cas d'erreur
+      return {
+        results: [],
+        count: 0,
+        next: null,
+        previous: null
+      };
     }
   },
 
