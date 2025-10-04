@@ -1,5 +1,54 @@
 // Service pour gérer l'export PDF et l'impression des consultations médicales
 import jsPDF from 'jspdf';
+import 'jspdf-autotable';
+import html2canvas from 'html2canvas';
+
+// Export PDF avancé avec capture HTML
+export const exportAdvancedPDF = async (elementId, consultation, options = {}) => {
+  try {
+    const element = document.getElementById(elementId);
+    if (!element) {
+      throw new Error('Élément HTML non trouvé');
+    }
+
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    const imgWidth = 210;
+    const pageHeight = 295;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+    heightLeft -= pageHeight;
+
+    while (heightLeft >= 0) {
+      position = heightLeft - imgHeight;
+      pdf.addPage();
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+    }
+
+    const fileName = options.filename || `consultation_avancee_${consultation.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+    pdf.save(fileName);
+
+    return { success: true, fileName };
+  } catch (error) {
+    console.error('Erreur lors de l\'export PDF avancé:', error);
+    throw new Error('Impossible de générer le PDF avancé');
+  }
+};
 
 // Export PDF professionnel de la consultation avec le même design que l'impression
 export const exportToPDF = async (consultationData) => {

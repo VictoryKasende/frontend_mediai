@@ -78,6 +78,16 @@ const DoctorConsultations = () => {
             consultation.assigned_medecin.toString() === user.id.toString()
           );
           
+          console.log('Consultations assignées détails:', assignedConsultations);
+          assignedConsultations.forEach((consultation, index) => {
+            console.log(`Consultation ${index}:`, {
+              id: consultation.id,
+              patient_name: consultation.nom,
+              assigned_medecin: consultation.assigned_medecin,
+              keys: Object.keys(consultation)
+            });
+          });
+          
           console.log(`${assignedConsultations.length} consultations assignées trouvées`);
           setConsultations(assignedConsultations);
         } else {
@@ -362,10 +372,13 @@ const DoctorConsultations = () => {
    * Fermer toutes les modals
    */
   const closeAllModals = () => {
+    console.log('Fermeture de toutes les modals');
     setShowMessagesModal(false);
     setShowAIAnalysisModal(false);
     setShowWhatsAppModal(false);
     setSelectedFicheForAction(null);
+    // Ne pas réinitialiser selectedConsultation car on en a besoin pour l'affichage
+    // setSelectedConsultation(null);
   };
 
   // Fonctions pour la messagerie des consultations
@@ -402,8 +415,21 @@ const DoctorConsultations = () => {
   };
 
   const openMessagesModal = (consultation) => {
+    console.log('Opening messages modal for consultation:', consultation);
+    console.log('Consultation ID:', consultation?.id);
+    console.log('Consultation object keys:', Object.keys(consultation || {}));
+    
+    if (!consultation || !consultation.id) {
+      console.error('Consultation invalide ou sans ID:', consultation);
+      showError('Erreur', 'Consultation invalide pour ouvrir la messagerie');
+      return;
+    }
+    
+    console.log('Setting selectedConsultation and selectedFicheForAction to:', consultation);
     setSelectedConsultation(consultation);
+    setSelectedFicheForAction(consultation);
     setShowMessagesModal(true);
+    console.log('Modal should now be open with ficheId:', consultation.id);
     loadConsultationMessages(consultation.id);
   };
 
@@ -2072,7 +2098,7 @@ const DoctorConsultations = () => {
 
       {/* Nouvelles modals avec les composants dédiés */}
       <ConsultationMessaging
-        ficheId={selectedFicheForAction?.id}
+        ficheId={selectedFicheForAction?.id || selectedConsultation?.id || null}
         isOpen={showMessagesModal}
         onClose={closeAllModals}
       />

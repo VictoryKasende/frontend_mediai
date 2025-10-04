@@ -304,6 +304,21 @@ export const authService = {
   },
 
   /**
+   * Récupérer la liste des patients (pour les médecins)
+   * @returns {Promise<Array>} - Liste des patients
+   */
+  async getPatients() {
+    try {
+      const response = await api.get('/auth/patients/');
+      console.log('Patients récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des patients:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Récupérer la liste de tous les médecins
    * @param {Object} filters - Filtres optionnels
    * @param {boolean} filters.available - Filtrer par disponibilité
@@ -723,6 +738,91 @@ export const consultationService = {
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des consultations:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  // Gestion des rendez-vous
+  async getPatientRendezVous() {
+    try {
+      console.log('Récupération des RDV patient');
+      const response = await api.get('/rendez-vous/patient/');
+      console.log('RDV récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async createRendezVous(rdvData) {
+    try {
+      console.log('Création d\'un RDV:', rdvData);
+      const response = await api.post('/rendez-vous/', rdvData);
+      console.log('RDV créé:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la création du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async updateRendezVous(rdvId, rdvData) {
+    try {
+      console.log('Modification du RDV:', rdvId, rdvData);
+      const response = await api.put(`/rendez-vous/${rdvId}/`, rdvData);
+      console.log('RDV modifié:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la modification du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async cancelRendezVous(rdvId) {
+    try {
+      console.log('Annulation du RDV:', rdvId);
+      const response = await api.patch(`/rendez-vous/${rdvId}/`, { statut: 'annule' });
+      console.log('RDV annulé:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async confirmRendezVous(rdvId) {
+    try {
+      console.log('Confirmation du RDV:', rdvId);
+      const response = await api.patch(`/rendez-vous/${rdvId}/`, { statut: 'confirme' });
+      console.log('RDV confirmé:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la confirmation du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async getDoctorRendezVous() {
+    try {
+      console.log('Récupération des RDV médecin');
+      const response = await api.get('/rendez-vous/medecin/');
+      console.log('RDV médecin récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des RDV médecin:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async getDoctorRendezVous() {
+    try {
+      console.log('Récupération des RDV médecin');
+      const response = await api.get('/rendez-vous/medecin/');
+      console.log('RDV médecin récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des RDV médecin:', error);
       throw this.handleError(error);
     }
   },

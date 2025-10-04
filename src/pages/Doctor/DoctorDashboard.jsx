@@ -8,6 +8,7 @@ import Logo from '../../components/Logo';
 import DoctorConsultations from './DoctorConsultations';
 import DoctorAppointments from './DoctorAppointments';
 import DoctorChatIa from './DoctorChatIa';
+import DoctorRendezVous from './DoctorRendezVous';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import api, { dashboardService, consultationService } from '../../services/api';
 
@@ -536,6 +537,10 @@ const DoctorDashboard = () => {
   );
 
   const renderRendezVous = () => (
+    <DoctorRendezVous onBack={() => setCurrentView('dashboard')} />
+  );
+
+  const renderAppointments = () => (
     <DoctorAppointments />
   );
 

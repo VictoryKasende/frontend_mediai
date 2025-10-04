@@ -11,6 +11,7 @@ import SettingsModal from '../../components/SettingsModal';
 import FicheConsultationForm from './FicheConsultationForm';
 import ConsultationsList from './ConsultationsList';
 import ConsultationDetails from './ConsultationDetails';
+import RendezVousSimple from './RendezVousSimple';
 import { consultationService, authService } from '../../services/api';
 
 // Composants améliorés
@@ -529,6 +530,14 @@ const PatientDashboard = () => {
       bgColor: 'bg-green-50'
     },
     { 
+      id: 'rendez-vous', 
+      label: 'Rendez-vous', 
+      icon: MedicalIcons.Calendar, 
+      description: 'Gérer vos rendez-vous',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
+    },
+    { 
       id: 'mes-consultations', 
       label: 'Mes fiches', 
       icon: MedicalIcons.History, 
@@ -558,6 +567,8 @@ const PatientDashboard = () => {
     switch (activeView) {
       case 'nouvelle-fiche':
         return <FicheConsultationForm onBack={() => setActiveView('dashboard')} />;
+      case 'rendez-vous':
+        return <RendezVousSimple onBack={() => setActiveView('dashboard')} />;
       case 'mes-consultations':
         return (
           <ConsultationsList
