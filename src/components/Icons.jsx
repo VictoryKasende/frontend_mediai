@@ -31,6 +31,8 @@ import {
   PaperAirplaneIcon,
   PaperClipIcon,
   MicrophoneIcon,
+  ArrowTopRightOnSquareIcon,
+  PhotoIcon,
   
   // États et notifications
   CheckCircleIcon,
@@ -243,24 +245,37 @@ export const MedicalIcons = {
   Phone: Phone,
   Notes: StickyNote,
   Info: InformationCircleIcon,
-  Search: MagnifyingGlassIcon
+  Search: MagnifyingGlassIcon,
+  Shield: Shield,
+  
+  // Icônes supplémentaires pour le dashboard
+  ExternalLink: ArrowTopRightOnSquareIcon,
+  Lab: FlaskConical,
+  Attachment: Paperclip,
+  Image: PhotoIcon,
+  Diagnostic: Target
 };
 
 // Icônes pour les statuts et états
 export const StatusIcons = {
   Check: Check,
+  CheckCircle: CheckCircleIcon,
   X: X,
+  XCircle: XCircleIcon,
   Clock: Clock,
   Star: Star,
   Eye: Eye,
   Question: MessageCircle,
   Warning: AlertTriangle,
   Info: AlertCircle,
+  InformationCircle: InformationCircleIcon,
+  ExclamationTriangle: ExclamationTriangleIcon,
   Success: Check,
   Error: X,
   Bell: Bell,
   Mail: Mail,
   Upload: Upload,
+  Calendar: CalendarIcon,
 };
 
 // Icônes pour les actions
