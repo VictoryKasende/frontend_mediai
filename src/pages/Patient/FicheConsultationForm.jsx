@@ -4,6 +4,7 @@ import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PhoneInput from '../../components/PhoneInput';
+import Switch from '../../components/Switch';
 import { consultationService, authService } from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -156,7 +157,12 @@ const FicheConsultationForm = ({ onBack }) => {
     preoccupations: '',
     comprehension: '',
     attentes: '',
-    engagement: ''
+    engagement: '',
+    
+    // Hypothèse et analyses proposées (nouveaux champs P0)
+    hypothese_patient: '',
+    analyses_proposees: '',
+    observations_importantes: ''
   });
 
   const steps = [
@@ -169,7 +175,8 @@ const FicheConsultationForm = ({ onBack }) => {
     { id: 7, title: 'Symptômes', icon: MedicalIcons.Symptoms },
     { id: 8, title: 'Antécédents', icon: MedicalIcons.History },
     { id: 9, title: 'Examen clinique', icon: MedicalIcons.Stethoscope },
-    { id: 10, title: 'Finalisation', icon: MedicalIcons.Check }
+    { id: 10, title: 'Hypothèse & Analyses', icon: MedicalIcons.Search },
+    { id: 11, title: 'Finalisation', icon: MedicalIcons.Check }
   ];
 
   // Pré-remplir les informations du patient connecté
@@ -480,7 +487,12 @@ const FicheConsultationForm = ({ onBack }) => {
         preoccupations: formData.preoccupations || '',
         comprehension: formData.comprehension || '',
         attentes: formData.attentes || '',
-        engagement: formData.engagement || ''
+        engagement: formData.engagement || '',
+        
+        // Hypothèse et analyses proposées (nouveaux champs P0)
+        hypothese_patient: formData.hypothese_patient || '',
+        analyses_proposees: formData.analyses_proposees || '',
+        observations_importantes: formData.observations_importantes || ''
       };
       
       // Note: L'ID du patient connecté est probablement géré automatiquement 
@@ -559,6 +571,8 @@ const FicheConsultationForm = ({ onBack }) => {
       case 9:
         return renderExamenClinique();
       case 10:
+        return renderHypotheseAnalyses();
+      case 11:
         return renderFinalisation();
       default:
         return null;
@@ -1283,77 +1297,65 @@ const FicheConsultationForm = ({ onBack }) => {
 
   const renderSymptomes = () => (
     <div className="space-y-4 lg:space-y-6">
-      <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Symptômes actuels</h3>
-        <p className="text-medical-body text-sm lg:text-base mb-4">
-          Cochez les symptômes que vous ressentez actuellement :
+      <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 lg:p-6 shadow-sm border border-red-200">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark flex items-center">
+          <MedicalIcons.Symptoms className="w-5 h-5 mr-2 text-red-500" />
+          Symptômes actuels
+        </h3>
+        <p className="text-medical-body text-sm lg:text-base mb-6 text-mediai-medium">
+          Indiquez les symptômes que vous ressentez actuellement :
         </p>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+        <div className="grid grid-cols-1 gap-4 lg:gap-5">
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Céphalées"
+              description="Maux de tête, migraines"
               checked={formData.cephalees}
-              onChange={(e) => handleInputChange('cephalees', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('cephalees', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Céphalées</span>
-              <p className="text-xs lg:text-sm text-medium">Maux de tête</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Vertiges"
+              description="Sensation de rotation, déséquilibre"
               checked={formData.vertiges}
-              onChange={(e) => handleInputChange('vertiges', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('vertiges', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Vertiges</span>
-              <p className="text-xs lg:text-sm text-medium">Sensation de rotation</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Palpitations"
+              description="Battements cardiaques rapides ou irréguliers"
               checked={formData.palpitations}
-              onChange={(e) => handleInputChange('palpitations', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('palpitations', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Palpitations</span>
-              <p className="text-xs lg:text-sm text-medium">Battements cardiaques rapides</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Troubles visuels"
+              description="Vision floue, double vision, éblouissements"
               checked={formData.troubles_visuels}
-              onChange={(e) => handleInputChange('troubles_visuels', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('troubles_visuels', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Troubles visuels</span>
-              <p className="text-xs lg:text-sm text-medium">Vision floue, double...</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer sm:col-span-2">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Nycturie"
+              description="Besoin d'uriner fréquemment la nuit"
               checked={formData.nycturie}
-              onChange={(e) => handleInputChange('nycturie', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('nycturie', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Nycturie</span>
-              <p className="text-xs lg:text-sm text-medium">Urination nocturne fréquente</p>
-            </div>
-          </label>
+          </div>
         </div>
       </div>
     </div>
@@ -1748,6 +1750,73 @@ const FicheConsultationForm = ({ onBack }) => {
               rows={2}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
             />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderHypotheseAnalyses = () => (
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 lg:p-6 shadow-sm border border-blue-200">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark flex items-center">
+          <MedicalIcons.Search className="w-5 h-5 mr-2 text-mediai-primary" />
+          Hypothèse et Analyses proposées
+        </h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6 text-mediai-medium">
+          Partagez vos impressions sur votre état de santé et les examens que vous pensez nécessaires.
+        </p>
+        
+        <div className="space-y-4 lg:space-y-6">
+          {/* Hypothèse du patient */}
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Votre hypothèse sur votre état
+            </label>
+            <textarea
+              value={formData.hypothese_patient}
+              onChange={(e) => handleInputChange('hypothese_patient', e.target.value)}
+              placeholder="Selon vous, de quoi pourriez-vous souffrir ? Avez-vous une idée sur l'origine de vos symptômes ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
+            />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Vos impressions peuvent aider le médecin dans son diagnostic
+            </p>
+          </div>
+
+          {/* Analyses proposées */}
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Examens ou analyses que vous pensez nécessaires
+            </label>
+            <textarea
+              value={formData.analyses_proposees}
+              onChange={(e) => handleInputChange('analyses_proposees', e.target.value)}
+              placeholder="Pensez-vous qu'il faut faire une prise de sang, une radiographie, un scanner, etc. ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
+            />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Suggestions d'examens complémentaires
+            </p>
+          </div>
+
+          {/* Observations importantes */}
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Observations importantes à signaler
+            </label>
+            <textarea
+              value={formData.observations_importantes}
+              onChange={(e) => handleInputChange('observations_importantes', e.target.value)}
+              placeholder="Y a-t-il quelque chose d'important que vous n'avez pas encore mentionné ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
+            />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Toute information que vous jugez pertinente
+            </p>
           </div>
         </div>
       </div>
