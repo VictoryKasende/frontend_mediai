@@ -2365,6 +2365,67 @@ export const whatsappService = {
   },
 
   /**
+   * Vérifier si un numéro est dans le sandbox WhatsApp
+   * @param {string} phoneNumber - Numéro de téléphone
+   * @returns {Promise<Object>} - Statut sandbox
+   */
+  async checkSandboxStatus(phoneNumber) {
+    try {
+      const response = await api.get(`/whatsapp/sandbox-status/?phone=${encodeURIComponent(phoneNumber)}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Envoyer les instructions d'onboarding par SMS
+   * @param {string} phoneNumber - Numéro de téléphone
+   * @returns {Promise<Object>} - Résultat envoi SMS
+   */
+  async sendOnboardingSMS(phoneNumber) {
+    try {
+      const response = await api.post('/whatsapp/onboarding-sms/', {
+        phone_number: phoneNumber
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Générer un QR code pour l'onboarding WhatsApp
+   * @returns {Promise<Object>} - URL du QR code
+   */
+  async generateOnboardingQR() {
+    try {
+      const response = await api.get('/whatsapp/onboarding-qr/');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Obtenir les instructions d'onboarding
+   * @returns {Object} - Instructions d'onboarding
+   */
+  getOnboardingInstructions() {
+    return {
+      sandbox_number: '+14155238886',
+      join_message: 'join tie-for',
+      qr_url: 'https://wa.me/14155238886?text=join%20tie-for',
+      steps: [
+        'Ouvrez WhatsApp sur votre téléphone',
+        'Scannez le QR code ou cliquez sur le lien',
+        'Envoyez le message "join tie-for"',
+        'Attendez la confirmation d\'activation'
+      ]
+    };
+  },
+
+  /**
    * Gestion des erreurs pour le service WhatsApp
    * @param {Object} error - Erreur axios
    * @returns {Object} - Erreur formatée

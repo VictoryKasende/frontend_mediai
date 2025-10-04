@@ -78,6 +78,7 @@ import {
   Search,
   Filter,
   MoreHorizontal,
+  QrCode,
   Phone,
   Video,
   Send,
@@ -253,7 +254,8 @@ export const MedicalIcons = {
   Lab: FlaskConical,
   Attachment: Paperclip,
   Image: PhotoIcon,
-  Diagnostic: Target
+  Diagnostic: Target,
+  QrCode: QrCode
 };
 
 // Icônes pour les statuts et états
@@ -312,6 +314,8 @@ export const ActionIcons = {
   Menu: Menu,
   Close: X,
   Email: Mail,
+  Warning: AlertTriangle,
+  Check: Check,
 };
 
 // Composant Icon générique
