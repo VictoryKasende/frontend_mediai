@@ -48,13 +48,6 @@ const DoctorConsultations = () => {
   const [newMessage, setNewMessage] = useState('');
   const [loadingMessages, setLoadingMessages] = useState(false);
 
-  // États pour WhatsApp (legacy - conservés pour compatibilité)
-  const [whatsappData, setWhatsappData] = useState({
-    message_template: 'default',
-    additional_info: ''
-  });
-  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
-
   // États pour validation/rejet rapide
   const [showQuickValidateModal, setShowQuickValidateModal] = useState(false);
   const [showQuickRejectModal, setShowQuickRejectModal] = useState(false);
@@ -412,31 +405,6 @@ const DoctorConsultations = () => {
     setSelectedConsultation(consultation);
     setShowMessagesModal(true);
     loadConsultationMessages(consultation.id);
-  };
-
-  // Fonctions pour WhatsApp
-  const openWhatsAppModal = (consultation) => {
-    setSelectedConsultation(consultation);
-    setShowWhatsAppModal(true);
-    setWhatsappData({
-      message_template: 'default',
-      additional_info: ''
-    });
-  };
-
-  const sendWhatsAppMessage = async (consultationId) => {
-    setSendingWhatsApp(true);
-    try {
-      const response = await consultationService.sendWhatsApp(consultationId, whatsappData);
-      showSuccess('WhatsApp envoyé', 'Les résultats ont été envoyés via WhatsApp');
-      setShowWhatsAppModal(false);
-      setWhatsappData({ message_template: 'default', additional_info: '' });
-    } catch (error) {
-      console.error('Erreur lors de l\'envoi WhatsApp:', error);
-      showError('Erreur', 'Impossible d\'envoyer le message WhatsApp');
-    } finally {
-      setSendingWhatsApp(false);
-    }
   };
 
   // Fonction pour relancer l'analyse IA
@@ -1372,7 +1340,7 @@ const DoctorConsultations = () => {
                 <span>Messages</span>
               </button>
               <button
-                onClick={() => openWhatsAppModal(selectedConsultation)}
+                onClick={() => handleOpenWhatsApp(selectedConsultation)}
                 className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-body flex items-center space-x-2"
                 disabled={!selectedConsultation.telephone}
               >
@@ -1423,7 +1391,7 @@ const DoctorConsultations = () => {
               </div>
               <div className="flex space-x-2">
                 <button
-                  onClick={() => openWhatsAppModal(selectedConsultation)}
+                  onClick={() => handleOpenWhatsApp(selectedConsultation)}
                   className="flex-1 px-3 py-2 bg-green-600 text-white rounded-lg text-sm font-body flex items-center justify-center space-x-1"
                   disabled={!selectedConsultation.telephone}
                 >
