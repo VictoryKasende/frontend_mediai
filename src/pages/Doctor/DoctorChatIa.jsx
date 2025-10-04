@@ -57,7 +57,7 @@ const DoctorChatIa = () => {
   // Charger les conversations au montage du composant
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [loadConversations]);
 
   // Charger les messages quand une conversation est sélectionnée
   useEffect(() => {

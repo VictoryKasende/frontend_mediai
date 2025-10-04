@@ -34,13 +34,13 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       loadConsultation();
       loadMedecins();
     }
-  }, [consultationId]);
+  }, [consultationId, loadConsultation, loadMedecins]);
 
   useEffect(() => {
     if (consultation && medecins.length > 0) {
       findAssignedMedecin();
     }
-  }, [consultation, medecins]);
+  }, [consultation, medecins, findAssignedMedecin]);
 
   const loadConsultation = async () => {
     try {

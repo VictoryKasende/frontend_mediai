@@ -40,9 +40,9 @@ const DoctorRendezVous = ({ onBack }) => {
 
   useEffect(() => {
     loadData();
-  }, []);
+  }, [loadData]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     setIsLoading(true);
     try {
       await Promise.all([
@@ -55,7 +55,7 @@ const DoctorRendezVous = ({ onBack }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [showError]);
 
   const loadRendezVous = async () => {
     try {
