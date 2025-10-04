@@ -69,7 +69,17 @@ const ConsultationCard = React.memo(({ consultation, onViewDetails, getMedecinIn
             </div>
             <div className="flex items-center space-x-1">
               <MedicalIcon icon={StatusIcons.Calendar} size="w-3 h-3" />
-              <span>{new Date(consultation.date_creation || consultation.date_soumission).toLocaleDateString('fr-FR')}</span>
+              <span>{
+                (() => {
+                  const dateStr = consultation.date_creation || consultation.date_soumission || consultation.created_at || consultation.date_consultation;
+                  if (!dateStr) return 'Date inconnue';
+                  
+                  const date = new Date(dateStr);
+                  if (isNaN(date.getTime())) return 'Date invalide';
+                  
+                  return date.toLocaleDateString('fr-FR');
+                })()
+              }</span>
             </div>
           </div>
         </div>
@@ -231,7 +241,9 @@ const PatientDashboard = () => {
   // Mémorisation des fonctions utilitaires
   const getMedecinInfo = useCallback((consultation) => {
     console.log('PatientDashboard - getMedecinInfo pour consultation:', consultation.id);
+    console.log('Consultation complète:', consultation);
     
+    // Vérifier tous les champs possibles pour le médecin
     if (consultation.medecin_prenom && consultation.medecin_nom) {
       return `Dr ${consultation.medecin_prenom} ${consultation.medecin_nom}`;
     }
@@ -240,11 +252,24 @@ const PatientDashboard = () => {
       return consultation.medecin_nom;
     }
     
+    // Vérifier les champs d'assignation du médecin
     const medecinId = consultation.assigned_medecin || consultation.medecin_id || consultation.medecin;
+    console.log('Medecin ID trouvé:', medecinId);
+    console.log('Liste des medecins disponibles:', medecins);
+    
     if (medecinId && medecins.length > 0) {
       const medecin = medecins.find(m => m.id === medecinId);
+      console.log('Medecin trouvé:', medecin);
       if (medecin) {
         return `Dr ${medecin.first_name} ${medecin.last_name}`;
+      }
+    }
+    
+    // Fallback : vérifier si un médecin est mentionné dans les infos additionnelles
+    if (consultation.medecin_info || consultation.assigned_medecin_info) {
+      const info = consultation.medecin_info || consultation.assigned_medecin_info;
+      if (info.first_name && info.last_name) {
+        return `Dr ${info.first_name} ${info.last_name}`;
       }
     }
     
@@ -419,6 +444,15 @@ const PatientDashboard = () => {
     try {
       setLoadingDashboard(true);
       
+      // Charger les médecins en parallèle pour la résolution des noms
+      if (medecins.length === 0) {
+        try {
+          await loadMedecinsData();
+        } catch (error) {
+          console.warn('Impossible de charger les médecins pour le dashboard:', error);
+        }
+      }
+      
       const response = await consultationService.getConsultations({
         is_patient_distance: true
       });
@@ -445,13 +479,17 @@ const PatientDashboard = () => {
         recent.map(async (consultation) => {
           try {
             const detailedConsultation = await consultationService.getConsultation(consultation.id);
+            console.log('Dashboard - Consultation enrichie:', detailedConsultation);
             return detailedConsultation;
           } catch (error) {
             console.error('Dashboard - Erreur lors de l\'enrichissement de la consultation:', consultation.id, error);
+            console.log('Dashboard - Consultation originale (fallback):', consultation);
             return consultation;
           }
         })
       );
+      
+      console.log('Dashboard - Consultations finales pour affichage:', enrichedConsultations);
       
       setRecentConsultations(enrichedConsultations);
       
