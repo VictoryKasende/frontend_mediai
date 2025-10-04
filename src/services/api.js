@@ -627,6 +627,15 @@ export const authService = {
             status: 400
           };
         case 401:
+          // Gestion spécifique des erreurs de token
+          if (data && (data.code === 'token_not_valid' || data.detail?.includes('token'))) {
+            return {
+              message: 'Session expirée. Veuillez vous reconnecter.',
+              details: data,
+              status: 401,
+              code: 'token_not_valid'
+            };
+          }
           return {
             message: 'Identifiants incorrects',
             details: data,

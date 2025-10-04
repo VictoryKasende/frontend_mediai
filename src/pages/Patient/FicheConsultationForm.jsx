@@ -300,6 +300,19 @@ const FicheConsultationForm = ({ onBack }) => {
     try {
       setIsSubmitting(true);
       
+      // Vérification préventive du token d'authentification
+      const accessToken = localStorage.getItem('mediai_access_token');
+      if (!accessToken) {
+        showError(
+          'Session expirée',
+          'Votre session a expiré. Veuillez vous reconnecter.'
+        );
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 2000);
+        return;
+      }
+      
       // Validation complète des champs obligatoires
       const requiredFields = {
         // Informations Patient (Obligatoires)
@@ -518,8 +531,28 @@ const FicheConsultationForm = ({ onBack }) => {
     } catch (error) {
       console.error('Erreur lors de la création de la consultation:', error);
       console.error('Détails de l\'erreur:', error.details);
+      console.error('Response:', error.response);
       
       let errorMessage = 'Une erreur est survenue lors de la création de la consultation.';
+      
+      // Gestion spécifique des erreurs d'authentification
+      if (error.response?.status === 401 || 
+          (error.code === 'token_not_valid') ||
+          (error.detail && error.detail.includes('token'))) {
+        errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+        showError('Session expirée', errorMessage);
+        
+        // Redirection vers la page de connexion après 2 secondes
+        setTimeout(() => {
+          // Nettoyer les tokens locaux
+          localStorage.removeItem('mediai_access_token');
+          localStorage.removeItem('mediai_refresh_token');
+          localStorage.removeItem('mediai_user');
+          window.location.href = '/auth/login';
+        }, 2000);
+        
+        return;
+      }
       
       // Gestion spécifique des erreurs API
       if (error.details && typeof error.details === 'object') {
@@ -534,6 +567,18 @@ const FicheConsultationForm = ({ onBack }) => {
         });
         if (fieldErrors.length > 0) {
           errorMessage = fieldErrors.join('\n');
+        }
+      } else if (error.response?.data) {
+        // Erreur avec réponse du serveur
+        const errorData = error.response.data;
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.non_field_errors?.length > 0) {
+          errorMessage = errorData.non_field_errors[0];
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
         }
       } else if (error.message && typeof error.message === 'string') {
         errorMessage = error.message;
