@@ -1997,47 +1997,47 @@ const FicheConsultationForm = ({ onBack }) => {
             </h2>
             
             {renderStepContent()}
-          </div>
-          
-          {/* Navigation Buttons */}
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-mediai-light">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-              className="flex items-center justify-center space-x-2 w-full sm:w-auto border-2 border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light transition-all duration-300"
-            >
-              <NavigationIcons.ArrowLeft className="w-4 h-4" />
-              <span>Précédent</span>
-            </Button>
             
-            {currentStep === steps.length ? (
+            {/* Navigation Buttons */}
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
               <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 1}
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 py-3 border-2 border-gray-300 hover:border-mediai-primary hover:bg-mediai-light transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Création en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <MedicalIcons.Check className="w-4 h-4" />
-                    <span>Soumettre la fiche</span>
-                  </>
-                )}
+                <NavigationIcons.ArrowLeft className="w-4 h-4" />
+                <span>Précédent</span>
               </Button>
-            ) : (
-              <Button
-                onClick={handleNext}
-                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg"
-              >
-                <span>Suivant</span>
-                <NavigationIcons.ArrowRight className="w-4 h-4" />
-              </Button>
-            )}
+              
+              {currentStep === steps.length ? (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 py-3 gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Création en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <MedicalIcons.Check className="w-4 h-4" />
+                      <span>Soumettre la fiche</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleNext}
+                  className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 py-3 gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg"
+                >
+                  <span>Suivant</span>
+                  <NavigationIcons.ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
