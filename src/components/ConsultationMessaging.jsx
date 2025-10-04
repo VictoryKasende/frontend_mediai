@@ -11,6 +11,8 @@ import Button from './Button';
  * Avec auto-refresh, notifications, et indicateurs de statut
  */
 const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, refreshInterval = 10000 }) => {
+  console.log('ConsultationMessaging props:', { ficheId, isOpen, onClose, autoRefresh, refreshInterval });
+  
   const { user } = useAuth();
   const { showSuccess, showError, showInfo } = useNotification();
   const [messages, setMessages] = useState([]);
@@ -161,6 +163,7 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
     }
 
     if (!ficheId) {
+      console.error('ConsultationMessaging: ficheId manquant', { ficheId, props: { ficheId } });
       showError('Erreur', 'ID de fiche manquant');
       return;
     }
