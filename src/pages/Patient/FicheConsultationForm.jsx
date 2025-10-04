@@ -136,8 +136,8 @@ const FicheConsultationForm = ({ onBack }) => {
     capacite_psychologique: 'Top',
     capacite_psychologique_score: '',
     febrile: 'Non',
-    coloration_bulbaire: 'Normale',
-    coloration_palpebrale: 'Normale',
+    coloration_bulbaire: 'normale',
+    coloration_palpebrale: 'normale',
     tegument: 'Normal',
     
     // Régions examinées
@@ -479,8 +479,8 @@ const FicheConsultationForm = ({ onBack }) => {
         capacite_psychologique: formData.capacite_psychologique || 'Top',
         capacite_psychologique_score: formData.capacite_psychologique_score || '',
         febrile: formData.febrile || 'Non',
-        coloration_bulbaire: formData.coloration_bulbaire || 'Normale',
-        coloration_palpebrale: formData.coloration_palpebrale || 'Normale',
+        coloration_bulbaire: formData.coloration_bulbaire || 'normale',
+        coloration_palpebrale: formData.coloration_palpebrale || 'normale',
         tegument: formData.tegument || 'Normal',
         
         // Régions examinées
@@ -1691,8 +1691,9 @@ const FicheConsultationForm = ({ onBack }) => {
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
               required
             >
-              <option value="Normale">Normale</option>
-              <option value="Anormale">Anormale</option>
+              <option value="normale">Normale</option>
+              <option value="jaunatre">Jaunâtre</option>
+              <option value="rougeatre">Rougeâtre</option>
             </select>
           </div>
           
@@ -1706,8 +1707,8 @@ const FicheConsultationForm = ({ onBack }) => {
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
               required
             >
-              <option value="Normale">Normale</option>
-              <option value="Anormale">Anormale</option>
+              <option value="normale">Normale</option>
+              <option value="pale">Pâle</option>
             </select>
           </div>
           
