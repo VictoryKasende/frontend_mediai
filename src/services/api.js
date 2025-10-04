@@ -2346,18 +2346,40 @@ export const ficheMessagingService = {
   },
 
   /**
+   * Envoyer un message à une fiche de consultation (alias pour addMessage)
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} messageData - Données du message
+   * @param {string} messageData.content - Contenu du message
+   * @param {string} messageData.sender_role - Rôle de l'expéditeur
+   * @returns {Promise<Object>} - Message créé
+   */
+  async sendMessage(ficheId, messageData) {
+    try {
+      const response = await api.post(`/fiche-consultation/${ficheId}/messages/`, {
+        content: messageData.content,
+        sender_role: messageData.sender_role || 'patient'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Gestion des erreurs pour le service de messagerie
    * @param {Object} error - Erreur axios
    * @returns {Object} - Erreur formatée
    */
   handleError(error) {
+    console.error('Erreur dans ficheMessagingService:', error);
+    
     if (error.response?.data) {
-      // Retourner directement les données d'erreur pour préserver la structure
-      return error.response.data;
+      // Retourner l'erreur au lieu de la relancer
+      const errorData = error.response.data;
+      throw new Error(errorData.detail || errorData.message || 'Erreur de messagerie');
     }
-    return {
-      detail: error.message || 'Erreur lors de l\'opération de messagerie'
-    };
+    
+    throw new Error(error.message || 'Erreur lors de l\'opération de messagerie');
   }
 };
 

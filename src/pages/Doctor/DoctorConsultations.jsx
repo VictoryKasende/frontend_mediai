@@ -6,7 +6,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { exportToPDF, printConsultation } from '../../services/MedicalPDFService';
 import { consultationService, ficheMessagingService, ficheAIService, whatsappService } from '../../services/api';
-import ConsultationMessaging from '../../components/ConsultationMessaging';
+import ConsultationMessaging from '../../components/ConsultationMessagingFixed';
 import AIAnalysisModal from '../../components/AIAnalysisModal';
 import WhatsAppModal from '../../components/WhatsAppModal';
 
