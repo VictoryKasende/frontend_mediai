@@ -268,7 +268,8 @@ export const authService = {
     try {
       await api.post('/auth/verify/', { token });
       return true;
-    } catch (error) {
+    } catch (errorVerify) {
+      console.log('Erreur de vérification de token:', errorVerify);
       return false;
     }
   },
@@ -614,7 +615,7 @@ export const authService = {
       });
       
       switch (status) {
-        case 400:
+        case 400: {
           // Extraire le message d'erreur spécifique si disponible
           let errorMessage = 'Données invalides';
           if (data) {
@@ -641,6 +642,7 @@ export const authService = {
             details: data,
             status: 400
           };
+        }
         case 401:
           // Gestion spécifique des erreurs de token
           if (data && (data.code === 'token_not_valid' || data.detail?.includes('token'))) {
@@ -799,18 +801,6 @@ export const consultationService = {
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la confirmation du RDV:', error);
-      throw this.handleError(error);
-    }
-  },
-
-  async getDoctorRendezVous() {
-    try {
-      console.log('Récupération des RDV médecin');
-      const response = await api.get('/rendez-vous/medecin/');
-      console.log('RDV médecin récupérés:', response.data);
-      return response.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération des RDV médecin:', error);
       throw this.handleError(error);
     }
   },

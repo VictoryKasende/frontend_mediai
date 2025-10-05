@@ -21,46 +21,9 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
   const [sending, setSending] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const messagesEndRef = useRef(null);
-  const refreshIntervalRef = useRef(null);
 
-  // Ne pas afficher la modal si elle n'est pas ouverte
-  if (!isOpen) {
-    return null;
-  }
-
-  // Validation avec message informatif si pas d'ID
-  if (!ficheId || ficheId === null || ficheId === undefined) {
-    console.warn('ConsultationMessaging: ficheId manquant ou invalide:', ficheId);
-    
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl p-6 max-w-md w-full">
-          <h3 className="text-lg font-semibold text-red-600 mb-4">Erreur de configuration</h3>
-          <p className="text-gray-600 mb-4">ID de consultation manquant. Impossible d'afficher la messagerie.</p>
-          <p className="text-sm text-gray-500 mb-4">
-            ID reçu: {JSON.stringify(ficheId)} | Type: {typeof ficheId}
-          </p>
-          <div className="text-xs text-gray-400 mb-4">
-            Debug: Vérifiez que la consultation sélectionnée a bien un ID valide.
-          </div>
-          <button
-            onClick={onClose}
-            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            Fermer
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  // Charger les messages au montage
-  useEffect(() => {
-    if (isOpen && ficheId) {
-      loadMessages();
-    }
-  }, [isOpen, ficheId, loadMessages]);
-
+  // Tous les hooks doivent être appelés avant tout return conditionnel
+  
   // Auto-scroll vers le bas
   useEffect(() => {
     scrollToBottom();
@@ -216,6 +179,44 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
       setSending(false);
     }
   }, [newMessage, ficheId, user, showError, showSuccess, setMessages]);
+
+  // Charger les messages au montage
+  useEffect(() => {
+    if (isOpen && ficheId) {
+      loadMessages();
+    }
+  }, [isOpen, ficheId, loadMessages]);
+
+  // Ne pas afficher la modal si elle n'est pas ouverte
+  if (!isOpen) {
+    return null;
+  }
+
+  // Validation avec message informatif si pas d'ID
+  if (!ficheId || ficheId === null || ficheId === undefined) {
+    console.warn('ConsultationMessaging: ficheId manquant ou invalide:', ficheId);
+    
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl p-6 max-w-md w-full">
+          <h3 className="text-lg font-semibold text-red-600 mb-4">Erreur de configuration</h3>
+          <p className="text-gray-600 mb-4">ID de consultation manquant. Impossible d'afficher la messagerie.</p>
+          <p className="text-sm text-gray-500 mb-4">
+            ID reçu: {JSON.stringify(ficheId)} | Type: {typeof ficheId}
+          </p>
+          <div className="text-xs text-gray-400 mb-4">
+            Debug: Vérifiez que la consultation sélectionnée a bien un ID valide.
+          </div>
+          <button
+            onClick={onClose}
+            className="w-full px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+          >
+            Fermer
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const formatTime = (dateString) => {
     try {

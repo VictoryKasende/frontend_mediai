@@ -15,7 +15,7 @@ import RendezVousSimple from './RendezVousSimple';
 import { consultationService, authService } from '../../services/api';
 
 // Composants améliorés
-const StatCard = React.memo(({ title, value, icon: IconComponent, color, bgColor, trend }) => (
+const StatCard = React.memo(({ title, value, icon: IconComponent, bgColor, trend }) => (
   <div className={`${bgColor} overflow-hidden shadow-lg rounded-2xl border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105 group cursor-pointer`}>
     <div className="p-6">
       <div className="flex items-center justify-between">
@@ -215,7 +215,7 @@ const EmptyState = ({ icon, title, description, actionLabel, onAction }) => (
  */
 const PatientDashboard = () => {
   const { user } = useAuth();
-  const { showSuccess, showError, showWarning, showInfo, notifications, removeNotification } = useNotification();
+  const { showError, showInfo, notifications, removeNotification } = useNotification();
   const { handleLogout } = useLogout();
   const { isOpen: isSettingsOpen, openModal: openSettings, closeModal: closeSettings } = useSettingsModal();
   
@@ -344,9 +344,9 @@ const PatientDashboard = () => {
     } else if (activeView === 'medecins') {
       loadMedecinsData();
     }
-  }, [activeView]);
+  }, [activeView, loadDashboardData, loadMedecinsData]);
 
-  const loadMedecinsData = async () => {
+  const loadMedecinsData = useCallback(async () => {
     try {
       setLoadingMedecins(true);
       const response = await authService.getMedecins();
@@ -439,9 +439,9 @@ const PatientDashboard = () => {
     } finally {
       setLoadingMedecins(false);
     }
-  };
+  }, []);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoadingDashboard(true);
       
@@ -510,7 +510,7 @@ const PatientDashboard = () => {
     } finally {
       setLoadingDashboard(false);
     }
-  };
+  }, [medecins, user?.id, showError]);
 
   const menuItems = [
     { 

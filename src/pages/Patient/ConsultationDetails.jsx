@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
@@ -42,7 +42,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
     }
   }, [consultation, medecins, findAssignedMedecin]);
 
-  const loadConsultation = async () => {
+  const loadConsultation = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -58,9 +58,9 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [consultationId, showError]);
 
-  const loadMedecins = async () => {
+  const loadMedecins = useCallback(async () => {
     try {
       const response = await authService.getMedecins();
       const medecinsList = response.results || response;
@@ -70,15 +70,15 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       console.error('Erreur lors du chargement des médecins:', error);
       // En cas d'erreur, on peut continuer sans la liste des médecins
     }
-  };
+  }, []);
 
-  const findAssignedMedecin = () => {
+  const findAssignedMedecin = useCallback(() => {
     if (consultation?.assigned_medecin !== undefined && consultation.assigned_medecin !== null) {
       const medecin = medecins.find(m => m.id === consultation.assigned_medecin);
       setAssignedMedecin(medecin);
       console.log('Médecin assigné trouvé:', medecin);
     }
-  };
+  }, [consultation, medecins]);
 
   // Fonction utilitaire pour obtenir le nom du médecin
   const getMedecinInfo = () => {

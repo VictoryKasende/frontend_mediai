@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
@@ -203,9 +203,7 @@ const FicheConsultationForm = ({ onBack }) => {
   // Charger les médecins au démarrage
   useEffect(() => {
     loadMedecins();
-  }, []);
-
-  const loadMedecins = async () => {
+  }, [loadMedecins]);  const loadMedecins = useCallback(async () => {
     try {
       setLoadingMedecins(true);
       
@@ -221,7 +219,7 @@ const FicheConsultationForm = ({ onBack }) => {
     } finally {
       setLoadingMedecins(false);
     }
-  };
+  }, [showError]);
 
   // Validation par étape
   const validateStep = (step) => {
@@ -1975,7 +1973,7 @@ const FicheConsultationForm = ({ onBack }) => {
         {/* Progress Bar */}
         <div className="mb-4 lg:mb-6">
           <div className="hidden sm:flex items-center justify-between mb-4">
-            {steps.map((step, index) => {
+            {steps.map((step) => {
               const IconComponent = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;

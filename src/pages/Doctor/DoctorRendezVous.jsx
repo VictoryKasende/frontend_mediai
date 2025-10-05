@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
-import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons } from '../../components/Icons';
-import Logo from '../../components/Logo';
+import { NavigationIcons, MedicalIcons, StatusIcons } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
-import Modal from '../../components/Modal';
 import ConfirmModal from '../../components/ConfirmModal';
 import { consultationService, authService } from '../../services/api';
 
@@ -14,8 +12,7 @@ import { consultationService, authService } from '../../services/api';
  * Permet aux médecins de gérer les demandes de RDV des patients
  */
 const DoctorRendezVous = ({ onBack }) => {
-  const { user } = useAuth();
-  const { showSuccess, showError, showInfo } = useNotification();
+  const { showSuccess, showError } = useNotification();
   
   // États principaux
   const [activeView, setActiveView] = useState('list'); // 'list', 'details', 'planning'
@@ -36,7 +33,6 @@ const DoctorRendezVous = ({ onBack }) => {
   
   // Planning
   const [planningDate, setPlanningDate] = useState(new Date().toISOString().split('T')[0]);
-  const [availableSlots, setAvailableSlots] = useState([]);
 
   useEffect(() => {
     loadData();
@@ -55,9 +51,9 @@ const DoctorRendezVous = ({ onBack }) => {
     } finally {
       setIsLoading(false);
     }
-  }, [showError]);
+  }, [loadRendezVous, loadPatients, showError]);
 
-  const loadRendezVous = async () => {
+  const loadRendezVous = useCallback(async () => {
     try {
       const data = await consultationService.getDoctorRendezVous();
       setRdvs(data || []);
@@ -65,9 +61,9 @@ const DoctorRendezVous = ({ onBack }) => {
       console.error('Erreur lors du chargement des RDV:', error);
       setRdvs([]);
     }
-  };
+  }, []);
 
-  const loadPatients = async () => {
+  const loadPatients = useCallback(async () => {
     try {
       const data = await authService.getPatients();
       setPatients(data || []);
@@ -75,7 +71,7 @@ const DoctorRendezVous = ({ onBack }) => {
       console.error('Erreur lors du chargement des patients:', error);
       setPatients([]);
     }
-  };
+  }, []);
 
   // Fonctions utilitaires
   const getStatusBadge = (status) => {
@@ -189,8 +185,8 @@ const DoctorRendezVous = ({ onBack }) => {
       
       showSuccess('Rendez-vous confirmé', 'Le patient sera notifié de la confirmation');
       
-    } catch (error) {
-      console.error('Erreur lors de la confirmation du RDV:', error);
+    } catch (errorConfirm) {
+      console.error('Erreur lors de la confirmation du RDV:', errorConfirm);
       showError('Erreur', 'Impossible de confirmer le rendez-vous');
     } finally {
       setIsUpdating(false);
@@ -208,8 +204,8 @@ const DoctorRendezVous = ({ onBack }) => {
       
       showSuccess('Rendez-vous annulé', 'Le patient sera notifié de l\'annulation');
       
-    } catch (error) {
-      console.error('Erreur lors de l\'annulation du RDV:', error);
+    } catch (errorReject) {
+      console.error('Erreur lors de l\'annulation du RDV:', errorReject);
       showError('Erreur', 'Impossible d\'annuler le rendez-vous');
     } finally {
       setIsUpdating(false);
@@ -227,8 +223,8 @@ const DoctorRendezVous = ({ onBack }) => {
       
       showSuccess('Consultation terminée', 'Le rendez-vous a été marqué comme terminé');
       
-    } catch (error) {
-      console.error('Erreur lors de la finalisation du RDV:', error);
+    } catch (errorComplete) {
+      console.error('Erreur lors de la finalisation du RDV:', errorComplete);
       showError('Erreur', 'Impossible de finaliser le rendez-vous');
     } finally {
       setIsUpdating(false);

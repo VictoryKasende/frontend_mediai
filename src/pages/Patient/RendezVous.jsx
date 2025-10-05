@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons, ActionIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
@@ -15,7 +15,7 @@ import { useAuth } from '../../contexts/AuthContext';
  */
 const RendezVous = ({ onBack }) => {
   const { user } = useAuth();
-  const { showSuccess, showError, showInfo } = useNotification();
+  const { showSuccess, showError } = useNotification();
   
   // États principaux
   const [activeView, setActiveView] = useState('list'); // 'list', 'create', 'edit', 'details'
@@ -46,9 +46,7 @@ const RendezVous = ({ onBack }) => {
 
   useEffect(() => {
     loadData();
-  }, []);
-
-  const loadData = async () => {
+  }, [loadData]);  const loadData = useCallback(async () => {
     console.log('Chargement des données RDV...');
     setIsLoading(true);
     try {
@@ -63,9 +61,9 @@ const RendezVous = ({ onBack }) => {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [loadRendezVous, loadMedecins, showError]);
 
-  const loadRendezVous = async () => {
+  const loadRendezVous = useCallback(async () => {
     try {
       const data = await consultationService.getPatientRendezVous();
       setRdvs(data || []);
@@ -73,9 +71,9 @@ const RendezVous = ({ onBack }) => {
       console.error('Erreur lors du chargement des RDV:', error);
       setRdvs([]);
     }
-  };
+  }, []);
 
-  const loadMedecins = async () => {
+  const loadMedecins = useCallback(async () => {
     try {
       const data = await authService.getMedecins();
       setMedecins(data || []);
@@ -83,7 +81,7 @@ const RendezVous = ({ onBack }) => {
       console.error('Erreur lors du chargement des médecins:', error);
       setMedecins([]);
     }
-  };
+  }, []);
 
   // Fonctions utilitaires
   const getStatusBadge = (status) => {
@@ -138,7 +136,8 @@ const RendezVous = ({ onBack }) => {
         return `${dateStr} à ${time}`;
       }
       return dateStr;
-    } catch (error) {
+    } catch (errorDate) {
+      console.error('Erreur de formatage de date:', errorDate);
       return 'Date invalide';
     }
   };

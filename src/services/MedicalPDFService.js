@@ -145,7 +145,7 @@ export const exportToPDF = async (consultationData) => {
       { title: 'Histoire de la Maladie', content: consultationData.histoire_maladie || 'Non renseigné' }
     ];
     
-    sections.forEach((section, index) => {
+    sections.forEach((section) => {
       // Vérifier si on a besoin d'une nouvelle page
       if (currentY > pageHeight - 60) {
         pdf.addPage();

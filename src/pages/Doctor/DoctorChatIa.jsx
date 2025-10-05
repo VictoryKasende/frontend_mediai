@@ -57,7 +57,7 @@ const DoctorChatIa = () => {
   // Charger les conversations au montage du composant
   useEffect(() => {
     loadConversations();
-  }, [loadConversations]);
+  }, []);
 
   // Charger les messages quand une conversation est sélectionnée
   useEffect(() => {
@@ -95,7 +95,7 @@ const DoctorChatIa = () => {
   };
 
   // Charger les conversations depuis l'API
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       setIsLoadingConversations(true);
       const response = await api.get('/conversations/');
@@ -146,7 +146,7 @@ const DoctorChatIa = () => {
     } finally {
       setIsLoadingConversations(false);
     }
-  };
+  }, [showNotification]);
 
   // Fonction utilitaire pour générer un titre par défaut
   const generateConversationTitle = (conversation) => {

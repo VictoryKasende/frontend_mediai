@@ -1,16 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons, ActionIcons } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { useNotification } from '../../contexts/NotificationContext';
-import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Interface simplifiée de gestion des rendez-vous
  * Version basique pour éviter les erreurs de page blanche
  */
 const RendezVousSimple = ({ onBack }) => {
-  const { user } = useAuth();
   const { showSuccess, showError, showInfo } = useNotification();
   
   const [activeView, setActiveView] = useState('list');
@@ -54,7 +52,7 @@ const RendezVousSimple = ({ onBack }) => {
       setRdvs(rdvsTest);
       setIsLoading(false);
     }, 500);
-  }, []);
+  }, [rdvsTest]);
 
   const getStatusBadge = (status) => {
     const statusConfig = {
@@ -91,7 +89,8 @@ const RendezVousSimple = ({ onBack }) => {
       });
       
       return time ? `${dateStr} à ${time}` : dateStr;
-    } catch (error) {
+    } catch (errorFormat) {
+      console.error('Erreur de formatage de date:', errorFormat);
       return 'Date invalide';
     }
   };
