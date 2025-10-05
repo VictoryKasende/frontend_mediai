@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons, ActionIcons } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -31,7 +31,7 @@ const RendezVousSimple = ({ onBack }) => {
     { id: 3, prenom: 'Pierre', nom: 'Bernard', specialite: 'Pédiatrie' }
   ];
 
-  const rdvsTest = [
+  const rdvsTest = useMemo(() => [
     {
       id: 1,
       medecin_id: 1,
@@ -43,7 +43,7 @@ const RendezVousSimple = ({ onBack }) => {
       type_consultation: 'presentiel',
       date_creation: '2025-10-05'
     }
-  ];
+  ], []);
 
   useEffect(() => {
     // Simuler le chargement des données

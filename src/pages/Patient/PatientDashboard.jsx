@@ -510,7 +510,7 @@ const PatientDashboard = () => {
     } finally {
       setLoadingDashboard(false);
     }
-  }, [medecins, user?.id, showError]);
+  }, [medecins, user?.id, user?.nom, user?.prenom, loadMedecinsData, showError]);
 
   const menuItems = [
     { 
