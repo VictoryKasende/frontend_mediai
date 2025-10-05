@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
@@ -22,8 +22,6 @@ const DoctorChatIa = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [editingConversation, setEditingConversation] = useState(null);
-  const [editingName, setEditingName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshKey, setRefreshKey] = useState(0); // Pour forcer la mise à jour
   
@@ -40,7 +38,7 @@ const DoctorChatIa = () => {
   const textareaRef = useRef(null);
 
   // Fonction helper pour les notifications
-  const showNotification = (message, type = 'info') => {
+  const showNotification = useCallback((message, type = 'info') => {
     switch (type) {
       case 'success':
         return showSuccess(message);
@@ -52,12 +50,12 @@ const DoctorChatIa = () => {
       default:
         return showInfo(message);
     }
-  };
+  }, [showSuccess, showError, showWarning, showInfo]);
 
   // Charger les conversations au montage du composant
   useEffect(() => {
     loadConversations();
-  }, []);
+  }, [loadConversations]);
 
   // Charger les messages quand une conversation est sélectionnée
   useEffect(() => {

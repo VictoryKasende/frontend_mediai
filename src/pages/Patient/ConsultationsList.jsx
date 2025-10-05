@@ -158,7 +158,7 @@ const ConsultationsList = ({ onViewDetails }) => {
       showError('Erreur', 'Impossible de charger les consultations');
       setConsultations([]);
     }
-  }, [user?.id, user, showError]);
+  }, [user, showError]);
 
   const getStatusColor = (statut) => {
     const baseClasses = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-sm";
