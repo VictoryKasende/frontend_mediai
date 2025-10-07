@@ -28,6 +28,8 @@ const FileUpload = ({
   const [uploadError, setUploadError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const isLoadingInitialFiles = useRef(false);
+  const hasLoadedInitialFiles = useRef(false);
 
   // Charger les fichiers existants au montage
   useEffect(() => {
@@ -41,6 +43,7 @@ const FileUpload = ({
   const loadExistingFiles = async () => {
     if (!ficheId) return;
     
+    isLoadingInitialFiles.current = true;
     setIsLoading(true);
     try {
       const response = await attachmentService.getAll({ fiche_consultation: ficheId });
@@ -56,16 +59,29 @@ const FileUpload = ({
         file: null
       }));
       setFiles(backendFiles);
-      onFilesChange && onFilesChange(backendFiles);
+      // Ne pas notifier au chargement initial
+      hasLoadedInitialFiles.current = true;
     } catch (error) {
       console.error('Erreur chargement fichiers existants:', error);
     } finally {
       setIsLoading(false);
+      isLoadingInitialFiles.current = false;
     }
   };
 
-  // Mettre à jour callback parent quand files change
+  // Mettre à jour callback parent quand files change (mais pas au chargement initial)
   useEffect(() => {
+    // Ignorer si on est en train de charger les fichiers initiaux
+    if (isLoadingInitialFiles.current) {
+      return;
+    }
+    
+    // Ignorer le premier changement (chargement initial)
+    if (!hasLoadedInitialFiles.current) {
+      return;
+    }
+    
+    // Maintenant on peut notifier les vrais changements
     onFilesChange && onFilesChange(files);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files]);
