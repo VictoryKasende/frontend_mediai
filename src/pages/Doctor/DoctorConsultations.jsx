@@ -51,7 +51,6 @@ const DoctorConsultations = () => {
   const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
   
   // Fonction pour envoyer un message WhatsApp
-  // eslint-disable-next-line no-unused-vars
   const sendWhatsAppMessage = async (consultationId) => {
     setSendingWhatsApp(true);
     try {
@@ -59,7 +58,7 @@ const DoctorConsultations = () => {
       console.log('Envoi WhatsApp pour consultation:', consultationId);
       showSuccess('Message WhatsApp envoyé avec succès');
       setShowWhatsAppModal(false);
-    } catch (error) {
+    } catch {
       showError('Erreur lors de l\'envoi WhatsApp');
     } finally {
       setSendingWhatsApp(false);
