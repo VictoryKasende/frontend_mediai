@@ -1,4 +1,3 @@
-/* eslint-disable react-refresh/only-export-components */
 import { useState, useCallback } from 'react';
 
 /**
@@ -33,7 +32,7 @@ export const useConfirmModal = () => {
         }
       });
     });
-  }, []);
+  }, [closeModal]);
 
   // Fermer la modal
   const closeModal = useCallback(() => {

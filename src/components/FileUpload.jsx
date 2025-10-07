@@ -34,6 +34,7 @@ const FileUpload = ({
     if (ficheId) {
       loadExistingFiles();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ficheId]);
 
   // Charger fichiers depuis le backend
@@ -66,6 +67,7 @@ const FileUpload = ({
   // Mettre à jour callback parent quand files change
   useEffect(() => {
     onFilesChange && onFilesChange(files);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [files]);
 
   const validateFile = (file) => {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Icon, StatusIcons, ActionIcons } from './Icons';
 
 /**
@@ -59,6 +59,14 @@ const Toast = ({
 
   const config = toastConfig[type] || toastConfig.info;
 
+  // Définir handleClose avant les useEffect qui l'utilisent
+  const handleClose = useCallback(() => {
+    setShow(false);
+    if (onClose) {
+      onClose();
+    }
+  }, [onClose]);
+
   // Gestion de la fermeture automatique
   useEffect(() => {
     if (duration > 0 && show) {
@@ -79,7 +87,7 @@ const Toast = ({
         clearInterval(progressTimer);
       };
     }
-  }, [duration, show]);
+  }, [duration, show, handleClose]);
 
   // Mettre à jour la visibilité
   useEffect(() => {
@@ -88,13 +96,6 @@ const Toast = ({
       setProgress(100);
     }
   }, [isVisible]);
-
-  const handleClose = () => {
-    setShow(false);
-    if (onClose) {
-      onClose();
-    }
-  };
 
   if (!show) return null;
 

@@ -37,11 +37,13 @@ const LabResultsTable = ({
     if (ficheId) {
       loadLabResults();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ficheId]);
 
   // Notifier le parent lors du changement
   useEffect(() => {
     onLabResultsChange && onLabResultsChange(labResults);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [labResults]);
 
   // Charger les résultats depuis l'API
