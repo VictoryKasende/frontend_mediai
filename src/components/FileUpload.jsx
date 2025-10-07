@@ -15,7 +15,6 @@ import { attachmentService } from '../services/api';
  */
 const FileUpload = ({ 
   ficheId,
-  initialFiles = [],
   onFilesChange, 
   acceptedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'],
   maxSize = 10, // 10MB
