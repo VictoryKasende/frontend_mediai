@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { whatsappService } from '../services/api';
-import { ActionIcons, MedicalIcons } from './Icons';
+import { ActionIcons, MedicalIcons, StatusIcons } from './Icons';
 import Button from './Button';
 
 /**
@@ -54,26 +54,35 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
    * Envoyer la fiche via WhatsApp
    */
   const handleSendWhatsApp = async () => {
+    console.log('🔄 Début envoi WhatsApp');
+    console.log('📋 Fiche:', fiche);
+    console.log('⚙️ Options WhatsApp:', whatsappOptions);
+
     if (!fiche) {
+      console.log('❌ Erreur: Aucune fiche sélectionnée');
       showError('Erreur', 'Aucune fiche sélectionnée');
       return;
     }
 
     // Validation du numéro de téléphone
     if (!whatsappOptions.recipient_phone?.trim()) {
+      console.log('❌ Erreur: Numéro de téléphone manquant');
       showError('Erreur', 'Numéro de téléphone requis');
       return;
     }
 
     // Validation du message personnalisé si template custom
     if (whatsappOptions.template_type === 'custom' && !whatsappOptions.custom_message?.trim()) {
+      console.log('❌ Erreur: Message personnalisé manquant pour template custom');
       showError('Erreur', 'Message personnalisé requis pour le template custom');
       return;
     }
 
     setLoading(true);
     try {
+      console.log('📤 Envoi en cours vers WhatsApp service...');
       const result = await whatsappService.sendFiche(fiche.id, whatsappOptions);
+      console.log('✅ Résultat envoi WhatsApp:', result);
       
       showSuccess('WhatsApp envoyé', 'La fiche a été envoyée avec succès via WhatsApp');
       
@@ -84,11 +93,14 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
       
       onClose();
     } catch (error) {
-      console.error('Erreur lors de l\'envoi WhatsApp:', error);
-      const errorMsg = error.detail || error.recipient_phone?.[0] || 'Erreur lors de l\'envoi WhatsApp';
+      console.error('❌ Erreur lors de l\'envoi WhatsApp:', error);
+      console.error('❌ Erreur détaillée:', error.response?.data || error.message);
+      
+      const errorMsg = error.detail || error.recipient_phone?.[0] || error.message || 'Erreur lors de l\'envoi WhatsApp';
       showError('Erreur', errorMsg);
     } finally {
       setLoading(false);
+      console.log('🏁 Fin du processus d\'envoi WhatsApp');
     }
   };
 
@@ -355,7 +367,7 @@ L'équipe médicale`
               {onboardingStep === 'sms' && (
                 <div className="text-center">
                   <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <ActionIcons.Message className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <StatusIcons.CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                     <h4 className="text-xl font-bold text-gray-900 mb-2">Instructions SMS envoyées</h4>
                     <p className="text-gray-700 mb-4">
                       Les instructions d'activation WhatsApp ont été envoyées par SMS au numéro {whatsappOptions.recipient_phone}
@@ -373,7 +385,7 @@ L'équipe médicale`
               {onboardingStep === 'success' && (
                 <div className="text-center">
                   <div className="bg-white rounded-xl p-6 shadow-sm">
-                    <ActionIcons.Check className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <StatusIcons.CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
                     <h4 className="text-xl font-bold text-gray-900 mb-2">WhatsApp configuré</h4>
                     <p className="text-gray-700 mb-4">
                       Le numéro {whatsappOptions.recipient_phone} est maintenant prêt pour recevoir des messages WhatsApp
@@ -422,7 +434,7 @@ L'équipe médicale`
                     disabled={!whatsappOptions.recipient_phone?.trim() || loading}
                     className="text-blue-600 border-blue-300 hover:bg-blue-50"
                   >
-                    <MedicalIcons.Shield className="w-4 h-4 mr-2" />
+                    <MedicalIcons.Settings className="w-4 h-4 mr-2" />
                     Vérifier/Configurer WhatsApp
                   </Button>
                   
@@ -540,7 +552,7 @@ L'équipe médicale`
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
                 <div className="flex items-center mb-4">
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
-                    <ActionIcons.Phone className="w-5 h-5 text-white" />
+                    <div className="w-5 h-5 bg-white rounded-full"></div>
                   </div>
                   <span className="font-semibold text-green-700 text-lg">{templatePreview.title}</span>
                 </div>
@@ -628,7 +640,7 @@ L'équipe médicale`
               </>
             ) : (
               <>
-                <ActionIcons.Phone className="w-5 h-5 mr-2" />
+                <ActionIcons.Send className="w-5 h-5 mr-2 text-white" />
                 Envoyer WhatsApp
               </>
             )}

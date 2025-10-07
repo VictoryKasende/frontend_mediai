@@ -2552,5 +2552,8 @@ export const whatsappService = {
   }
 };
 
+// Alias pour la compatibilité avec les anciens noms
+export const labResultService = labService;
+
 // Export de l'instance axios configurée
 export default api;

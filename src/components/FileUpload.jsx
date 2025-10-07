@@ -1,10 +1,12 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ActionIcons, MedicalIcons, StatusIcons } from './Icons';
 import Button from './Button';
+import { attachmentService } from '../services/api';
 
 /**
  * Composant de téléchargement de fichiers avec prévisualisation
- * @param {Array} files - Liste des fichiers existants
+ * @param {number} ficheId - ID de la fiche de consultation
+ * @param {Array} initialFiles - Fichiers existants depuis le backend
  * @param {function} onFilesChange - Callback lors du changement de fichiers
  * @param {Array} acceptedTypes - Types de fichiers acceptés
  * @param {number} maxSize - Taille max en MB
@@ -12,7 +14,8 @@ import Button from './Button';
  * @param {boolean} showPreview - Afficher la prévisualisation
  */
 const FileUpload = ({ 
-  files = [], 
+  ficheId,
+  initialFiles = [],
   onFilesChange, 
   acceptedTypes = ['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx'],
   maxSize = 10, // 10MB
@@ -21,9 +24,50 @@ const FileUpload = ({
   disabled = false,
   label = "Pièces jointes"
 }) => {
+  const [files, setFiles] = useState([]);
   const [dragOver, setDragOver] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Charger les fichiers existants au montage
+  useEffect(() => {
+    if (ficheId) {
+      loadExistingFiles();
+    }
+  }, [ficheId]);
+
+  // Charger fichiers depuis le backend
+  const loadExistingFiles = async () => {
+    if (!ficheId) return;
+    
+    setIsLoading(true);
+    try {
+      const response = await attachmentService.getAll({ fiche_consultation: ficheId });
+      const backendFiles = (response.results || response).map(attachment => ({
+        id: attachment.id,
+        backendId: attachment.id,
+        name: attachment.name || attachment.file_name,
+        size: attachment.file_size || 0,
+        type: attachment.file_type || '',
+        status: 'completed',
+        progress: 100,
+        url: attachment.file || attachment.file_url,
+        file: null
+      }));
+      setFiles(backendFiles);
+      onFilesChange && onFilesChange(backendFiles);
+    } catch (error) {
+      console.error('Erreur chargement fichiers existants:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Mettre à jour callback parent quand files change
+  useEffect(() => {
+    onFilesChange && onFilesChange(files);
+  }, [files]);
 
   const validateFile = (file) => {
     // Vérifier la taille
@@ -40,10 +84,14 @@ const FileUpload = ({
     return null;
   };
 
-  const handleFileSelect = (selectedFiles) => {
+  const handleFileSelect = async (selectedFiles) => {
     setUploadError('');
 
     if (!selectedFiles || selectedFiles.length === 0) return;
+    if (!ficheId) {
+      setUploadError('ID de fiche manquant. Impossible d\'uploader des fichiers.');
+      return;
+    }
 
     const fileArray = Array.from(selectedFiles);
     
@@ -62,15 +110,17 @@ const FileUpload = ({
       if (error) {
         errors.push(error);
       } else {
+        const tempId = Date.now() + Math.random();
         validFiles.push({
-          id: Date.now() + Math.random(),
+          id: tempId,
           file: file,
           name: file.name,
           size: file.size,
           type: file.type,
           status: 'uploading',
           progress: 0,
-          url: null // Sera rempli après l'upload
+          url: null,
+          backendId: null
         });
       }
     });
@@ -80,42 +130,113 @@ const FileUpload = ({
       return;
     }
 
-    // Ajouter les fichiers valides
-    const newFiles = [...files, ...validFiles];
-    onFilesChange && onFilesChange(newFiles);
+    // Ajouter les fichiers valides à l'état immédiatement
+    setFiles(prevFiles => [...prevFiles, ...validFiles]);
 
-    // Simuler l'upload pour chaque fichier
-    validFiles.forEach((fileData, index) => {
-      simulateUpload(fileData.id);
+    // Upload réel vers le backend pour chaque fichier
+    validFiles.forEach((fileData) => {
+      uploadFileToBackend(fileData);
     });
   };
 
-  const simulateUpload = (fileId) => {
-    const interval = setInterval(() => {
-      onFilesChange && onFilesChange(prevFiles => 
-        prevFiles.map(file => {
-          if (file.id === fileId) {
-            const newProgress = Math.min(file.progress + 10, 100);
-            return {
-              ...file,
-              progress: newProgress,
-              status: newProgress === 100 ? 'completed' : 'uploading'
-            };
+  // Upload réel vers le backend
+  const uploadFileToBackend = async (fileData) => {
+    try {
+      const result = await attachmentService.upload(
+        ficheId,
+        fileData.file,
+        {
+          name: fileData.name,
+          description: '',
+          onProgress: (percent) => {
+            // Mettre à jour la progression
+            setFiles(prevFiles => 
+              prevFiles.map(f => 
+                f.id === fileData.id 
+                  ? { ...f, progress: percent }
+                  : f
+              )
+            );
           }
-          return file;
-        })
+        }
       );
-    }, 200);
 
-    // Arrêter la simulation après 2 secondes
-    setTimeout(() => {
-      clearInterval(interval);
-    }, 2000);
+      // Upload réussi - mettre à jour avec les données backend
+      setFiles(prevFiles => 
+        prevFiles.map(f => 
+          f.id === fileData.id
+            ? {
+                ...f,
+                backendId: result.id,
+                status: 'completed',
+                progress: 100,
+                url: result.file || result.file_url
+              }
+            : f
+        )
+      );
+
+    } catch (error) {
+      console.error('Erreur upload fichier:', error);
+      
+      // Marquer le fichier en erreur
+      setFiles(prevFiles => 
+        prevFiles.map(f => 
+          f.id === fileData.id
+            ? {
+                ...f,
+                status: 'error',
+                progress: 0,
+                error: error.response?.data?.detail || error.message || 'Erreur d\'upload'
+              }
+            : f
+        )
+      );
+      
+      setUploadError(`Erreur upload "${fileData.name}": ${error.response?.data?.detail || error.message}`);
+    }
   };
 
-  const removeFile = (fileId) => {
-    const newFiles = files.filter(file => file.id !== fileId);
-    onFilesChange && onFilesChange(newFiles);
+  // Supprimer un fichier (backend + état local)
+  const removeFile = async (fileId, backendId) => {
+    // Si le fichier a un ID backend, le supprimer du serveur
+    if (backendId) {
+      try {
+        await attachmentService.delete(backendId);
+        console.log('✅ Fichier supprimé du backend:', backendId);
+      } catch (error) {
+        console.error('❌ Erreur suppression backend:', error);
+        setUploadError(`Erreur suppression: ${error.response?.data?.detail || error.message}`);
+        return; // Ne pas supprimer de l'état si erreur backend
+      }
+    }
+    
+    // Supprimer de l'état local
+    setFiles(prevFiles => prevFiles.filter(file => file.id !== fileId));
+  };
+
+  // Télécharger un fichier
+  const downloadFile = async (backendId, fileName) => {
+    if (!backendId) return;
+    
+    try {
+      const blob = await attachmentService.download(backendId);
+      
+      // Créer un lien de téléchargement
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('✅ Fichier téléchargé:', fileName);
+    } catch (error) {
+      console.error('❌ Erreur téléchargement:', error);
+      setUploadError(`Erreur téléchargement: ${error.response?.data?.detail || error.message}`);
+    }
   };
 
   const handleDragOver = (e) => {
@@ -168,6 +289,22 @@ const FileUpload = ({
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+  // État de chargement
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center">
+          <div className="animate-pulse space-y-3">
+            <div className="w-12 h-12 mx-auto rounded-full bg-gray-200"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+            <div className="h-3 bg-gray-200 rounded w-2/3 mx-auto"></div>
+          </div>
+          <p className="text-sm text-gray-500 mt-3">Chargement des fichiers...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Zone de téléchargement */}
@@ -175,7 +312,7 @@ const FileUpload = ({
         className={`
           relative border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200
           ${dragOver ? 'border-mediai-primary bg-blue-50' : 'border-gray-300'}
-          ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-mediai-primary hover:bg-gray-50'}
+          ${disabled || !ficheId ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-mediai-primary hover:bg-gray-50'}
         `}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -189,7 +326,7 @@ const FileUpload = ({
           accept={acceptedTypes.join(',')}
           onChange={(e) => handleFileSelect(e.target.files)}
           className="hidden"
-          disabled={disabled}
+          disabled={disabled || !ficheId}
         />
         
         <div className="space-y-3">
@@ -199,7 +336,7 @@ const FileUpload = ({
           
           <div>
             <p className="text-sm font-medium text-gray-700">
-              {disabled ? 'Téléchargement désactivé' : dragOver ? 'Déposer les fichiers ici' : 'Cliquez ou glissez-déposez vos fichiers'}
+              {!ficheId ? 'Sauvegardez d\'abord la fiche' : disabled ? 'Téléchargement désactivé' : dragOver ? 'Déposer les fichiers ici' : 'Cliquez ou glissez-déposez vos fichiers'}
             </p>
             <p className="text-xs text-gray-500 mt-1">
               {acceptedTypes.join(', ')} • Max {maxSize}MB par fichier • {maxFiles} fichiers max
@@ -230,7 +367,21 @@ const FileUpload = ({
               <Button
                 size="sm"
                 variant="outline"
-                onClick={() => onFilesChange && onFilesChange([])}
+                onClick={async () => {
+                  if (window.confirm('Êtes-vous sûr de vouloir supprimer tous les fichiers ?')) {
+                    // Supprimer tous les fichiers du backend
+                    for (const file of files) {
+                      if (file.backendId) {
+                        try {
+                          await attachmentService.delete(file.backendId);
+                        } catch (error) {
+                          console.error('Erreur suppression:', error);
+                        }
+                      }
+                    }
+                    setFiles([]);
+                  }
+                }}
                 className="text-red-600 border-red-300 hover:bg-red-50"
               >
                 Tout supprimer
@@ -269,29 +420,39 @@ const FileUpload = ({
                         Téléchargé
                       </span>
                     )}
+                    {file.status === 'error' && (
+                      <span className="text-xs text-red-600 flex items-center">
+                        <StatusIcons.Error className="w-3 h-3 mr-1" />
+                        Erreur: {file.error}
+                      </span>
+                    )}
                   </div>
                 </div>
                 
                 <div className="flex items-center space-x-2">
-                  {file.url && (
+                  {file.backendId && file.status === 'completed' && (
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => window.open(file.url, '_blank')}
+                      onClick={() => downloadFile(file.backendId, file.name)}
                       className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                      title="Télécharger le fichier"
                     >
-                      <ActionIcons.Eye className="w-4 h-4" />
+                      <ActionIcons.Download className="w-4 h-4" />
                     </Button>
                   )}
                   
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => removeFile(file.id)}
-                    className="text-red-600 border-red-300 hover:bg-red-50"
-                  >
-                    <ActionIcons.Trash className="w-4 h-4" />
-                  </Button>
+                  {file.status !== 'uploading' && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => removeFile(file.id, file.backendId)}
+                      className="text-red-600 border-red-300 hover:bg-red-50"
+                      title="Supprimer le fichier"
+                    >
+                      <ActionIcons.Trash className="w-4 h-4" />
+                    </Button>
+                  )}
                 </div>
               </div>
             ))}

@@ -200,10 +200,7 @@ const FicheConsultationForm = ({ onBack }) => {
     }
   }, [user]);
 
-  // Charger les médecins au démarrage
-  useEffect(() => {
-    loadMedecins();
-  }, [loadMedecins]);  const loadMedecins = useCallback(async () => {
+  const loadMedecins = useCallback(async () => {
     try {
       setLoadingMedecins(true);
       
@@ -220,6 +217,11 @@ const FicheConsultationForm = ({ onBack }) => {
       setLoadingMedecins(false);
     }
   }, [showError]);
+
+  // Charger les médecins au démarrage
+  useEffect(() => {
+    loadMedecins();
+  }, [loadMedecins]);
 
   // Validation par étape
   const validateStep = (step) => {

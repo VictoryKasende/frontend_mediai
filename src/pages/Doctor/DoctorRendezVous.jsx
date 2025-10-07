@@ -33,25 +33,7 @@ const DoctorRendezVous = ({ onBack }) => {
   // Planning
   const [planningDate, setPlanningDate] = useState(new Date().toISOString().split('T')[0]);
 
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const loadData = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      await Promise.all([
-        loadRendezVous(),
-        loadPatients()
-      ]);
-    } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-      showError('Erreur', 'Impossible de charger les données');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [loadRendezVous, loadPatients, showError]);
-
+  // Définir les fonctions de chargement avant loadData
   const loadRendezVous = useCallback(async () => {
     try {
       const data = await consultationService.getDoctorRendezVous();
@@ -71,6 +53,25 @@ const DoctorRendezVous = ({ onBack }) => {
       setPatients([]);
     }
   }, []);
+
+  const loadData = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await Promise.all([
+        loadRendezVous(),
+        loadPatients()
+      ]);
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+      showError('Erreur', 'Impossible de charger les données');
+    } finally {
+      setIsLoading(false);
+    }
+  }, [loadRendezVous, loadPatients, showError]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   // Fonctions utilitaires
   const getStatusBadge = (status) => {

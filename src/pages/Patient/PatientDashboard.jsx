@@ -238,6 +238,7 @@ const PatientDashboard = () => {
   const [disponibiliteFilter, setDisponibiliteFilter] = useState('all');
   const [medecins, setMedecins] = useState([]);
   const [loadingMedecins, setLoadingMedecins] = useState(false);
+  const [medecinsLoaded, setMedecinsLoaded] = useState(false);
 
   // Mémorisation des fonctions utilitaires
   const getMedecinInfo = useCallback((consultation) => {
@@ -338,23 +339,24 @@ const PatientDashboard = () => {
     return [...new Set(medecins.map(m => m.medecin_profile?.specialty).filter(Boolean))];
   }, [medecins]);
 
-  useEffect(() => {
-    if (activeView === 'dashboard') {
-      loadDashboardData();
-    } else if (activeView === 'medecins') {
-      loadMedecinsData();
-    }
-  }, [activeView, loadDashboardData, loadMedecinsData]);
-
   const loadMedecinsData = useCallback(async () => {
+    if (medecinsLoaded || loadingMedecins) {
+      return; // Éviter les appels multiples
+    }
+    
     try {
       setLoadingMedecins(true);
       const response = await authService.getMedecins();
       const medecinsList = response.results || response;
       setMedecins(medecinsList);
+      setMedecinsLoaded(true);
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
-      // Fallback avec données statiques améliorées
+      showError('Erreur', 'Impossible de charger la liste des médecins');
+      // Arrêter les tentatives répétées et utiliser des données de fallback
+      if (error.response?.status === 429) {
+        console.warn('Trop de requêtes - utilisation des données de fallback');
+      }
       setMedecins([
         {
           id: 1,
@@ -435,11 +437,12 @@ const PatientDashboard = () => {
           }
         }
       ]);
+      setMedecinsLoaded(true); // Marquer comme chargé même en erreur
       showError('Erreur', 'Impossible de charger la liste des médecins, affichage des données locales');
     } finally {
       setLoadingMedecins(false);
     }
-  }, []);
+  }, [showError, medecinsLoaded, loadingMedecins]);
 
   const loadDashboardData = useCallback(async () => {
     try {
@@ -511,6 +514,15 @@ const PatientDashboard = () => {
       setLoadingDashboard(false);
     }
   }, [medecins, user?.id, user?.nom, user?.prenom, loadMedecinsData, showError]);
+
+  useEffect(() => {
+    if (activeView === 'dashboard') {
+      loadDashboardData();
+    } else if (activeView === 'medecins' && !medecinsLoaded && !loadingMedecins) {
+      // Charger seulement si pas déjà chargés et pas en cours de chargement
+      loadMedecinsData();
+    }
+  }, [activeView, loadDashboardData, medecinsLoaded, loadingMedecins]);
 
   const menuItems = [
     { 
@@ -594,7 +606,7 @@ const PatientDashboard = () => {
   };
 
   const renderDashboardOverview = () => (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 transition-opacity duration-500 ease-in-out">
       {/* Header moderne avec informations patient */}
       <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 shadow-2xl rounded-3xl overflow-hidden">
         <div className="px-8 py-10 text-white relative">
@@ -732,7 +744,7 @@ const PatientDashboard = () => {
   );
 
   const renderMedecins = () => (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 transition-opacity duration-500 ease-in-out">
       {/* Header avec style moderne */}
       <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-100">
         <div className="flex items-center space-x-4 mb-8">
@@ -1132,43 +1144,6 @@ const PatientDashboard = () => {
         isOpen={isSettingsOpen} 
         onClose={closeSettings} 
       />
-
-      {/* Styles CSS personnalisés */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.6s ease-out;
-        }
-
-        .hover-lift:hover {
-          transform: translateY(-2px);
-        }
-
-        .hover\\:scale-102:hover {
-          transform: scale(1.02);
-        }
-
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .tabular-nums {
-          font-variant-numeric: tabular-nums;
-        }
-      `}</style>
     </div>
   );
 };

@@ -1,26 +1,27 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MedicalIcons, ActionIcons, StatusIcons } from './Icons';
 import Button from './Button';
 import Modal from './Modal';
+import { labResultService } from '../services/api';
 
 /**
  * Composant de tableau des résultats de laboratoire
- * @param {Array} labResults - Résultats de laboratoire
- * @param {function} onAddResult - Ajouter un nouveau résultat
- * @param {function} onEditResult - Éditer un résultat
- * @param {function} onDeleteResult - Supprimer un résultat
+ * @param {number} ficheId - ID de la fiche de consultation
+ * @param {function} onLabResultsChange - Callback lors du changement des résultats
  * @param {boolean} isEditable - Mode édition
  */
 const LabResultsTable = ({ 
-  labResults = [], 
-  onAddResult, 
-  onEditResult, 
-  onDeleteResult,
+  ficheId,
+  onLabResultsChange,
   isEditable = true,
   showAddButton = true 
 }) => {
+  const [labResults, setLabResults] = useState([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingResult, setEditingResult] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [error, setError] = useState('');
   const [formData, setFormData] = useState({
     name: '',
     value: '',
@@ -30,6 +31,37 @@ const LabResultsTable = ({
     date: new Date().toISOString().split('T')[0],
     notes: ''
   });
+
+  // Charger les résultats depuis le backend au montage
+  useEffect(() => {
+    if (ficheId) {
+      loadLabResults();
+    }
+  }, [ficheId]);
+
+  // Notifier le parent lors du changement
+  useEffect(() => {
+    onLabResultsChange && onLabResultsChange(labResults);
+  }, [labResults]);
+
+  // Charger les résultats depuis l'API
+  const loadLabResults = async () => {
+    if (!ficheId) return;
+    
+    setIsLoading(true);
+    setError('');
+    try {
+      const response = await labResultService.getAll({ fiche_consultation: ficheId });
+      const results = response.results || response;
+      setLabResults(results);
+      console.log('✅ Résultats labo chargés:', results.length);
+    } catch (error) {
+      console.error('❌ Erreur chargement résultats labo:', error);
+      setError('Erreur lors du chargement des résultats');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -63,28 +95,73 @@ const LabResultsTable = ({
     setShowAddModal(true);
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    const resultData = {
-      ...formData,
-      id: editingResult ? editingResult.id : Date.now()
-    };
-
-    if (editingResult) {
-      onEditResult && onEditResult(resultData);
-    } else {
-      onAddResult && onAddResult(resultData);
+    if (!ficheId) {
+      setError('ID de fiche manquant');
+      return;
     }
 
-    setShowAddModal(false);
-    resetForm();
-    setEditingResult(null);
+    const resultData = {
+      ...formData,
+      fiche_consultation: ficheId
+    };
+
+    setIsSaving(true);
+    setError('');
+
+    try {
+      if (editingResult) {
+        // Mise à jour
+        console.log('🔄 Mise à jour résultat:', editingResult.id);
+        await labResultService.update(editingResult.id, resultData);
+        console.log('✅ Résultat mis à jour');
+      } else {
+        // Création
+        console.log('➕ Création résultat:', resultData);
+        await labResultService.create(resultData);
+        console.log('✅ Résultat créé');
+      }
+
+      // Recharger la liste
+      await loadLabResults();
+
+      // Fermer le modal
+      setShowAddModal(false);
+      resetForm();
+      setEditingResult(null);
+    } catch (error) {
+      console.error('❌ Erreur sauvegarde résultat:', error);
+      setError(
+        error.response?.data?.detail || 
+        error.response?.data?.message ||
+        'Erreur lors de la sauvegarde du résultat'
+      );
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  const handleDelete = (result) => {
-    if (window.confirm(`Êtes-vous sûr de vouloir supprimer le résultat "${result.name}" ?`)) {
-      onDeleteResult && onDeleteResult(result.id);
+  const handleDelete = async (result) => {
+    if (!window.confirm(`Êtes-vous sûr de vouloir supprimer le résultat "${result.name}" ?`)) {
+      return;
+    }
+
+    setError('');
+    try {
+      console.log('🗑️ Suppression résultat:', result.id);
+      await labResultService.delete(result.id);
+      console.log('✅ Résultat supprimé');
+      
+      // Recharger la liste
+      await loadLabResults();
+    } catch (error) {
+      console.error('❌ Erreur suppression résultat:', error);
+      setError(
+        error.response?.data?.detail || 
+        'Erreur lors de la suppression du résultat'
+      );
     }
   };
 
@@ -127,15 +204,49 @@ const LabResultsTable = ({
     }
   };
 
+  // État de chargement
+  if (isLoading) {
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center">
+            <MedicalIcons.Lab className="w-5 h-5 mr-2 text-mediai-primary" />
+            Résultats de laboratoire
+          </h3>
+        </div>
+        <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+          <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto"></div>
+            <div className="h-4 bg-gray-200 rounded w-1/2 mx-auto"></div>
+          </div>
+          <p className="text-sm text-gray-500 mt-3">Chargement des résultats...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      {/* Erreur globale */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+          <div className="flex items-start">
+            <StatusIcons.Error className="w-5 h-5 text-red-500 mt-0.5 mr-2 flex-shrink-0" />
+            <div>
+              <p className="text-sm font-medium text-red-800">Erreur</p>
+              <p className="text-xs text-red-600 mt-1">{error}</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-lg font-medium text-gray-900 flex items-center">
           <MedicalIcons.Lab className="w-5 h-5 mr-2 text-mediai-primary" />
           Résultats de laboratoire
         </h3>
-        {showAddButton && isEditable && (
+        {showAddButton && isEditable && ficheId && (
           <Button size="sm" onClick={handleAdd}>
             <ActionIcons.Plus className="w-4 h-4 mr-2" />
             Ajouter résultat
@@ -233,8 +344,13 @@ const LabResultsTable = ({
       ) : (
         <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
           <MedicalIcons.Lab className="w-12 h-12 mx-auto text-gray-300 mb-3" />
-          <p className="text-gray-500 mb-4">Aucun résultat de laboratoire</p>
-          {showAddButton && isEditable && (
+          <p className="text-gray-500 mb-4">
+            {!ficheId 
+              ? 'Sauvegardez d\'abord la fiche pour ajouter des résultats'
+              : 'Aucun résultat de laboratoire'
+            }
+          </p>
+          {showAddButton && isEditable && ficheId && (
             <Button size="sm" onClick={handleAdd}>
               <ActionIcons.Plus className="w-4 h-4 mr-2" />
               Ajouter le premier résultat
@@ -255,6 +371,13 @@ const LabResultsTable = ({
         size="md"
       >
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Erreur dans le modal */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+              <p className="text-sm text-red-800">{error}</p>
+            </div>
+          )}
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Nom de l'examen *
@@ -363,12 +486,24 @@ const LabResultsTable = ({
                 setShowAddModal(false);
                 resetForm();
                 setEditingResult(null);
+                setError('');
               }}
+              disabled={isSaving}
             >
               Annuler
             </Button>
-            <Button type="submit">
-              {editingResult ? 'Modifier' : 'Ajouter'}
+            <Button 
+              type="submit"
+              disabled={isSaving || !formData.name || !formData.value}
+            >
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Enregistrement...
+                </>
+              ) : (
+                editingResult ? 'Modifier' : 'Ajouter'
+              )}
             </Button>
           </div>
         </form>

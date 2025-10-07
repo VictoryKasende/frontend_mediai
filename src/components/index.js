@@ -15,3 +15,4 @@ export { default as ConsultationMessaging } from './ConsultationMessaging';
 export { default as AIAnalysisModal } from './AIAnalysisModal';
 export { default as AIAnalysisDisplay } from './AIAnalysisDisplay';
 export { default as WhatsAppModal } from './WhatsAppModal';
+export { default as PatientNotificationModal } from './PatientNotificationModal';

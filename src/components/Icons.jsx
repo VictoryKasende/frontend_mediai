@@ -255,7 +255,8 @@ export const MedicalIcons = {
   Attachment: Paperclip,
   Image: PhotoIcon,
   Diagnostic: Target,
-  QrCode: QrCode
+  QrCode: QrCode,
+  Video: Video
 };
 
 // Icônes pour les statuts et états
@@ -273,7 +274,7 @@ export const StatusIcons = {
   InformationCircle: InformationCircleIcon,
   ExclamationTriangle: ExclamationTriangleIcon,
   Success: Check,
-  Error: X,
+  Error: XCircleIcon,
   Bell: Bell,
   Mail: Mail,
   Upload: Upload,
@@ -287,7 +288,7 @@ export const ActionIcons = {
   Edit: Edit,
   Delete: Trash2,
   Save: Save,
-  Cancel: X,
+  Cancel: XMarkIcon,
   Confirm: Check,
   Search: Search,
   Filter: Filter,

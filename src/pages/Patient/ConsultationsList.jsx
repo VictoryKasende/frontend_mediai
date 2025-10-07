@@ -21,25 +21,6 @@ const ConsultationsList = ({ onViewDetails }) => {
   const [error, setError] = useState(null);
   const { showError } = useNotification();
 
-  // Charger les médecins et consultations depuis l'API
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      // Charger les médecins en premier
-      await loadMedecins();
-      // Puis charger les consultations
-      await loadConsultations();
-    } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [loadMedecins, loadConsultations]);
-
   const loadMedecins = useCallback(async () => {
     try {
       const response = await authService.getMedecins();
@@ -159,6 +140,25 @@ const ConsultationsList = ({ onViewDetails }) => {
       setConsultations([]);
     }
   }, [user, showError]);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Charger les médecins en premier
+      await loadMedecins();
+      // Puis charger les consultations
+      await loadConsultations();
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadMedecins, loadConsultations]);
+
+  // Charger les médecins et consultations depuis l'API
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getStatusColor = (statut) => {
     const baseClasses = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-sm";

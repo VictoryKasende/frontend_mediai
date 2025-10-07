@@ -10,8 +10,6 @@ import Button from './Button';
  * Version simplifiée qui fonctionne même sans backend
  */
 const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, refreshInterval = 10000 }) => {
-  console.log('ConsultationMessaging props:', { ficheId, isOpen, onClose, autoRefresh, refreshInterval });
-  console.log('ficheId type:', typeof ficheId, 'ficheId value:', ficheId);
   
   const { user } = useAuth();
   const { showSuccess, showError, showInfo } = useNotification();
@@ -52,12 +50,12 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
     
     setLoading(true);
     try {
-      console.log('Chargement des messages pour fiche:', ficheId);
+      // console.log('Chargement des messages pour fiche:', ficheId);
       
       // Essayer de charger depuis l'API
       try {
         const data = await ficheMessagingService.getMessages(ficheId);
-        console.log('Messages chargés depuis API:', data);
+        // console.log('Messages chargés depuis API:', data);
         setMessages(Array.isArray(data) ? data : []);
       } catch (apiError) {
         console.warn('API non disponible, utilisation de messages de test:', apiError.message);
@@ -66,19 +64,28 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
         const testMessages = [
           {
             id: 1,
-            content: "Bonjour, j'ai bien reçu votre fiche de consultation. Je vais l'examiner dans les plus brefs délais.",
+            content: "Bonjour madame Mahira, je suis le docteur Bernard.",
             sender_id: 'doctor',
-            sender_name: 'Dr. Medecin',
-            date_envoi: new Date(Date.now() - 3600000).toISOString(),
+            sender_name: 'Dr Pierre Bernard',
+            date_envoi: new Date(Date.now() - 3600000).toISOString(), // Il y a 1 heure
             is_read: true,
             temp: false
           },
           {
             id: 2,
-            content: "Merci docteur. J'attends votre réponse avec impatience.",
+            content: "Bonjour Docteur Bernard, merci pour votre message. J'ai effectivement une toux qui persiste depuis une semaine.",
             sender_id: user?.id || 'patient',
-            sender_name: user?.first_name + ' ' + user?.last_name || 'Patient',
-            date_envoi: new Date(Date.now() - 1800000).toISOString(),
+            sender_name: user?.first_name + ' ' + user?.last_name || 'Mahira Mupasa',
+            date_envoi: new Date(Date.now() - 1800000).toISOString(), // Il y a 30 minutes
+            is_read: true,
+            temp: false
+          },
+          {
+            id: 3,
+            content: "Bonjour Docteur Bernard",
+            sender_id: user?.id || 'patient',
+            sender_name: user?.first_name + ' ' + user?.last_name || 'Mahira Mupasa',
+            date_envoi: new Date(Date.now() - 300000).toISOString(), // Il y a 5 minutes
             is_read: true,
             temp: false
           }
@@ -219,13 +226,22 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
   }
 
   const formatTime = (dateString) => {
+    if (!dateString) return 'Heure inconnue';
+    
     try {
       const date = new Date(dateString);
-      return date.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-    } catch {
+      
+      // Test simple : si on peut obtenir l'heure, c'est que la date est valide
+      if (isNaN(date.getTime())) {
+        return 'Heure inconnue';
+      }
+      
+      // Formatage simple et direct
+      const hours = date.getHours().toString().padStart(2, '0');
+      const minutes = date.getMinutes().toString().padStart(2, '0');
+      return `${hours}:${minutes}`;
+      
+    } catch (error) {
       return 'Heure inconnue';
     }
   };
@@ -248,7 +264,7 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
         <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 rounded-t-xl flex justify-between items-center">
           <div>
             <h3 className="text-lg font-semibold flex items-center">
-              <MedicalIcons.Chat className="w-5 h-5 mr-2" />
+              <div className="w-5 h-5 mr-2 bg-blue-600 rounded-full"></div>
               Messages de consultation
             </h3>
             <div className="flex items-center space-x-4 text-sm opacity-90 mt-1">
@@ -265,7 +281,7 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
             onClick={onClose}
             className="text-white hover:bg-white/20 rounded-lg p-2 transition-all"
           >
-            <StatusIcons.X className="w-5 h-5" />
+            <div className="w-5 h-5 bg-gray-600 rounded-full"></div>
           </button>
         </div>
 
@@ -278,7 +294,7 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-8">
-              <MedicalIcons.Chat className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <div className="w-12 h-12 bg-gray-400 rounded-full mx-auto mb-4"></div>
               <h4 className="text-lg font-medium text-gray-600 mb-2">Aucun message</h4>
               <p className="text-gray-500">Soyez le premier à démarrer la conversation</p>
             </div>
@@ -336,7 +352,7 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose, autoRefresh = true, r
               {sending ? (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
               ) : (
-                <ActionIcons.Send className="w-4 h-4" />
+                <div className="w-4 h-4 bg-white rounded-full"></div>
               )}
               <span>Envoyer</span>
             </Button>
