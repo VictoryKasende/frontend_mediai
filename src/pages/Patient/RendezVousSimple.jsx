@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons, ActionIcons } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -12,7 +12,7 @@ import { appointmentService, authService, availabilityService } from '../../serv
  * Version basique pour éviter les erreurs de page blanche
  */
 const RendezVousSimple = ({ onBack }) => {
-  const { showSuccess, showError, showInfo } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const { user } = useAuth();
   
   const [activeView, setActiveView] = useState('list');
@@ -187,7 +187,7 @@ const RendezVousSimple = ({ onBack }) => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [loadAppointments, loadMedecins]);
 
   // Charger créneaux quand médecin ou date change
   useEffect(() => {
@@ -198,7 +198,7 @@ const RendezVousSimple = ({ onBack }) => {
       setAvailableSlots([]);
       setSelectedSlot(null);
     }
-  }, [formData.medecin_id, formData.date_rdv]);
+  }, [formData.medecin_id, formData.date_rdv, loadAvailableSlots]);
 
   // Obtenir le nom du médecin depuis l'ID ou le champ medecin_username
   const getMedecinName = (medecinIdOrUsername) => {
@@ -219,21 +219,17 @@ const RendezVousSimple = ({ onBack }) => {
   // Formater la date/heure depuis ISO 8601
   const formatDateTime = (isoString) => {
     if (!isoString) return 'Date non définie';
-    try {
-      const date = new Date(isoString);
-      const dateStr = date.toLocaleDateString('fr-FR', { 
-        day: '2-digit', 
-        month: '2-digit', 
-        year: 'numeric' 
-      });
-      const timeStr = date.toLocaleTimeString('fr-FR', { 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      });
-      return `${dateStr} à ${timeStr}`;
-    } catch (e) {
-      return 'Date invalide';
-    }
+    const date = new Date(isoString);
+    const dateStr = date.toLocaleDateString('fr-FR', { 
+      day: '2-digit', 
+      month: '2-digit', 
+      year: 'numeric' 
+    });
+    const timeStr = date.toLocaleTimeString('fr-FR', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+    return `${dateStr} à ${timeStr}`;
   };
 
   const getStatusBadge = (status) => {
@@ -342,7 +338,6 @@ const RendezVousSimple = ({ onBack }) => {
       
       // Calculer les timestamps ISO 8601
       const startTime = selectedSlot ? selectedSlot.start_time : manualTime;
-      const [hours, minutes] = startTime.split(':').map(Number);
       
       // requested_start: Date + Heure de début
       const requestedStart = new Date(`${formData.date_rdv}T${startTime}:00`);
