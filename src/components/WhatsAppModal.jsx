@@ -26,6 +26,8 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
   // Préremplir les données quand la fiche change
   useEffect(() => {
     if (fiche && isOpen) {
+      console.log('🔵 WhatsAppModal opened with fiche:', fiche);
+      
       // Récupérer le numéro de téléphone depuis différents champs possibles
       const phoneNumber = fiche.telephone || 
                           fiche.patient?.phone || 
@@ -33,13 +35,18 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
                           fiche.phone || 
                           '';
 
+      console.log('📞 Phone number found:', phoneNumber);
+
       // Déterminer le template par défaut selon le statut
       let defaultTemplate = 'consultation_validee';
       if (fiche.status === 'rejete_medecin' || fiche.status === 'rejete') {
         defaultTemplate = 'consultation_rejetee';
-      } else if (fiche.status === 'en_attente' || fiche.status === 'analyse_terminee') {
+      } else if (fiche.status === 'en_attente') {
         defaultTemplate = 'demande_informations';
       }
+      // 'analyse_terminee' et 'validee' utilisent 'consultation_validee' par défaut
+
+      console.log('📝 Template selected:', defaultTemplate);
 
       setWhatsappOptions(prev => ({
         ...prev,
@@ -145,6 +152,9 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
     const recommandations = fiche?.recommandations || 
       '[Recommandations à suivre]';
 
+    const examens = fiche?.examens_complementaires || 
+      '[Examens complémentaires si nécessaire]';
+
     const motifRejet = fiche?.commentaire_rejet || 
       fiche?.motif_rejet || 
       '[Motif de rejet à spécifier]';
@@ -159,10 +169,14 @@ Bonjour ${patientName},
 Votre consultation du ${consultationDate} a été validée par ${medecinName}.
 
 📋 *Diagnostic:* ${diagnostic}
-💊 *Traitement:* ${traitement}
-📝 *Recommandations:* ${recommandations}
 
-Pour toute question, contactez notre service au +243 XX XX XX XX.
+💊 *Traitement:* ${traitement}
+
+� *Examens complémentaires:* ${examens}
+
+�📝 *Recommandations:* ${recommandations}
+
+Pour toute question, contactez notre service au +243 997 123 456.
 
 Bonne santé ! 🌟`
       },
@@ -548,6 +562,17 @@ L'équipe médicale`
           <div className="space-y-6">
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-6 border-b border-gray-200 pb-2">Aperçu du message</h4>
+              
+              {/* Note d'information */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 flex items-start space-x-3">
+                <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">Aperçu du message</p>
+                  <p className="text-blue-700">Le message réel envoyé contiendra toutes les informations détaillées de la consultation (diagnostic complet, traitement avec posologie, examens, recommandations).</p>
+                </div>
+              </div>
               
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
                 <div className="flex items-center mb-4">
