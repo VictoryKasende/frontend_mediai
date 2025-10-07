@@ -187,7 +187,8 @@ const RendezVousSimple = ({ onBack }) => {
     return () => {
       mounted = false;
     };
-  }, [loadAppointments, loadMedecins]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // Charger une seule fois au montage
 
   // Charger créneaux quand médecin ou date change
   useEffect(() => {
@@ -198,7 +199,8 @@ const RendezVousSimple = ({ onBack }) => {
       setAvailableSlots([]);
       setSelectedSlot(null);
     }
-  }, [formData.medecin_id, formData.date_rdv, loadAvailableSlots]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [formData.medecin_id, formData.date_rdv]); // Uniquement quand les données du formulaire changent
 
   // Obtenir le nom du médecin depuis l'ID ou le champ medecin_username
   const getMedecinName = (medecinIdOrUsername) => {

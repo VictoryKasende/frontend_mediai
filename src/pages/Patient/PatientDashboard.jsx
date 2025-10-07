@@ -522,7 +522,8 @@ const PatientDashboard = () => {
       // Charger seulement si pas déjà chargés et pas en cours de chargement
       loadMedecinsData();
     }
-  }, [activeView, loadDashboardData, medecinsLoaded, loadingMedecins]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView]);
 
   const menuItems = [
     { 
