@@ -9,13 +9,11 @@ import ConsultationMessaging from '../../components/ConsultationMessaging';
 import PatientNotificationModal from '../../components/PatientNotificationModal';
 import { consultationService, authService, exportService } from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
-import { useAuth } from '../../contexts/AuthContext';
 
 /**
  * Détails d'une consultation avec réponse du médecin
  */
 const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('fiche');
   const [consultation, setConsultation] = useState(null);
   const [medecins, setMedecins] = useState([]);
@@ -1097,6 +1095,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
     }
 
     // Préparer les données pour le composant AIAnalysisDisplay
+    // eslint-disable-next-line no-unused-vars
     const analysisData = {
       diagnostic: consultation.diagnostic,
       recommandations: consultation.recommandations,

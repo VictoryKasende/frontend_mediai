@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
 import { MedicalIcons, NavigationIcons, StatusIcons, ActionIcons, Icon } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
@@ -9,7 +8,6 @@ import Input from '../../components/Input';
  * Planning, confirmation, modification et suivi des rendez-vous
  */
 const DoctorAppointments = () => {
-  const { user } = useAuth();
   const [activeView, setActiveView] = useState('calendar'); // 'calendar', 'list', 'detail'
   const [appointments, setAppointments] = useState([]);
   const [selectedAppointment, setSelectedAppointment] = useState(null);

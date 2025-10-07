@@ -22,7 +22,7 @@ export const useLogout = () => {
       
       // Redirection vers la page de connexion
       navigate('/auth/login');
-    } catch (error) {
+    } catch (_error) {
       showError('Erreur lors de la déconnexion');
       // Redirection même en cas d'erreur
       navigate('/auth/login');

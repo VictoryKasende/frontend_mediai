@@ -126,7 +126,7 @@ const DoctorRendezVous = ({ onBack }) => {
         return `${dateStr} à ${time}`;
       }
       return dateStr;
-    } catch (error) {
+    } catch (_error) {
       return 'Date invalide';
     }
   };

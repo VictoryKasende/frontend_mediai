@@ -5,7 +5,7 @@ import { MedicalIcons, NavigationIcons, StatusIcons, ActionIcons, Icon, MedicalI
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import { exportToPDF, printConsultation } from '../../services/MedicalPDFService';
-import { consultationService, ficheMessagingService, ficheAIService, whatsappService } from '../../services/api';
+import { consultationService } from '../../services/api';
 import ConsultationMessaging from '../../components/ConsultationMessaging';
 import AIAnalysisModal from '../../components/AIAnalysisModal';
 import WhatsAppModal from '../../components/WhatsAppModal';
@@ -42,6 +42,29 @@ const DoctorConsultations = () => {
   const [showAIAnalysisModal, setShowAIAnalysisModal] = useState(false);
   const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [selectedFicheForAction, setSelectedFicheForAction] = useState(null);
+  
+  // États pour WhatsApp
+  const [whatsappData, setWhatsappData] = useState({
+    message_template: 'default',
+    additional_info: ''
+  });
+  const [sendingWhatsApp, setSendingWhatsApp] = useState(false);
+  
+  // Fonction pour envoyer un message WhatsApp
+  // eslint-disable-next-line no-unused-vars
+  const sendWhatsAppMessage = async (consultationId) => {
+    setSendingWhatsApp(true);
+    try {
+      // Implémentation future avec l'API WhatsApp
+      console.log('Envoi WhatsApp pour consultation:', consultationId);
+      showSuccess('Message WhatsApp envoyé avec succès');
+      setShowWhatsAppModal(false);
+    } catch (error) {
+      showError('Erreur lors de l\'envoi WhatsApp');
+    } finally {
+      setSendingWhatsApp(false);
+    }
+  };
 
   // États pour la messagerie des consultations (legacy - conservés pour compatibilité)
   const [consultationMessages, setConsultationMessages] = useState([]);
@@ -177,6 +200,7 @@ const DoctorConsultations = () => {
   };
 
   // Gestion de la validation d'une consultation
+  // eslint-disable-next-line no-unused-vars
   const handleValidateConsultation = async (consultationId) => {
     if (!formData.diagnostic.trim()) {
       showError('Erreur', 'Le diagnostic est obligatoire pour valider une consultation');
@@ -253,6 +277,7 @@ const DoctorConsultations = () => {
   };
 
   // Gestion du rejet d'une consultation
+  // eslint-disable-next-line no-unused-vars
   const handleRejectConsultation = async (consultationId) => {
     if (!formData.commentaire_rejet.trim()) {
       showError('Erreur', 'Veuillez spécifier un motif de rejet');
@@ -743,6 +768,7 @@ const DoctorConsultations = () => {
   };
 
   // Modal pour la messagerie des consultations
+  // eslint-disable-next-line no-unused-vars
   const renderMessagesModal = () => (
     showMessagesModal && (
       <div className="fixed inset-0 bg-overlay-bg backdrop-blur-sm z-50 flex items-center justify-center p-4">
@@ -831,6 +857,7 @@ const DoctorConsultations = () => {
   );
 
   // Modal pour l'envoi WhatsApp
+  // eslint-disable-next-line no-unused-vars
   const renderWhatsAppModal = () => (
     showWhatsAppModal && (
       <div className="fixed inset-0 bg-overlay-bg backdrop-blur-sm z-50 flex items-center justify-center p-4">

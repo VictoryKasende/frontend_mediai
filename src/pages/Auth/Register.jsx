@@ -268,7 +268,7 @@ const Register = () => {
         showError(errorMessage);
         setIsLoading(false);
       }
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = 'Une erreur technique est survenue lors de l\'inscription. Veuillez réessayer.';
       setErrors({ submit: errorMessage });
       showError(errorMessage);
