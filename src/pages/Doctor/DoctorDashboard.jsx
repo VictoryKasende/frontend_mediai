@@ -6,13 +6,13 @@ import { useNavigate } from 'react-router-dom';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import DoctorConsultations from './DoctorConsultations';
-import DoctorAppointments from './DoctorAppointments';
 import DoctorChatIa from './DoctorChatIa';
+import ConsultationPresentielForm from './ConsultationPresentielForm';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import api, { dashboardService, consultationService } from '../../services/api';
 
 /**
- * Tableau de bord Médecin - Gestion complète des consultations et patients
+ * Tableau de bord Médecin - Gestion complète des consultations
  * Affichage des statistiques et suivi de l'activité médicale
  */
 const DoctorDashboard = () => {
@@ -25,68 +25,55 @@ const DoctorDashboard = () => {
     consultationsAujourdhui: 0,
     consultationsValidees: 0,
     consultationsEnAttente: 0,
-    totalConsultations: 0,
-    patientsUniques: 0
+    totalConsultations: 0
   });
   const [isLoading, setIsLoading] = useState(true);
   const [activeView, setActiveView] = useState('overview');
   const [selectedConsultation, setSelectedConsultation] = useState(null);
   const [showChat, setShowChat] = useState(false);
   const [recentConsultations, setRecentConsultations] = useState([]);
-  
-  // États pour la gestion des patients
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('tous');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-  const [showPatientDetail, setShowPatientDetail] = useState(false);
+
+  // Fonction pour charger les données du médecin
+  const loadDoctorData = async () => {
+    setIsLoading(true);
+    try {
+      // Charger les statistiques
+      const statsResponse = await dashboardService.getDoctorStats();
+      if (statsResponse.success) {
+        setStats(statsResponse.data);
+      }
+      
+      // Charger les consultations récentes
+      const consultationsResponse = await consultationService.getConsultations();
+      if (consultationsResponse && consultationsResponse.results && Array.isArray(consultationsResponse.results)) {
+        // Trier par date de création décroissante et prendre les 5 dernières
+        const sorted = consultationsResponse.results
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+          .slice(0, 5);
+        setRecentConsultations(sorted);
+      }
+      
+      // Notification de succès uniquement en cas de premier chargement ou refresh
+      // showSuccess('Données chargées', 'Tableau de bord mis à jour avec succès');
+    } catch (error) {
+      showError('Erreur', 'Erreur lors du chargement des données');
+      
+      // Fallback vers des données par défaut
+      setStats({
+        consultationsEnCours: 0,
+        consultationsAujourdhui: 0,
+        consultationsValidees: 0,
+        consultationsEnAttente: 0,
+        totalConsultations: 0
+      });
+      setRecentConsultations([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   // Chargement des données médicales réelles
   useEffect(() => {
-    const loadDoctorData = async () => {
-      setIsLoading(true);
-      try {
-        console.log('Chargement des statistiques du médecin...');
-        
-        // Charger les statistiques
-        const statsResponse = await dashboardService.getDoctorStats();
-        if (statsResponse.success) {
-          console.log('Statistiques reçues:', statsResponse.data);
-          setStats(statsResponse.data);
-        }
-        
-        // Charger les consultations récentes
-        const consultationsResponse = await consultationService.getConsultations();
-        if (consultationsResponse && consultationsResponse.results && Array.isArray(consultationsResponse.results)) {
-          // Trier par date de création décroissante et prendre les 5 dernières
-          const sorted = consultationsResponse.results
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 5);
-          setRecentConsultations(sorted);
-          console.log('Consultations récentes:', sorted);
-        }
-        
-        // Notification de succès uniquement en cas de premier chargement ou refresh
-        // showSuccess('Données chargées', 'Tableau de bord mis à jour avec succès');
-      } catch (error) {
-        console.error('Erreur lors du chargement des données:', error);
-        showError('Erreur', 'Erreur lors du chargement des données');
-        
-        // Fallback vers des données par défaut
-        setStats({
-          consultationsEnCours: 0,
-          consultationsAujourdhui: 0,
-          consultationsValidees: 0,
-          consultationsEnAttente: 0,
-          totalConsultations: 0,
-          patientsUniques: 0
-        });
-        setRecentConsultations([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
     if (user && user.role === 'medecin') {
       loadDoctorData();
     }
@@ -95,9 +82,7 @@ const DoctorDashboard = () => {
   const menuItems = [
     { id: 'overview', label: 'Aperçu', icon: NavigationIcons.Dashboard, description: 'Vue générale de votre activité', color: 'text-mediai-primary' },
     { id: 'consultations', label: 'Consultations', icon: MedicalIcons.Stethoscope, description: 'Gestion des consultations médicales', color: 'text-mediai-secondary' },
-    { id: 'rendez-vous', label: 'Rendez-vous', icon: MedicalIcons.Appointment, description: 'Planning et rendez-vous', color: 'text-mediai-primary' },
-    { id: 'chat-ia', label: 'Chat IA', icon: NavigationIcons.Chat, description: 'Interface ChatGPT médical', color: 'text-mediai-primary' },
-    { id: 'patients', label: 'Patients', icon: StatusIcons.Star, description: 'Gestion des dossiers patients', color: 'text-mediai-secondary' }
+    { id: 'chat-ia', label: 'Chat IA', icon: NavigationIcons.Chat, description: 'Interface ChatGPT médical', color: 'text-mediai-primary' }
   ];
 
   const StatCard = ({ title, value, icon, variant = 'primary' }) => {
@@ -331,7 +316,6 @@ const DoctorDashboard = () => {
             uniqueMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
             
             setChatMessages(uniqueMessages);
-            console.log('Messages chargés:', uniqueMessages);
           } else {
             // Aucun message trouvé dans la conversation
             const infoMessage = {
@@ -363,8 +347,6 @@ const DoctorDashboard = () => {
         setChatMessages([errorMessage]);
       }
     } catch (error) {
-      console.error('Erreur lors du chargement des messages:', error);
-      
       // En cas d'erreur, afficher un message d'erreur informatif
       const errorMessage = {
         id: Date.now(),
@@ -407,10 +389,7 @@ const DoctorDashboard = () => {
       try {
         // TODO: Envoyer le message à l'API
         // await chatService.sendMessage(selectedConsultation.id, chatInput);
-        
-        console.log('Message envoyé pour consultation:', selectedConsultation.id, chatInput);
       } catch (error) {
-        console.error('Erreur lors de l\'envoi du message:', error);
         showError('Erreur', 'Impossible d\'envoyer le message');
       }
     }
@@ -531,541 +510,26 @@ const DoctorDashboard = () => {
     </div>
   );
 
-  const renderConsultations = () => (
-    <DoctorConsultations />
+  const renderNouvelleConsultation = () => (
+    <ConsultationPresentielForm 
+      onBack={() => setActiveView('overview')}
+      onSuccess={(result) => {
+        showSuccess('Consultation créée', 'La fiche de consultation a été enregistrée avec succès.');
+        // Recharger les données
+        loadDoctorData();
+        // Rediriger vers la liste des consultations après 1 seconde
+        setTimeout(() => setActiveView('consultations'), 1000);
+      }}
+    />
   );
 
-  const renderRendezVous = () => (
-    <DoctorAppointments />
+  const renderConsultations = () => (
+    <DoctorConsultations onNewConsultation={() => setActiveView('nouvelle-consultation')} />
   );
 
   const renderChatIA = () => (
     <DoctorChatIa />
   );
-
-  const renderPatients = () => {
-    // Données complètes des patients (maintenant sans hooks)
-    const allPatients = [
-      { 
-        id: 1, 
-        nom: "Marie Dupont", 
-        prenom: "Marie",
-        age: 34, 
-        dateNaissance: "1991-03-15",
-        telephone: "+243 85 123 4567",
-        email: "marie.dupont@email.com",
-        adresse: "123 Avenue Lumumba, Kinshasa",
-        derniere: "2025-08-28", 
-        statut: "Suivi", 
-        motif: "Hypertension",
-        medicaments: ["Lisinopril 10mg", "Hydrochlorothiazide 25mg"],
-        allergies: ["Pénicilline"],
-        antecedents: ["Diabète familial"],
-        assurance: "SONAS",
-        consultations: 8
-      },
-      { 
-        id: 2, 
-        nom: "Jean Martin", 
-        prenom: "Jean",
-        age: 45, 
-        dateNaissance: "1980-07-22",
-        telephone: "+243 81 987 6543",
-        email: "jean.martin@email.com",
-        adresse: "456 Boulevard du 30 Juin, Kinshasa",
-        derniere: "2025-08-27", 
-        statut: "Traitement", 
-        motif: "Diabète type 2",
-        medicaments: ["Metformine 500mg", "Insuline"],
-        allergies: ["Aucune connue"],
-        antecedents: ["Hypertension", "Obésité"],
-        assurance: "CNSS",
-        consultations: 15
-      },
-      { 
-        id: 3, 
-        nom: "Sarah Johnson", 
-        prenom: "Sarah",
-        age: 28, 
-        dateNaissance: "1997-11-08",
-        telephone: "+243 99 456 7890",
-        email: "sarah.johnson@email.com",
-        adresse: "789 Rue de la Paix, Kinshasa",
-        derniere: "2025-08-26", 
-        statut: "Guéri", 
-        motif: "Infection respiratoire",
-        medicaments: ["Amoxicilline"],
-        allergies: ["Aspirine"],
-        antecedents: ["Asthme léger"],
-        assurance: "Privée",
-        consultations: 3
-      },
-      { 
-        id: 4, 
-        nom: "Paul Mukendi", 
-        prenom: "Paul",
-        age: 52, 
-        dateNaissance: "1973-01-30",
-        telephone: "+243 82 321 6547",
-        email: "paul.mukendi@email.com",
-        adresse: "321 Avenue Kasavubu, Kinshasa",
-        derniere: "2025-08-25", 
-        statut: "Urgence", 
-        motif: "Douleurs cardiaques",
-        medicaments: ["Aspirine", "Atorvastatine"],
-        allergies: ["Iode"],
-        antecedents: ["Infarctus 2020", "Cholestérol"],
-        assurance: "SONAS",
-        consultations: 12
-      },
-      { 
-        id: 5, 
-        nom: "Anne Kabongo", 
-        prenom: "Anne",
-        age: 39, 
-        dateNaissance: "1986-05-14",
-        telephone: "+243 84 654 3210",
-        email: "anne.kabongo@email.com",
-        adresse: "654 Rue Lumière, Kinshasa",
-        derniere: "2025-08-24", 
-        statut: "Suivi", 
-        motif: "Grossesse - 3e trimestre",
-        medicaments: ["Vitamines prénatales", "Fer"],
-        allergies: ["Latex"],
-        antecedents: ["2 grossesses normales"],
-        assurance: "CNSS",
-        consultations: 6
-      }
-    ];
-
-    // Filtrage des patients
-    const filteredPatients = allPatients.filter(patient => {
-      const matchesSearch = patient.nom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           patient.prenom.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           patient.motif.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesFilter = filterStatus === 'tous' || patient.statut.toLowerCase() === filterStatus.toLowerCase();
-      return matchesSearch && matchesFilter;
-    });
-
-  const getStatutBadge = (statut) => {
-    switch(statut) {
-      case 'Suivi': return 'bg-blue-100 text-blue-800 border-blue-200';
-      case 'Traitement': return 'bg-warning/10 text-warning border-warning/20';
-      case 'Guéri': return 'bg-success/10 text-success border-success/20';
-      case 'Urgence': return 'bg-danger/10 text-danger border-danger/20';
-      default: return 'bg-mediai-light text-mediai-medium border-border-light';
-    }
-  };
-
-    const openPatientDetail = (patient) => {
-      setSelectedPatient(patient);
-      setShowPatientDetail(true);
-    };
-
-    const renderPatientDetailModal = () => (
-      <div className="fixed inset-0 bg-overlay-bg backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-border-light">
-          <div className="gradient-mediai text-white p-6 rounded-t-2xl flex justify-between items-center">
-            <div className="flex items-center space-x-4">
-              <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
-              </div>
-              <div>
-                <h3 className="text-xl font-bold font-heading">
-                  {selectedPatient?.prenom} {selectedPatient?.nom}
-                </h3>
-                <p className="text-white/80 text-sm">Dossier médical - {selectedPatient?.age} ans</p>
-              </div>
-            </div>
-            <button 
-              onClick={() => setShowPatientDetail(false)}
-              className="text-white hover:bg-white/20 rounded-xl p-2 transition-all">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className="p-6 space-y-6">
-            {/* Informations personnelles */}
-            <div className="bg-light rounded-xl p-6 border border-border-light">
-              <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
-                <MedicalIcon icon={MedicalIcons.User} size="w-5 h-5" className="text-mediai-primary mr-2" />
-                Informations personnelles
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Date de naissance</p>
-                  <p className="text-mediai-dark">{selectedPatient?.dateNaissance}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Téléphone</p>
-                  <p className="text-mediai-dark">{selectedPatient?.telephone}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Email</p>
-                  <p className="text-mediai-dark">{selectedPatient?.email}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Assurance</p>
-                  <p className="text-mediai-dark">{selectedPatient?.assurance}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm text-mediai-medium font-subheading">Adresse</p>
-                  <p className="text-mediai-dark">{selectedPatient?.adresse}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Statut médical actuel */}
-            <div className="bg-light rounded-xl p-6 border border-border-light">
-              <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
-                <MedicalIcon icon={MedicalIcons.Stethoscope} size="w-5 h-5" className="text-mediai-primary mr-2" />
-                Statut médical actuel
-              </h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Motif de suivi</p>
-                  <p className="text-mediai-dark">{selectedPatient?.motif}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Statut</p>
-                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-semibold border ${getStatutBadge(selectedPatient?.statut)}`}>
-                    {selectedPatient?.statut}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Dernière consultation</p>
-                  <p className="text-mediai-dark">{selectedPatient?.derniere}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-mediai-medium font-subheading">Nombre de consultations</p>
-                  <p className="text-mediai-dark">{selectedPatient?.consultations}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Médicaments actuels */}
-            <div className="bg-light rounded-xl p-6 border border-border-light">
-              <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
-                <MedicalIcon icon={MedicalIcons.Prescription} size="w-5 h-5" className="text-mediai-primary mr-2" />
-                Médicaments actuels
-              </h4>
-              <div className="flex flex-wrap gap-2">
-                {selectedPatient?.medicaments.map((med, index) => (
-                  <span key={index} className="bg-success/10 text-success px-3 py-1 rounded-full text-sm font-medium">
-                    {med}
-                  </span>
-                ))}
-              </div>
-            </div>
-
-            {/* Allergies et antécédents */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-light rounded-xl p-6 border border-border-light">
-                <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
-                  <MedicalIcon icon={StatusIcons.Warning} size="w-5 h-5" className="text-warning mr-2" />
-                  Allergies
-                </h4>
-                <div className="space-y-2">
-                  {selectedPatient?.allergies.map((allergie, index) => (
-                    <span key={index} className="block bg-warning/10 text-warning px-3 py-2 rounded-lg text-sm font-medium">
-                      ⚠️ {allergie}
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              <div className="bg-light rounded-xl p-6 border border-border-light">
-                <h4 className="text-lg font-bold text-mediai-dark mb-4 font-heading flex items-center">
-                  <MedicalIcon icon={MedicalIcons.History} size="w-5 h-5" className="text-mediai-secondary mr-2" />
-                  Antécédents
-                </h4>
-                <div className="space-y-2">
-                  {selectedPatient?.antecedents.map((antecedent, index) => (
-                    <span key={index} className="block bg-mediai-secondary/10 text-mediai-secondary px-3 py-2 rounded-lg text-sm font-medium">
-                      📋 {antecedent}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex flex-wrap gap-3 pt-4 border-t border-border-light">
-              <button className="flex items-center space-x-2 bg-mediai-primary text-white px-4 py-2 rounded-lg hover:bg-mediai-secondary transition-colors">
-                <MedicalIcon icon={MedicalIcons.Appointment} size="w-4 h-4" />
-                <span>Nouvelle consultation</span>
-              </button>
-              <button className="flex items-center space-x-2 bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors">
-                <MedicalIcon icon={MedicalIcons.Prescription} size="w-4 h-4" />
-                <span>Prescrire</span>
-              </button>
-              <button className="flex items-center space-x-2 bg-mediai-secondary text-white px-4 py-2 rounded-lg hover:bg-purple-600 transition-colors">
-                <MedicalIcon icon={MedicalIcons.History} size="w-4 h-4" />
-                <span>Historique</span>
-              </button>
-              <button className="flex items-center space-x-2 bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors">
-                <MedicalIcon icon={ActionIcons.Edit} size="w-4 h-4" />
-                <span>Modifier</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-
-    const renderAddPatientModal = () => (
-      <div className="fixed inset-0 bg-overlay-bg backdrop-blur-sm z-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto shadow-2xl border border-border-light">
-          <div className="gradient-mediai text-white p-6 rounded-t-2xl flex justify-between items-center">
-            <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                <MedicalIcon icon={ActionIcons.Add} size="w-5 h-5" className="text-white" />
-              </div>
-              <h3 className="text-xl font-bold font-heading">Nouveau patient</h3>
-            </div>
-            <button 
-              onClick={() => setShowAddModal(false)}
-              className="text-white hover:bg-white/20 rounded-xl p-2 transition-all">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
-          
-          <div className="p-6">
-            <form className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Prénom *</label>
-                  <input type="text" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
-                </div>
-                <div>
-                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Nom *</label>
-                  <input type="text" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
-                </div>
-                <div>
-                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Date de naissance *</label>
-                  <input type="date" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
-                </div>
-                <div>
-                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Téléphone *</label>
-                  <input type="tel" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
-                </div>
-                <div>
-                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Email</label>
-                  <input type="email" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" />
-                </div>
-                <div>
-                  <label className="block text-sm font-subheading text-mediai-dark mb-2">Assurance</label>
-                  <select className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary">
-                    <option value="">Sélectionner...</option>
-                    <option value="SONAS">SONAS</option>
-                    <option value="CNSS">CNSS</option>
-                    <option value="Privée">Assurance privée</option>
-                    <option value="Aucune">Aucune</option>
-                  </select>
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-subheading text-mediai-dark mb-2">Adresse</label>
-                <textarea rows="2" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary"></textarea>
-              </div>
-
-              <div>
-                <label className="block text-sm font-subheading text-mediai-dark mb-2">Motif de consultation</label>
-                <textarea rows="3" className="w-full px-3 py-2 border border-border-light rounded-lg focus:outline-none focus:ring-2 focus:ring-mediai-primary" placeholder="Décrivez le motif de la première consultation..."></textarea>
-              </div>
-
-              <div className="flex justify-end space-x-3 pt-4 border-t border-border-light">
-                <button 
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-6 py-2 border border-border-light text-mediai-medium rounded-lg hover:bg-light transition-colors">
-                  Annuler
-                </button>
-                <button 
-                  type="submit"
-                  className="px-6 py-2 gradient-mediai text-white rounded-lg hover:shadow-lg transition-all">
-                  Ajouter le patient
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </div>
-    );
-
-    return (
-      <div className="space-y-6 animate-fadeIn">
-        {/* Header avec actions */}
-        <div className="bg-white rounded-2xl shadow-lg p-6 border border-border-light">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div className="flex items-center space-x-3">
-              <div className="w-12 h-12 gradient-mediai rounded-xl flex items-center justify-center">
-                <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-mediai-dark font-heading">Gestion des patients</h2>
-                <p className="text-sm text-mediai-medium font-body">
-                  {filteredPatients.length} patient{filteredPatients.length > 1 ? 's' : ''} • Total: {allPatients.length}
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex flex-col sm:flex-row space-y-3 sm:space-y-0 sm:space-x-3">
-              <button 
-                onClick={() => setShowAddModal(true)}
-                className="flex items-center justify-center space-x-2 bg-mediai-primary text-white px-4 py-2 rounded-lg hover:bg-mediai-secondary transition-colors font-body-medium">
-                <MedicalIcon icon={ActionIcons.Add} size="w-4 h-4" />
-                <span>Nouveau patient</span>
-              </button>
-              <button className="flex items-center justify-center space-x-2 bg-success text-white px-4 py-2 rounded-lg hover:bg-green-600 transition-colors font-body-medium">
-                <MedicalIcon icon={ActionIcons.Export} size="w-4 h-4" />
-                <span>Exporter</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Barre de recherche et filtres */}
-          <div className="mt-6 flex flex-col lg:flex-row space-y-3 lg:space-y-0 lg:space-x-4">
-            <div className="flex-1">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Rechercher un patient (nom, prénom, motif)..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-3 border border-border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-mediai-primary bg-light"
-                />
-                <MedicalIcon icon={ActionIcons.Search} size="w-5 h-5" className="absolute left-3 top-1/2 transform -translate-y-1/2 text-mediai-medium" />
-              </div>
-            </div>
-            <div className="lg:w-48">
-              <select
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="w-full px-4 py-3 border border-border-light rounded-xl focus:outline-none focus:ring-2 focus:ring-mediai-primary bg-light">
-                <option value="tous">Tous les statuts</option>
-                <option value="suivi">En suivi</option>
-                <option value="traitement">En traitement</option>
-                <option value="guéri">Guéri</option>
-                <option value="urgence">Urgence</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Statistiques des patients */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
-            <div className="flex items-center">
-              <MedicalIcon icon={StatusIcons.Success} size="w-8 h-8" className="text-success mr-3" />
-              <div>
-                <p className="text-2xl font-bold text-mediai-dark">{allPatients.length}</p>
-                <p className="text-sm text-mediai-medium">Patients total</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
-            <div className="flex items-center">
-              <MedicalIcon icon={MedicalIcons.Appointment} size="w-8 h-8" className="text-warning mr-3" />
-              <div>
-                <p className="text-2xl font-bold text-mediai-dark">{allPatients.filter(p => p.statut === 'Suivi').length}</p>
-                <p className="text-sm text-mediai-medium">En suivi</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
-            <div className="flex items-center">
-              <MedicalIcon icon={StatusIcons.Warning} size="w-8 h-8" className="text-mediai-primary mr-3" />
-              <div>
-                <p className="text-2xl font-bold text-mediai-dark">{allPatients.filter(p => p.statut === 'Traitement').length}</p>
-                <p className="text-sm text-mediai-medium">En traitement</p>
-              </div>
-            </div>
-          </div>
-          <div className="bg-white p-4 rounded-xl border border-border-light shadow-sm">
-            <div className="flex items-center">
-              <MedicalIcon icon={StatusIcons.Error} size="w-8 h-8" className="text-danger mr-3" />
-              <div>
-                <p className="text-2xl font-bold text-mediai-dark">{allPatients.filter(p => p.statut === 'Urgence').length}</p>
-                <p className="text-sm text-mediai-medium">Urgences</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Liste des patients */}
-        <div className="bg-white rounded-2xl shadow-lg border border-border-light overflow-hidden">
-          <div className="bg-light px-6 py-4 border-b border-border-light">
-            <h3 className="text-lg font-bold text-mediai-dark font-heading">
-              Liste des patients ({filteredPatients.length})
-            </h3>
-          </div>
-          <div className="p-6">
-            {filteredPatients.length === 0 ? (
-              <div className="text-center py-12">
-                <MedicalIcon icon={StatusIcons.Info} size="w-12 h-12" className="text-mediai-medium mx-auto mb-4" />
-                <p className="text-mediai-medium">Aucun patient trouvé</p>
-                <p className="text-sm text-mediai-medium mt-2">Modifiez vos critères de recherche ou ajoutez un nouveau patient</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {filteredPatients.map((patient) => (
-                  <div key={patient.id} className="flex flex-col lg:flex-row lg:items-center justify-between p-4 border border-border-light rounded-xl hover:bg-light transition-all duration-300 hover-lift space-y-3 lg:space-y-0">
-                    <div className="flex items-center space-x-4 flex-1">
-                      <div className="w-12 h-12 bg-mediai-primary rounded-xl flex items-center justify-center flex-shrink-0">
-                        <MedicalIcon icon={StatusIcons.Star} size="w-6 h-6" className="text-white" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center space-x-3 mb-1">
-                          <h4 className="font-bold text-mediai-dark text-lg font-heading truncate">
-                            {patient.prenom} {patient.nom}
-                          </h4>
-                          <span className={`px-2 py-1 rounded-full text-xs font-semibold border ${getStatutBadge(patient.statut)}`}>
-                            {patient.statut}
-                          </span>
-                        </div>
-                        <p className="text-sm text-mediai-medium font-body">{patient.age} ans • {patient.motif}</p>
-                        <p className="text-xs text-mediai-medium font-body mt-1">
-                          📞 {patient.telephone} • 🏥 {patient.assurance}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center justify-between lg:justify-end space-x-3 lg:space-x-4">
-                      <div className="text-right hidden lg:block">
-                        <p className="text-sm font-medium text-mediai-dark">Dernière consultation</p>
-                        <p className="text-xs text-mediai-medium">{patient.derniere}</p>
-                        <p className="text-xs text-mediai-medium">{patient.consultations} consultation{patient.consultations > 1 ? 's' : ''}</p>
-                      </div>
-                      <div className="flex space-x-2">
-                        <button 
-                          onClick={() => openPatientDetail(patient)}
-                          className="px-3 py-2 bg-mediai-primary text-white text-sm font-semibold rounded-lg hover:bg-mediai-secondary transition-colors">
-                          Voir détails
-                        </button>
-                        <button className="px-3 py-2 bg-success text-white text-sm font-semibold rounded-lg hover:bg-green-600 transition-colors">
-                          Consulter
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Modals */}
-        {showPatientDetail && renderPatientDetailModal()}
-        {showAddModal && renderAddPatientModal()}
-      </div>
-    );
-  };
 
   const renderOverview = () => (
     <div className="space-y-6 lg:space-y-8">
@@ -1140,18 +604,6 @@ const DoctorDashboard = () => {
             </div>
             <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
               <MedicalIcon icon={MedicalIcons.Document} size="w-6 h-6" className="text-white" />
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 sm:p-6 text-white">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-green-100 text-sm font-medium">Patients uniques</p>
-              <p className="text-2xl sm:text-3xl font-bold">{stats.patientsUniques}</p>
-            </div>
-            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center">
-              <MedicalIcon icon={MedicalIcons.User} size="w-6 h-6" className="text-white" />
             </div>
           </div>
         </div>
@@ -1257,7 +709,15 @@ const DoctorDashboard = () => {
             </div>
           </div>
           <div className="p-4 sm:p-6 lg:p-8">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+              <button 
+                onClick={() => setActiveView('nouvelle-consultation')}
+                className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-green-300 rounded-xl hover:border-green-500 hover:bg-green-50 transition-all duration-300 hover-lift">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-green-600 rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <MedicalIcon icon={ActionIcons.Plus} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
+                </div>
+                <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-green-600 font-body">Nouvelle consultation</span>
+              </button>
               <button 
                 onClick={() => setActiveView('consultations')}
                 className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
@@ -1267,28 +727,12 @@ const DoctorDashboard = () => {
                 <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Consultations</span>
               </button>
               <button 
-                onClick={() => setActiveView('rendez-vous')}
-                className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MedicalIcon icon={MedicalIcons.Appointment} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
-                </div>
-                <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Rendez-vous</span>
-              </button>
-              <button 
                 onClick={() => setActiveView('chat-ia')}
                 className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-primary hover:bg-light transition-all duration-300 hover-lift">
                 <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-primary rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
                   <MedicalIcon icon={NavigationIcons.Chat} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
                 </div>
                 <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-primary font-body">Chat IA</span>
-              </button>
-              <button 
-                onClick={() => setActiveView('patients')}
-                className="group flex flex-col items-center p-4 sm:p-6 text-center border-2 border-dashed border-border-light rounded-xl hover:border-mediai-secondary hover:bg-light transition-all duration-300 hover-lift">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 bg-mediai-secondary rounded-xl flex items-center justify-center mb-3 sm:mb-4 group-hover:scale-110 transition-transform duration-300">
-                  <MedicalIcon icon={StatusIcons.Star} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
-                </div>
-                <span className="text-xs sm:text-sm font-bold text-mediai-dark group-hover:text-mediai-secondary font-body">Patients</span>
               </button>
             </div>
           </div>
@@ -1305,7 +749,10 @@ const DoctorDashboard = () => {
               </div>
               <h2 className="text-lg sm:text-xl font-bold text-mediai-dark font-heading">Consultations du jour</h2>
             </div>
-            <button className="text-xs sm:text-sm font-semibold text-mediai-primary hover:text-mediai-secondary transition-colors font-body">
+            <button
+              className="text-xs sm:text-sm font-semibold text-mediai-primary hover:text-mediai-secondary transition-colors font-body"
+              onClick={() => setActiveView('consultations')}
+            >
               Voir toutes →
             </button>
           </div>
@@ -1423,11 +870,6 @@ const DoctorDashboard = () => {
               
               <div className="flex items-center space-x-1 sm:space-x-2">
                 <button 
-                  onClick={() => navigate('/settings')}
-                  className="p-2 text-mediai-medium hover:text-mediai-dark hover:bg-light rounded-lg transition-colors">
-                  <MedicalIcon icon={ActionIcons.Settings} size="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-                <button 
                   onClick={handleLogout}
                   className="px-4 py-2 bg-danger text-white text-sm font-semibold rounded-lg hover:shadow-lg transition-all duration-300 font-body">
                   Déconnexion
@@ -1444,37 +886,42 @@ const DoctorDashboard = () => {
           renderOverview()
         ) : (
           <div className="space-y-6 sm:space-y-8">
-            {/* Header de section */}
-            <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-              <div className="bg-mediai-dark px-4 sm:px-6 lg:px-8 py-4 sm:py-6 text-white">
-                <div className="flex items-center space-x-3 sm:space-x-4">
-                  {(() => {
-                    const activeItem = menuItems.find(item => item.id === activeView);
-                    return (
-                      <>
-                        <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                          <MedicalIcon icon={activeItem?.icon} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
-                        </div>
-                        <div>
-                          <h1 className="text-lg sm:text-xl lg:text-2xl font-bold font-heading">{activeItem?.label}</h1>
-                          <p className="text-white/70 font-body text-sm sm:text-base">{activeItem?.description}</p>
-                        </div>
-                      </>
-                    );
-                  })()}
+            {/* Header de section - Caché pour le formulaire de nouvelle consultation */}
+            {activeView !== 'nouvelle-consultation' && (
+              <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
+                <div className="bg-mediai-dark px-4 sm:px-6 lg:px-8 py-4 sm:py-6 text-white">
+                  <div className="flex items-center space-x-3 sm:space-x-4">
+                    {(() => {
+                      const activeItem = menuItems.find(item => item.id === activeView);
+                      return (
+                        <>
+                          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                            <MedicalIcon icon={activeItem?.icon} size="w-5 h-5 sm:w-6 sm:h-6" className="text-white" />
+                          </div>
+                          <div>
+                            <h1 className="text-lg sm:text-xl lg:text-2xl font-bold font-heading">{activeItem?.label}</h1>
+                            <p className="text-white/70 font-body text-sm sm:text-base">{activeItem?.description}</p>
+                          </div>
+                        </>
+                      );
+                    })()}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Contenu de la section */}
-            <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
-              <div className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-                {activeView === 'consultations' && renderConsultations()}
-                {activeView === 'rendez-vous' && renderRendezVous()}
-                {activeView === 'chat-ia' && renderChatIA()}
-                {activeView === 'patients' && renderPatients()}
+            {activeView === 'nouvelle-consultation' ? (
+              // Formulaire en plein écran sans padding
+              renderNouvelleConsultation()
+            ) : (
+              <div className="bg-white shadow-xl rounded-2xl border border-border-light overflow-hidden">
+                <div className="px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+                  {activeView === 'consultations' && renderConsultations()}
+                  {activeView === 'chat-ia' && renderChatIA()}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
       </div>

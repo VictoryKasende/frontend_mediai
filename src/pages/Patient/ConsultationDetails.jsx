@@ -126,8 +126,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
         histoire: consultation.histoire_maladie,
         diagnostic: consultation.diagnostic,
         traitement: consultation.traitement,
-        recommandations: consultation.recommandations,
-        signature_medecin: consultation.signature_medecin
+        recommandations: consultation.recommandations
       };
 
       const result = await exportToPDF(consultationForPDF);
@@ -168,8 +167,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
         histoire: consultation.histoire_maladie,
         diagnostic: consultation.diagnostic,
         traitement: consultation.traitement,
-        recommandations: consultation.recommandations,
-        signature_medecin: consultation.signature_medecin
+        recommandations: consultation.recommandations
       };
 
       printConsultation(consultationForPrint);
@@ -1028,19 +1026,6 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
             </h3>
             <div className="p-3 bg-white border border-red-100 rounded-lg">
               <p className="text-red-700 text-sm lg:text-base leading-relaxed">{consultation.commentaire_rejet}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Signature médecin */}
-        {consultation.signature_medecin && (
-          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
-            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center">
-              <MedicalIcons.Signature className="w-5 h-5 mr-2 text-indigo-600" />
-              Signature du médecin
-            </h3>
-            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-center">
-              <p className="text-indigo-800 font-semibold">{consultation.signature_medecin}</p>
             </div>
           </div>
         )}

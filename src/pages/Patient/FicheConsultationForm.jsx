@@ -259,11 +259,36 @@ const FicheConsultationForm = ({ onBack }) => {
     return errors;
   };
 
+  // Fonction pour calculer l'âge à partir de la date de naissance
+  const calculateAge = (dateNaissance) => {
+    if (!dateNaissance) return '';
+    
+    const today = new Date();
+    const birthDate = new Date(dateNaissance);
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const monthDiff = today.getMonth() - birthDate.getMonth();
+    
+    if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
+    }
+    
+    return age.toString();
+  };
+
   const handleInputChange = (name, value) => {
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData(prev => {
+      const newData = {
+        ...prev,
+        [name]: value
+      };
+      
+      // Si la date de naissance change, calculer automatiquement l'âge
+      if (name === 'date_naissance') {
+        newData.age = calculateAge(value);
+      }
+      
+      return newData;
+    });
   };
 
   const handleNext = () => {
@@ -602,16 +627,20 @@ const FicheConsultationForm = ({ onBack }) => {
             onChange={(e) => handleInputChange('date_naissance', e.target.value)}
             required
           />
-          <Input
-            label={<span>Âge <span className="text-red-500">*</span></span>}
-            type="number"
-            value={formData.age}
-            onChange={(e) => handleInputChange('age', e.target.value)}
-            placeholder="Votre âge"
-            min="0"
-            max="120"
-            required
-          />
+          <div>
+            <label className="block text-sm font-medium text-mediai-dark mb-2">
+              Âge <span className="text-red-500">*</span>
+              <span className="text-xs text-gray-500 ml-2">(calculé automatiquement)</span>
+            </label>
+            <input
+              type="number"
+              value={formData.age}
+              readOnly
+              disabled
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-600 cursor-not-allowed"
+              placeholder="Remplissez d'abord la date de naissance"
+            />
+          </div>
           <div>
             <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
               Sexe <span className="text-red-500">*</span>

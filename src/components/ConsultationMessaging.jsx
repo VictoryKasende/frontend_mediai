@@ -40,7 +40,15 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose }) => {
       setMessages(Array.isArray(messagesData) ? messagesData : []);
     } catch (error) {
       console.error('Erreur lors du chargement des messages:', error);
-      showError('Erreur', 'Impossible de charger les messages');
+      
+      // Gestion spécifique des erreurs
+      if (error.response?.status === 403) {
+        showError('Accès refusé', 'La consultation doit être validée pour accéder aux messages');
+      } else if (error.response?.status === 404) {
+        showError('Erreur', 'Consultation non trouvée');
+      } else {
+        showError('Erreur', error.message || 'Impossible de charger les messages');
+      }
       setMessages([]);
     } finally {
       setLoading(false);
@@ -73,10 +81,15 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose }) => {
       showSuccess('Succès', 'Message envoyé avec succès');
     } catch (error) {
       console.error('Erreur lors de l\'envoi du message:', error);
-      // Gestion d'erreur améliorée pour différents formats d'erreur
+      
+      // Gestion spécifique des erreurs
       let errorMsg = 'Erreur lors de l\'envoi du message';
       
-      if (error.response?.data) {
+      if (error.response?.status === 403) {
+        errorMsg = 'Accès refusé. La consultation doit être validée pour envoyer des messages';
+      } else if (error.response?.status === 404) {
+        errorMsg = 'Consultation non trouvée';
+      } else if (error.response?.data) {
         const errorData = error.response.data;
         if (errorData.content && Array.isArray(errorData.content)) {
           errorMsg = errorData.content[0];
@@ -87,12 +100,8 @@ const ConsultationMessaging = ({ ficheId, isOpen, onClose }) => {
         } else if (typeof errorData === 'string') {
           errorMsg = errorData;
         }
-      } else if (error.content && Array.isArray(error.content)) {
-        errorMsg = error.content[0];
-      } else if (error.fiche && Array.isArray(error.fiche)) {
-        errorMsg = `Erreur de fiche: ${error.fiche[0]}`;
-      } else if (error.detail) {
-        errorMsg = error.detail;
+      } else if (error.message) {
+        errorMsg = error.message;
       }
       
       showError('Erreur', errorMsg);

@@ -79,7 +79,7 @@ export const exportToPDF = async (consultationData) => {
     pdf.setTextColor(...darkBlue);
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(9);
-    const consultationDate = new Date(consultationData.date || consultationData.created_at).toLocaleDateString('fr-FR');
+    const consultationDate = new Date(consultationData.date_consultation || consultationData.date || consultationData.created_at).toLocaleDateString('fr-FR');
     pdf.text(`Date: ${consultationDate}`, boxX2 + 5, currentY + 16);
     pdf.text(`Heure: ${consultationData.heure || '10:00'}`, boxX2 + 5, currentY + 22);
     pdf.text(`Réf: CONS-${consultationData.id}`, boxX2 + 5, currentY + 28);
@@ -281,7 +281,7 @@ const exportToPDFFallback = async (consultationData) => {
     // Date et référence
     pdf.setFont('helvetica', 'normal');
     pdf.setFontSize(10);
-    const consultationDate = new Date(consultationData.date).toLocaleDateString('fr-FR', {
+    const consultationDate = new Date(consultationData.date_consultation || consultationData.date || consultationData.created_at).toLocaleDateString('fr-FR', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
@@ -472,7 +472,7 @@ export const printConsultation = (consultationData) => {
 
 // Génère le HTML stylisé pour l'impression
 const generatePrintHTML = (consultationData) => {
-  const consultationDate = new Date(consultationData.date).toLocaleDateString('fr-FR', {
+  const consultationDate = new Date(consultationData.date_consultation || consultationData.date || consultationData.created_at).toLocaleDateString('fr-FR', {
     weekday: 'long',
     year: 'numeric',
     month: 'long',

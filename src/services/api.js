@@ -722,9 +722,7 @@ export const consultationService = {
    */
   async validateConsultation(id, validationData) {
     try {
-      console.log('Validation de la consultation:', id, validationData);
       const response = await api.post(`/fiche-consultation/${id}/validate/`, validationData);
-      console.log('Consultation validée:', response.data);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la validation de la consultation:', error);
@@ -741,11 +739,9 @@ export const consultationService = {
    */
   async rejectConsultation(id, commentaire) {
     try {
-      console.log('Rejet de la consultation:', id, commentaire);
       const response = await api.post(`/fiche-consultation/${id}/reject/`, {
         commentaire
       });
-      console.log('Consultation rejetée:', response.data);
       return response.data;
     } catch (error) {
       console.error('Erreur lors du rejet de la consultation:', error);
@@ -1222,19 +1218,6 @@ export const iaService = {
  */
 export const dashboardService = {
   /**
-   * Récupérer les statistiques du tableau de bord patient
-   * @returns {Promise<Object>} - Statistiques
-   */
-  getStats: async () => {
-    try {
-      const response = await api.get('/dashboard/stats');
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || error;
-    }
-  },
-
-  /**
    * Récupérer les statistiques du médecin
    * @returns {Promise<Object>} - Statistiques médicales
    */
@@ -1265,8 +1248,7 @@ export const dashboardService = {
         consultationsEnAttente: consultations.filter(c => 
           c.status === 'analyse_terminee' && !c.diagnostic
         ).length,
-        totalConsultations: consultations.length,
-        patientsUniques: new Set(consultations.map(c => c.email)).size
+        totalConsultations: consultations.length
       };
       
       console.log('Statistiques calculées:', stats);
@@ -1393,6 +1375,7 @@ export const ficheMessagingService = {
   async addMessage(ficheId, content) {
     try {
       const response = await api.post(`/fiche-consultation/${ficheId}/messages/`, {
+        fiche: ficheId,
         content: content
       });
       return response.data;

@@ -755,10 +755,13 @@ const DoctorChatIa = () => {
 
   // Obtenir l'icône selon le type de conversation
   const getConversationIcon = (conversation) => {
+    // Toujours afficher une icône, même sans messages
     if (conversation.fiche) {
-      return MedicalIcons.Report; // Conversation liée à une fiche
+      // Conversation liée à une consultation/fiche médicale
+      return MedicalIcons.Stethoscope; // Icône stéthoscope pour consultation
     }
-    return NavigationIcons.Chat; // Conversation libre
+    // Conversation libre avec l'IA
+    return MedicalIcons.AI; // Icône robot/IA pour chat libre
   };
 
   // Filtrer les conversations selon la recherche
@@ -1032,8 +1035,8 @@ const DoctorChatIa = () => {
                 
                 {!sidebarCollapsed && (
                   <div className="flex-1 min-w-0 pr-6"> {/* Espace réservé pour les boutons - minimal */}
-                    <div className="w-full">
-                      <h3 className={`text-sm font-medium font-heading transition-colors duration-200 truncate ${
+                    <div className="w-full flex items-center gap-2">
+                      <h3 className={`text-sm font-medium font-heading transition-colors duration-200 truncate flex-1 ${
                         selectedConversation?.id === conversation.id 
                           ? 'text-mediai-primary font-semibold' 
                           : 'text-content-primary'
@@ -1041,6 +1044,12 @@ const DoctorChatIa = () => {
                         {/* Priorité : nom modifié, puis titre, puis titre généré */}
                         {conversation.nom || conversation.titre || generateConversationTitle(conversation)}
                       </h3>
+                      {/* Badge pour identifier le type de conversation */}
+                      {conversation.fiche && (
+                        <span className="text-xs bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded-md font-body-medium flex-shrink-0" title="Conversation liée à une consultation">
+                          Consultation
+                        </span>
+                      )}
                     </div>
                     
                     <p className="text-xs text-content-secondary truncate mt-1 font-body" title={conversation.first_message || conversation.last_message || 'Aucun message'}>
