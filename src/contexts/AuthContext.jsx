@@ -1,8 +1,6 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useReducer, useEffect } from 'react';
 import { authService } from '../services/api';
-
-// Hook pour utiliser les notifications - nous l'importerons dynamiquement pour éviter les dépendances circulaires
-let useNotificationHook = null;
 
 // Types de rôles utilisateur selon l'API
 export const USER_ROLES = {
@@ -191,6 +189,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Fonction pour vérifier les permissions
+  // eslint-disable-next-line no-unused-vars
   const hasPermission = (permission) => {
     // TODO: Implémenter la logique des permissions
     return true;

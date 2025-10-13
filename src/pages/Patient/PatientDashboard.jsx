@@ -11,10 +11,11 @@ import SettingsModal from '../../components/SettingsModal';
 import FicheConsultationForm from './FicheConsultationForm';
 import ConsultationsList from './ConsultationsList';
 import ConsultationDetails from './ConsultationDetails';
+import RendezVousSimple from './RendezVousSimple';
 import { consultationService, authService } from '../../services/api';
 
 // Composants améliorés
-const StatCard = React.memo(({ title, value, icon: IconComponent, color, bgColor, trend }) => (
+const StatCard = React.memo(({ title, value, icon: IconComponent, bgColor, trend }) => (
   <div className={`${bgColor} overflow-hidden shadow-lg rounded-2xl border border-white/20 hover:shadow-xl transition-all duration-300 hover:scale-105 group cursor-pointer`}>
     <div className="p-6">
       <div className="flex items-center justify-between">
@@ -69,7 +70,17 @@ const ConsultationCard = React.memo(({ consultation, onViewDetails, getMedecinIn
             </div>
             <div className="flex items-center space-x-1">
               <MedicalIcon icon={StatusIcons.Calendar} size="w-3 h-3" />
-              <span>{new Date(consultation.date_creation || consultation.date_soumission).toLocaleDateString('fr-FR')}</span>
+              <span>{
+                (() => {
+                  const dateStr = consultation.date_creation || consultation.date_soumission || consultation.created_at || consultation.date_consultation;
+                  if (!dateStr) return 'Date inconnue';
+                  
+                  const date = new Date(dateStr);
+                  if (isNaN(date.getTime())) return 'Date invalide';
+                  
+                  return date.toLocaleDateString('fr-FR');
+                })()
+              }</span>
             </div>
           </div>
         </div>
@@ -204,7 +215,7 @@ const EmptyState = ({ icon, title, description, actionLabel, onAction }) => (
  */
 const PatientDashboard = () => {
   const { user } = useAuth();
-  const { showSuccess, showError, showWarning, showInfo, notifications, removeNotification } = useNotification();
+  const { showError, showInfo, notifications, removeNotification } = useNotification();
   const { handleLogout } = useLogout();
   const { isOpen: isSettingsOpen, openModal: openSettings, closeModal: closeSettings } = useSettingsModal();
   
@@ -227,11 +238,14 @@ const PatientDashboard = () => {
   const [disponibiliteFilter, setDisponibiliteFilter] = useState('all');
   const [medecins, setMedecins] = useState([]);
   const [loadingMedecins, setLoadingMedecins] = useState(false);
+  const [medecinsLoaded, setMedecinsLoaded] = useState(false);
 
   // Mémorisation des fonctions utilitaires
   const getMedecinInfo = useCallback((consultation) => {
     console.log('PatientDashboard - getMedecinInfo pour consultation:', consultation.id);
+    console.log('Consultation complète:', consultation);
     
+    // Vérifier tous les champs possibles pour le médecin
     if (consultation.medecin_prenom && consultation.medecin_nom) {
       return `Dr ${consultation.medecin_prenom} ${consultation.medecin_nom}`;
     }
@@ -240,11 +254,24 @@ const PatientDashboard = () => {
       return consultation.medecin_nom;
     }
     
+    // Vérifier les champs d'assignation du médecin
     const medecinId = consultation.assigned_medecin || consultation.medecin_id || consultation.medecin;
+    console.log('Medecin ID trouvé:', medecinId);
+    console.log('Liste des medecins disponibles:', medecins);
+    
     if (medecinId && medecins.length > 0) {
       const medecin = medecins.find(m => m.id === medecinId);
+      console.log('Medecin trouvé:', medecin);
       if (medecin) {
         return `Dr ${medecin.first_name} ${medecin.last_name}`;
+      }
+    }
+    
+    // Fallback : vérifier si un médecin est mentionné dans les infos additionnelles
+    if (consultation.medecin_info || consultation.assigned_medecin_info) {
+      const info = consultation.medecin_info || consultation.assigned_medecin_info;
+      if (info.first_name && info.last_name) {
+        return `Dr ${info.first_name} ${info.last_name}`;
       }
     }
     
@@ -312,23 +339,24 @@ const PatientDashboard = () => {
     return [...new Set(medecins.map(m => m.medecin_profile?.specialty).filter(Boolean))];
   }, [medecins]);
 
-  useEffect(() => {
-    if (activeView === 'dashboard') {
-      loadDashboardData();
-    } else if (activeView === 'medecins') {
-      loadMedecinsData();
+  const loadMedecinsData = useCallback(async () => {
+    if (medecinsLoaded || loadingMedecins) {
+      return; // Éviter les appels multiples
     }
-  }, [activeView]);
-
-  const loadMedecinsData = async () => {
+    
     try {
       setLoadingMedecins(true);
       const response = await authService.getMedecins();
       const medecinsList = response.results || response;
       setMedecins(medecinsList);
+      setMedecinsLoaded(true);
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
-      // Fallback avec données statiques améliorées
+      showError('Erreur', 'Impossible de charger la liste des médecins');
+      // Arrêter les tentatives répétées et utiliser des données de fallback
+      if (error.response?.status === 429) {
+        console.warn('Trop de requêtes - utilisation des données de fallback');
+      }
       setMedecins([
         {
           id: 1,
@@ -409,15 +437,25 @@ const PatientDashboard = () => {
           }
         }
       ]);
+      setMedecinsLoaded(true); // Marquer comme chargé même en erreur
       showError('Erreur', 'Impossible de charger la liste des médecins, affichage des données locales');
     } finally {
       setLoadingMedecins(false);
     }
-  };
+  }, [showError, medecinsLoaded, loadingMedecins]);
 
-  const loadDashboardData = async () => {
+  const loadDashboardData = useCallback(async () => {
     try {
       setLoadingDashboard(true);
+      
+      // Charger les médecins en parallèle pour la résolution des noms
+      if (medecins.length === 0) {
+        try {
+          await loadMedecinsData();
+        } catch (error) {
+          console.warn('Impossible de charger les médecins pour le dashboard:', error);
+        }
+      }
       
       const response = await consultationService.getConsultations({
         is_patient_distance: true
@@ -445,13 +483,17 @@ const PatientDashboard = () => {
         recent.map(async (consultation) => {
           try {
             const detailedConsultation = await consultationService.getConsultation(consultation.id);
+            console.log('Dashboard - Consultation enrichie:', detailedConsultation);
             return detailedConsultation;
           } catch (error) {
             console.error('Dashboard - Erreur lors de l\'enrichissement de la consultation:', consultation.id, error);
+            console.log('Dashboard - Consultation originale (fallback):', consultation);
             return consultation;
           }
         })
       );
+      
+      console.log('Dashboard - Consultations finales pour affichage:', enrichedConsultations);
       
       setRecentConsultations(enrichedConsultations);
       
@@ -471,7 +513,17 @@ const PatientDashboard = () => {
     } finally {
       setLoadingDashboard(false);
     }
-  };
+  }, [medecins, user?.id, user?.nom, user?.prenom, loadMedecinsData, showError]);
+
+  useEffect(() => {
+    if (activeView === 'dashboard') {
+      loadDashboardData();
+    } else if (activeView === 'medecins' && !medecinsLoaded && !loadingMedecins) {
+      // Charger seulement si pas déjà chargés et pas en cours de chargement
+      loadMedecinsData();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeView]);
 
   const menuItems = [
     { 
@@ -489,6 +541,14 @@ const PatientDashboard = () => {
       description: 'Envoyer une fiche à distance',
       color: 'text-green-600',
       bgColor: 'bg-green-50'
+    },
+    { 
+      id: 'rendez-vous', 
+      label: 'Rendez-vous', 
+      icon: MedicalIcons.Calendar, 
+      description: 'Gérer vos rendez-vous',
+      color: 'text-purple-600',
+      bgColor: 'bg-purple-50'
     },
     { 
       id: 'mes-consultations', 
@@ -520,6 +580,8 @@ const PatientDashboard = () => {
     switch (activeView) {
       case 'nouvelle-fiche':
         return <FicheConsultationForm onBack={() => setActiveView('dashboard')} />;
+      case 'rendez-vous':
+        return <RendezVousSimple onBack={() => setActiveView('dashboard')} />;
       case 'mes-consultations':
         return (
           <ConsultationsList
@@ -545,7 +607,7 @@ const PatientDashboard = () => {
   };
 
   const renderDashboardOverview = () => (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 transition-opacity duration-500 ease-in-out">
       {/* Header moderne avec informations patient */}
       <div className="bg-gradient-to-br from-blue-600 via-blue-700 to-blue-800 shadow-2xl rounded-3xl overflow-hidden">
         <div className="px-8 py-10 text-white relative">
@@ -683,7 +745,7 @@ const PatientDashboard = () => {
   );
 
   const renderMedecins = () => (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-8 transition-opacity duration-500 ease-in-out">
       {/* Header avec style moderne */}
       <div className="bg-white rounded-3xl shadow-lg p-8 border border-gray-100">
         <div className="flex items-center space-x-4 mb-8">
@@ -1083,43 +1145,6 @@ const PatientDashboard = () => {
         isOpen={isSettingsOpen} 
         onClose={closeSettings} 
       />
-
-      {/* Styles CSS personnalisés */}
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-fadeIn {
-          animation: fadeIn 0.6s ease-out;
-        }
-
-        .hover-lift:hover {
-          transform: translateY(-2px);
-        }
-
-        .hover\\:scale-102:hover {
-          transform: scale(1.02);
-        }
-
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-
-        .tabular-nums {
-          font-variant-numeric: tabular-nums;
-        }
-      `}</style>
     </div>
   );
 };

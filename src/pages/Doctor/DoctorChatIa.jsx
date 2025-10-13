@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNotification } from '../../contexts/NotificationContext';
 import { NavigationIcons, MedicalIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
@@ -22,8 +22,6 @@ const DoctorChatIa = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [editingConversation, setEditingConversation] = useState(null);
-  const [editingName, setEditingName] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshKey, setRefreshKey] = useState(0); // Pour forcer la mise à jour
   
@@ -40,7 +38,7 @@ const DoctorChatIa = () => {
   const textareaRef = useRef(null);
 
   // Fonction helper pour les notifications
-  const showNotification = (message, type = 'info') => {
+  const showNotification = useCallback((message, type = 'info') => {
     switch (type) {
       case 'success':
         return showSuccess(message);
@@ -52,50 +50,14 @@ const DoctorChatIa = () => {
       default:
         return showInfo(message);
     }
-  };
-
-  // Charger les conversations au montage du composant
-  useEffect(() => {
-    loadConversations();
-  }, []);
-
-  // Charger les messages quand une conversation est sélectionnée
-  useEffect(() => {
-    if (selectedConversation) {
-      loadMessages(selectedConversation.id);
-    }
-  }, [selectedConversation]);
-
-  // Faire défiler vers le bas quand de nouveaux messages arrivent
-  useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  // Auto-resize de la textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      const textarea = textareaRef.current;
-      // Reset la hauteur pour recalculer correctement
-      textarea.style.height = 'auto';
-      // Applique la nouvelle hauteur basée sur le contenu
-      const newHeight = Math.min(textarea.scrollHeight, 200);
-      textarea.style.height = newHeight + 'px';
-      
-      // Gère le scroll si le contenu dépasse
-      if (textarea.scrollHeight > 200) {
-        textarea.style.overflowY = 'auto';
-      } else {
-        textarea.style.overflowY = 'hidden';
-      }
-    }
-  }, [newMessage]);
+  }, [showSuccess, showError, showWarning, showInfo]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
   // Charger les conversations depuis l'API
-  const loadConversations = async () => {
+  const loadConversations = useCallback(async () => {
     try {
       setIsLoadingConversations(true);
       const response = await api.get('/conversations/');
@@ -146,7 +108,12 @@ const DoctorChatIa = () => {
     } finally {
       setIsLoadingConversations(false);
     }
-  };
+  }, [showNotification]);
+
+  // Charger les conversations au montage du composant
+  useEffect(() => {
+    loadConversations();
+  }, [loadConversations]);
 
   // Fonction utilitaire pour générer un titre par défaut
   const generateConversationTitle = (conversation) => {
@@ -209,6 +176,37 @@ const DoctorChatIa = () => {
       setMessages([]);
     }
   };
+
+  // Charger les messages quand une conversation est sélectionnée
+  useEffect(() => {
+    if (selectedConversation) {
+      loadMessages(selectedConversation.id);
+    }
+  }, [selectedConversation]);
+
+  // Faire défiler vers le bas quand de nouveaux messages arrivent
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  // Auto-resize de la textarea
+  useEffect(() => {
+    if (textareaRef.current) {
+      const textarea = textareaRef.current;
+      // Reset la hauteur pour recalculer correctement
+      textarea.style.height = 'auto';
+      // Applique la nouvelle hauteur basée sur le contenu
+      const newHeight = Math.min(textarea.scrollHeight, 200);
+      textarea.style.height = newHeight + 'px';
+      
+      // Gère le scroll si le contenu dépasse
+      if (textarea.scrollHeight > 200) {
+        textarea.style.overflowY = 'auto';
+      } else {
+        textarea.style.overflowY = 'hidden';
+      }
+    }
+  }, [newMessage]);
 
   // Créer une nouvelle conversation
   const createNewConversation = async () => {

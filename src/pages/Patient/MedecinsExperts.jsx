@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Button from '../../components/Button';
 import { authService } from '../../services/api';
@@ -18,13 +18,13 @@ const MedecinsExperts = ({ onBack }) => {
 
   useEffect(() => {
     loadMedecins();
-  }, []);
+  }, [loadMedecins]);
 
   useEffect(() => {
     filterMedecins();
-  }, [medecins, searchTerm, specialtyFilter, showAvailableOnly]);
+  }, [filterMedecins]);
 
-  const loadMedecins = async () => {
+  const loadMedecins = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -40,9 +40,9 @@ const MedecinsExperts = ({ onBack }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [showError]);
 
-  const filterMedecins = () => {
+  const filterMedecins = useCallback(() => {
     let filtered = [...medecins];
 
     // Filtre par recherche (nom ou spécialité)
@@ -66,7 +66,7 @@ const MedecinsExperts = ({ onBack }) => {
     }
 
     setFilteredMedecins(filtered);
-  };
+  }, [medecins, searchTerm, specialtyFilter, showAvailableOnly]);
 
   // Obtenir la liste des spécialités uniques
   const specialties = [...new Set(medecins.map(m => m.medecin_profile?.specialty).filter(Boolean))];

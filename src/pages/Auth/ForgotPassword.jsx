@@ -74,7 +74,8 @@ const ForgotPassword = () => {
       console.log('Demande de récupération pour:', formData.email);
       setIsEmailSent(true);
       
-    } catch (error) {
+    } catch (resetError) {
+      console.error('Erreur lors de la réinitialisation:', resetError);
       setErrors({ submit: 'Une erreur est survenue. Veuillez réessayer plus tard.' });
     } finally {
       setIsLoading(false);

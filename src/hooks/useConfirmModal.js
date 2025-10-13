@@ -32,7 +32,7 @@ export const useConfirmModal = () => {
         }
       });
     });
-  }, []);
+  }, [closeModal]);
 
   // Fermer la modal
   const closeModal = useCallback(() => {

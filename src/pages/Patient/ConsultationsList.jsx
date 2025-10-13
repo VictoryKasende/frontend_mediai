@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
@@ -10,7 +10,7 @@ import { useAuth } from '../../contexts/AuthContext';
 /**
  * Liste des consultations du patient avec filtres et recherche
  */
-const ConsultationsList = ({ onBack, onViewDetails }) => {
+const ConsultationsList = ({ onViewDetails }) => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -18,43 +18,20 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
   const [consultations, setConsultations] = useState([]);
   const [medecins, setMedecins] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [medecinsLoading, setMedecinsLoading] = useState(true);
   const [error, setError] = useState(null);
   const { showError } = useNotification();
 
-  // Charger les médecins et consultations depuis l'API
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadMedecins = useCallback(async () => {
     try {
-      setLoading(true);
-      // Charger les médecins en premier
-      await loadMedecins();
-      // Puis charger les consultations
-      await loadConsultations();
-    } catch (error) {
-      console.error('Erreur lors du chargement des données:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadMedecins = async () => {
-    try {
-      setMedecinsLoading(true);
       const response = await authService.getMedecins();
       const medecinsList = response.results || response;
       setMedecins(medecinsList);
       console.log('Médecins chargés pour consultations:', medecinsList);
     } catch (error) {
       console.error('Erreur lors du chargement des médecins:', error);
-      // En cas d'erreur, on peut continuer sans la liste des médecins
-    } finally {
-      setMedecinsLoading(false);
+      setMedecins([]);
     }
-  };
+  }, []);
 
   // Fonction pour obtenir les informations du médecin assigné
   const getMedecinInfo = (consultation) => {
@@ -91,7 +68,7 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
     return 'Médecin non assigné';
   };
 
-  const loadConsultations = async () => {
+  const loadConsultations = useCallback(async () => {
     try {
       setError(null);
       
@@ -159,9 +136,29 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
     } catch (error) {
       console.error('Erreur lors du chargement des consultations:', error);
       setError('Impossible de charger les consultations');
-      showError('Erreur de chargement', 'Impossible de charger les consultations');
+      showError('Erreur', 'Impossible de charger les consultations');
+      setConsultations([]);
     }
-  };
+  }, [user, showError]);
+
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      // Charger les médecins en premier
+      await loadMedecins();
+      // Puis charger les consultations
+      await loadConsultations();
+    } catch (error) {
+      console.error('Erreur lors du chargement des données:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [loadMedecins, loadConsultations]);
+
+  // Charger les médecins et consultations depuis l'API
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const getStatusColor = (statut) => {
     const baseClasses = "inline-flex items-center px-3 py-1 rounded-full text-xs font-bold shadow-sm";
@@ -219,7 +216,7 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
         (consultation.motif_consultation || '').toLowerCase().includes(searchText) ||
         (consultation.symptomes || '').toLowerCase().includes(searchText) ||
         (consultation.numero_ordre || '').toLowerCase().includes(searchText) ||
-        (`CONS-${consultation.id}` || '').toLowerCase().includes(searchText);
+        `CONS-${consultation.id}`.toLowerCase().includes(searchText);
       
       const matchesStatus = statusFilter === 'all' || consultation.status === statusFilter;
       
@@ -227,7 +224,7 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
     })
     .sort((a, b) => {
       switch (sortBy) {
-        case 'date_desc':
+        case 'date_desc': {
           // Fonction utilitaire pour obtenir une date valide
           const getValidDate = (consultation) => {
             const possibleDates = [
@@ -250,7 +247,8 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
           };
           
           return getValidDate(b) - getValidDate(a);
-        case 'date_asc':
+        }
+        case 'date_asc': {
           const getValidDateAsc = (consultation) => {
             const possibleDates = [
               consultation.date_creation,
@@ -272,10 +270,12 @@ const ConsultationsList = ({ onBack, onViewDetails }) => {
           };
           
           return getValidDateAsc(a) - getValidDateAsc(b);
-        case 'medecin':
+        }
+        case 'medecin': {
           const nameA = getMedecinInfo(a);
           const nameB = getMedecinInfo(b);
           return nameA.localeCompare(nameB);
+        }
         case 'statut':
           return (a.status || '').localeCompare(b.status || '');
         default:

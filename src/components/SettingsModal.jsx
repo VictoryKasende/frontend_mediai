@@ -67,6 +67,7 @@ const SettingsModal = ({ isOpen, onClose }) => {
       // Optionnellement, charger les données fraîches du serveur
       loadUserProfile();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user]);
 
   const loadUserProfile = async () => {

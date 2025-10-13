@@ -1,17 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
-import { consultationService, authService } from '../../services/api';
+import AIAnalysisDisplay from '../../components/AIAnalysisDisplay';
+import FileUpload from '../../components/FileUpload';
+import LabResultsTable from '../../components/LabResultsTable';
+import ConsultationMessaging from '../../components/ConsultationMessaging';
+import PatientNotificationModal from '../../components/PatientNotificationModal';
+import { consultationService, authService, exportService } from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
-import { useAuth } from '../../contexts/AuthContext';
-import { exportToPDF, printConsultation } from '../../services/MedicalPDFService';
 
 /**
  * Détails d'une consultation avec réponse du médecin
  */
 const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
-  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState('fiche');
   const [consultation, setConsultation] = useState(null);
   const [medecins, setMedecins] = useState([]);
@@ -20,20 +22,44 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
   const [error, setError] = useState(null);
   const { showError, showSuccess } = useNotification();
 
-  useEffect(() => {
-    if (consultationId) {
-      loadConsultation();
-      loadMedecins();
-    }
-  }, [consultationId]);
+  // States pour les nouvelles fonctionnalités P0
+  const [attachedFiles, setAttachedFiles] = useState([]);
+  const [labResults, setLabResults] = useState([]);
+  const [showMessaging, setShowMessaging] = useState(false);
+  const [showNotificationModal, setShowNotificationModal] = useState(false);
 
-  useEffect(() => {
-    if (consultation && medecins.length > 0) {
-      findAssignedMedecin();
+  // Fonction utilitaire pour formater les dates de manière sécurisée
+  const formatDate = (dateString, fallback = 'Date inconnue') => {
+    try {
+      if (!dateString) return fallback;
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return fallback;
+      return date.toLocaleDateString('fr-FR');
+    } catch {
+      return fallback;
     }
-  }, [consultation, medecins]);
+  };
 
-  const loadConsultation = async () => {
+  const formatDateTime = (dateString, fallback = 'Date inconnue') => {
+    try {
+      if (!dateString) return fallback;
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return fallback;
+      return date.toLocaleDateString('fr-FR', {
+        weekday: 'short',
+        day: 'numeric',
+        month: 'short',
+        year: 'numeric'
+      }) + ' à ' + date.toLocaleTimeString('fr-FR', {
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch {
+      return fallback;
+    }
+  };
+
+  const loadConsultation = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
@@ -49,9 +75,9 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [consultationId, showError]);
 
-  const loadMedecins = async () => {
+  const loadMedecins = useCallback(async () => {
     try {
       const response = await authService.getMedecins();
       const medecinsList = response.results || response;
@@ -61,15 +87,15 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       console.error('Erreur lors du chargement des médecins:', error);
       // En cas d'erreur, on peut continuer sans la liste des médecins
     }
-  };
+  }, []);
 
-  const findAssignedMedecin = () => {
+  const findAssignedMedecin = useCallback(() => {
     if (consultation?.assigned_medecin !== undefined && consultation.assigned_medecin !== null) {
       const medecin = medecins.find(m => m.id === consultation.assigned_medecin);
       setAssignedMedecin(medecin);
       console.log('Médecin assigné trouvé:', medecin);
     }
-  };
+  }, [consultation, medecins]);
 
   // Fonction utilitaire pour obtenir le nom du médecin
   const getMedecinInfo = () => {
@@ -100,82 +126,137 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
     };
   };
 
-  // Fonction pour télécharger la fiche en PDF
+  // Fonction pour télécharger la fiche en PDF (Backend)
   const handleDownloadPDF = async () => {
     try {
       if (!consultation) return;
 
-      const medecinInfo = getMedecinInfo();
-      const consultationForPDF = {
-        ...consultation,
-        patient: {
-          nom: [consultation.nom, consultation.postnom, consultation.prenom].filter(Boolean).join(' '),
-          age: consultation.age,
-          telephone: consultation.telephone,
-          sexe: consultation.sexe,
-          adresse: [consultation.avenue, consultation.quartier, consultation.commune].filter(Boolean).join(', ')
-        },
-        medecin: {
-          nom: medecinInfo.nom,
-          specialite: medecinInfo.specialite,
-          numero_ordre: consultation.numero_ordre
-        },
-        date: consultation.date_consultation || consultation.created_at,
-        heure: consultation.heure_debut || '10:00',
-        motif: consultation.motif_consultation,
-        histoire: consultation.histoire_maladie,
-        diagnostic: consultation.diagnostic,
-        traitement: consultation.traitement,
-        recommandations: consultation.recommandations
-      };
-
-      const result = await exportToPDF(consultationForPDF);
-      if (result.success) {
-        showSuccess('PDF téléchargé', 'La fiche de consultation a été téléchargée avec succès');
-      } else {
-        showError('Erreur de téléchargement', 'Impossible de générer le PDF');
-      }
+      console.log('📥 Téléchargement PDF depuis le backend...');
+      
+      // Appel API backend pour générer le PDF
+      const blob = await exportService.exportFichePDF(consultation.id);
+      
+      // Créer URL temporaire pour le blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Créer et déclencher le téléchargement
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `consultation_${consultation.id}_${new Date().toISOString().split('T')[0]}.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Nettoyer
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('✅ PDF téléchargé avec succès');
+      showSuccess('PDF téléchargé', 'La fiche de consultation a été téléchargée avec succès');
     } catch (error) {
-      console.error('Erreur lors du téléchargement PDF:', error);
-      showError('Erreur de téléchargement', 'Une erreur est survenue lors du téléchargement');
+      console.error('❌ Erreur lors du téléchargement PDF:', error);
+      showError(
+        'Erreur de téléchargement', 
+        error.response?.data?.detail || 'Une erreur est survenue lors du téléchargement du PDF'
+      );
     }
   };
 
-  // Fonction pour imprimer la fiche
-  const handlePrint = () => {
+  // Fonction pour imprimer la fiche (Backend)
+  const handlePrint = async () => {
     try {
       if (!consultation) return;
 
-      const medecinInfo = getMedecinInfo();
-      const consultationForPrint = {
-        ...consultation,
-        patient: {
-          nom: [consultation.nom, consultation.postnom, consultation.prenom].filter(Boolean).join(' '),
-          age: consultation.age,
-          telephone: consultation.telephone,
-          sexe: consultation.sexe,
-          adresse: [consultation.avenue, consultation.quartier, consultation.commune].filter(Boolean).join(', ')
-        },
-        medecin: {
-          nom: medecinInfo.nom,
-          specialite: medecinInfo.specialite,
-          numero_ordre: consultation.numero_ordre
-        },
-        date: consultation.date_consultation || consultation.created_at,
-        heure: consultation.heure_debut || '10:00',
-        motif: consultation.motif_consultation,
-        histoire: consultation.histoire_maladie,
-        diagnostic: consultation.diagnostic,
-        traitement: consultation.traitement,
-        recommandations: consultation.recommandations
-      };
-
-      printConsultation(consultationForPrint);
-      showSuccess('Impression lancée', 'La fiche de consultation est en cours d\'impression');
+      console.log('🖨️ Préparation impression depuis le backend...');
+      
+      // Appel API backend pour générer le PDF
+      const blob = await exportService.exportFichePDF(consultation.id);
+      
+      // Créer URL temporaire pour le blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Ouvrir dans une nouvelle fenêtre pour impression
+      const printWindow = window.open(url, '_blank');
+      
+      if (printWindow) {
+        printWindow.onload = () => {
+          printWindow.print();
+        };
+        
+        // Nettoyer après un délai
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 1000);
+        
+        console.log('✅ Fenêtre d\'impression ouverte');
+        showSuccess('Impression lancée', 'La fiche de consultation est en cours d\'impression');
+      } else {
+        window.URL.revokeObjectURL(url);
+        showError('Fenêtre bloquée', 'Veuillez autoriser les fenêtres pop-up pour imprimer');
+      }
     } catch (error) {
-      console.error('Erreur lors de l\'impression:', error);
-      showError('Erreur d\'impression', 'Une erreur est survenue lors de l\'impression');
+      console.error('❌ Erreur lors de l\'impression:', error);
+      showError(
+        'Erreur d\'impression', 
+        error.response?.data?.detail || 'Une erreur est survenue lors de l\'impression'
+      );
     }
+  };
+
+  // Fonction pour exporter en JSON (Backend)
+  const handleExportJSON = async () => {
+    try {
+      if (!consultation) return;
+
+      console.log('📤 Export JSON depuis le backend...');
+      
+      // Appel API backend pour exporter en JSON
+      const data = await exportService.exportFicheJSON(consultation.id);
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      
+      // Créer URL temporaire pour le blob
+      const url = window.URL.createObjectURL(blob);
+      
+      // Créer et déclencher le téléchargement
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `consultation_${consultation.id}_${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      
+      // Nettoyer
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      console.log('✅ JSON exporté avec succès');
+      showSuccess('Export JSON réussi', 'Les données de consultation ont été exportées');
+    } catch (error) {
+      console.error('❌ Erreur lors de l\'export JSON:', error);
+      showError(
+        'Erreur d\'export', 
+        error.response?.data?.detail || 'Une erreur est survenue lors de l\'export JSON'
+      );
+    }
+  };
+
+  // Fonctions de gestion des labos et pièces jointes
+  const handleFilesChange = (newFiles) => {
+    setAttachedFiles(newFiles);
+    showSuccess('Fichiers mis à jour', 'Les pièces jointes ont été mises à jour');
+  };
+
+  const handleAddLabResult = (result) => {
+    setLabResults(prev => [...prev, result]);
+    showSuccess('Résultat ajouté', 'Le résultat de laboratoire a été ajouté');
+  };
+
+  const handleEditLabResult = (result) => {
+    setLabResults(prev => prev.map(r => r.id === result.id ? result : r));
+    showSuccess('Résultat modifié', 'Le résultat de laboratoire a été modifié');
+  };
+
+  const handleDeleteLabResult = (resultId) => {
+    setLabResults(prev => prev.filter(r => r.id !== resultId));
+    showSuccess('Résultat supprimé', 'Le résultat de laboratoire a été supprimé');
   };
 
   // Fonction pour modifier la consultation
@@ -187,6 +268,19 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       showError('Modification non disponible', 'La modification n\'est pas encore disponible');
     }
   };
+
+  useEffect(() => {
+    if (consultationId) {
+      loadConsultation();
+      loadMedecins();
+    }
+  }, [consultationId, loadConsultation, loadMedecins]);
+
+  useEffect(() => {
+    if (consultation && medecins.length > 0) {
+      findAssignedMedecin();
+    }
+  }, [consultation, medecins, findAssignedMedecin]);
 
   if (loading) {
     return (
@@ -214,9 +308,9 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
   }
 
   const tabs = [
-    { id: 'fiche', label: 'Ma fiche', icon: MedicalIcons.Document },
-    { id: 'reponse', label: 'Réponse médecin', icon: MedicalIcons.Doctor },
-    { id: 'historique', label: 'Historique', icon: MedicalIcons.History }
+    { id: 'fiche', label: 'Ma fiche', icon: 'document' },
+    { id: 'reponse', label: 'Réponse médecin', icon: 'doctor' },
+    { id: 'historique', label: 'Historique', icon: 'history' }
   ];
 
   const getStatusColor = (statut) => {
@@ -267,7 +361,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           <div>
             <label className="block text-xs lg:text-sm font-medium text-mediai-medium mb-1">Date de naissance</label>
             <p className="text-mediai-dark text-sm lg:text-base">
-              {consultation.date_naissance ? new Date(consultation.date_naissance).toLocaleDateString('fr-FR') : 'Non renseignée'}
+              {formatDate(consultation.date_naissance, 'Non renseignée')}
             </p>
           </div>
           <div>
@@ -381,7 +475,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           <div>
             <label className="block text-xs lg:text-sm font-medium text-mediai-medium mb-1">Date de consultation</label>
             <p className="text-mediai-dark text-sm lg:text-base">
-              {consultation.date_consultation ? new Date(consultation.date_consultation).toLocaleDateString('fr-FR') : 'Non programmée'}
+              {formatDate(consultation.date_consultation, 'Non programmée')}
             </p>
           </div>
           <div>
@@ -396,7 +490,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           <div>
             <label className="block text-xs lg:text-sm font-medium text-mediai-medium mb-1">Date de création</label>
             <p className="text-mediai-dark text-sm lg:text-base">
-              {new Date(consultation.created_at).toLocaleDateString('fr-FR')}
+              {formatDate(consultation.created_at)}
             </p>
           </div>
           <div>
@@ -726,7 +820,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       {(consultation.evenement_traumatique === 'oui' || consultation.trauma_divorce || consultation.trauma_perte_parent || consultation.trauma_deces_epoux || consultation.trauma_deces_enfant) && (
         <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
           <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center">
-            <StatusIcons.Warning className="w-5 h-5 mr-2 text-orange-500" />
+              <span className="w-5 h-5 mr-2 bg-orange-500 rounded-full"></span>
             Événements traumatiques
           </h3>
           <div className="space-y-3">
@@ -912,6 +1006,15 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
             <MedicalIcons.Print className="w-4 h-4" />
             <span>Imprimer</span>
           </Button>
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setShowNotificationModal(true)}
+            className="flex items-center justify-center space-x-2 bg-green-50 text-green-700 border-green-300 hover:bg-green-100 hover:border-green-400"
+          >
+            <span className="text-base">💬</span>
+            <span>Recevoir sur WhatsApp</span>
+          </Button>
           {(consultation.status === 'en_analyse' || !consultation.diagnostic) && (
             <Button 
               variant="outline" 
@@ -935,6 +1038,40 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           </div>
         )}
       </div>
+
+      {/* Section Résultats de laboratoire */}
+      <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
+        <LabResultsTable
+          labResults={labResults}
+          onAddResult={handleAddLabResult}
+          onEditResult={handleEditLabResult}
+          onDeleteResult={handleDeleteLabResult}
+          isEditable={consultation.status === 'en_analyse'}
+          showAddButton={consultation.status === 'en_analyse'}
+        />
+      </div>
+
+      {/* Section Pièces jointes */}
+      <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
+        <FileUpload
+          files={attachedFiles}
+          onFilesChange={handleFilesChange}
+          acceptedTypes={['.pdf', '.jpg', '.jpeg', '.png', '.doc', '.docx']}
+          maxSize={10}
+          maxFiles={5}
+          showPreview={true}
+          disabled={consultation.status !== 'en_analyse'}
+          label="Pièces jointes médicales"
+        />
+        {consultation.status !== 'en_analyse' && attachedFiles.length === 0 && (
+          <div className="text-center py-4 text-gray-500">
+            <div className="w-8 h-8 mx-auto mb-2 text-gray-300 flex items-center justify-center">
+              📎
+            </div>
+            <p>Aucune pièce jointe pour cette consultation</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -945,7 +1082,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
     if (!hasResponse) {
       return (
         <div className="bg-white rounded-xl p-6 lg:p-8 shadow-sm border border-gray-200 text-center">
-          <StatusIcons.Clock className="w-10 h-10 lg:w-12 lg:h-12 text-yellow-500 mx-auto mb-3 lg:mb-4" />
+          <div className="w-10 h-10 lg:w-12 lg:h-12 bg-yellow-500 rounded-full mx-auto mb-3 lg:mb-4"></div>
           <h3 className="text-medical-subtitle text-lg lg:text-xl mb-2">En attente de réponse</h3>
           <p className="text-medical-body text-sm lg:text-base mb-4">
             Le médecin n'a pas encore répondu à votre fiche de consultation.
@@ -957,71 +1094,37 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       );
     }
 
+    // Préparer les données pour le composant AIAnalysisDisplay
+    // eslint-disable-next-line no-unused-vars
+    const analysisData = {
+      diagnostic: consultation.diagnostic,
+      recommandations: consultation.recommandations,
+      traitement: consultation.traitement,
+      examen_complementaire: consultation.examen_complementaire,
+      commentaire_medecin: consultation.commentaire_rejet || consultation.commentaire_medecin,
+      references: consultation.references || [],
+      confidence_score: consultation.confidence_score || 0,
+      date_validation: consultation.date_validation
+    };
+
     return (
       <div className="space-y-4 lg:space-y-6">
-        {/* Diagnostic médecin */}
-        {consultation.diagnostic && (
-          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
-            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center">
-              <MedicalIcons.Doctor className="w-5 h-5 mr-2 text-mediai-primary" />
-              Diagnostic médical
-            </h3>
-            <div className="p-3 bg-mediai-light rounded-lg">
-              <p className="text-mediai-dark text-sm lg:text-base leading-relaxed">{consultation.diagnostic}</p>
-            </div>
-            {consultation.date_validation && (
-              <div className="mt-3 flex items-center text-xs text-mediai-medium">
-                <MedicalIcons.Check className="w-4 h-4 mr-1" />
-                <span>Validé le {new Date(consultation.date_validation).toLocaleDateString('fr-FR')}</span>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Traitement */}
-        {consultation.traitement && (
-          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
-            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center">
-              <MedicalIcons.Pills className="w-5 h-5 mr-2 text-green-600" />
-              Traitement prescrit
-            </h3>
-            <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-              <p className="text-green-800 text-sm lg:text-base leading-relaxed">{consultation.traitement}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Examens complémentaires */}
-        {consultation.examen_complementaire && (
-          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
-            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center">
-              <MedicalIcons.Test className="w-5 h-5 mr-2 text-purple-600" />
-              Examens complémentaires
-            </h3>
-            <div className="p-3 bg-purple-50 border border-purple-200 rounded-lg">
-              <p className="text-purple-800 text-sm lg:text-base leading-relaxed">{consultation.examen_complementaire}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Recommandations */}
-        {consultation.recommandations && (
-          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
-            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center">
-              <MedicalIcons.Notes className="w-5 h-5 mr-2 text-orange-600" />
-              Recommandations
-            </h3>
-            <div className="p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <p className="text-orange-800 text-sm lg:text-base leading-relaxed">{consultation.recommandations}</p>
-            </div>
-          </div>
-        )}
+        {/* Composant d'affichage structuré de l'analyse IA */}
+        {/* <AIAnalysisDisplay 
+          analysisData={analysisData}
+          isEditable={false} // Pas d'édition pour les patients
+          showReferences={true}
+        /> */}
+        <div className="bg-blue-50 p-4 rounded-lg">
+          <p>Analyse IA temporairement désactivée pour debug</p>
+        </div>
 
         {/* Commentaire de rejet si applicable */}
         {consultation.status === 'rejete_medecin' && consultation.commentaire_rejet && (
           <div className="bg-red-50 border border-red-200 rounded-xl p-4 lg:p-6">
             <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center text-red-800">
-              <StatusIcons.Error className="w-5 h-5 mr-2" />
+              {/* <StatusIcons.Error className="w-5 h-5 mr-2" /> */}
+              <span className="w-5 h-5 mr-2 bg-red-500 rounded-full"></span>
               Motif de rejet
             </h3>
             <div className="p-3 bg-white border border-red-100 rounded-lg">
@@ -1030,32 +1133,60 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           </div>
         )}
 
+        {/* Signature médecin */}
+        {consultation.signature_medecin && (
+          <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
+            <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4 flex items-center">
+              {/* <MedicalIcons.Signature className="w-5 h-5 mr-2 text-indigo-600" /> */}
+              <span className="w-5 h-5 mr-2 bg-indigo-600 rounded-full"></span>
+              Signature du médecin
+            </h3>
+            <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-lg text-center">
+              <p className="text-indigo-800 font-semibold">{consultation.signature_medecin}</p>
+              {consultation.date_validation && (
+                <p className="text-xs text-indigo-600 mt-2">
+                  Validé le {formatDate(consultation.date_validation)}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Actions */}
         <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">
           <h3 className="text-medical-subtitle text-lg lg:text-xl mb-4">Actions disponibles</h3>
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <Button 
               onClick={handleDownloadPDF}
               className="flex items-center justify-center space-x-2 bg-mediai-primary hover:bg-mediai-primary/90 text-white border-mediai-primary"
             >
-              <MedicalIcons.Download className="w-4 h-4" />
-              <span>Télécharger l'ordonnance</span>
+              {/* <MedicalIcons.Download className="w-4 h-4" /> */}
+              <span className="w-4 h-4 bg-white rounded-full"></span>
+              <span>PDF</span>
             </Button>
             <Button 
               variant="outline" 
               onClick={handlePrint}
               className="flex items-center justify-center space-x-2 bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400"
             >
-              <MedicalIcons.Print className="w-4 h-4" />
-              <span>Imprimer la réponse</span>
+              <span className="w-4 h-4 bg-emerald-700 rounded-full"></span>
+              <span>Imprimer</span>
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleExportJSON}
+              className="flex items-center justify-center space-x-2 bg-purple-50 text-purple-700 border-purple-300 hover:bg-purple-100 hover:border-purple-400"
+            >
+              <span className="w-4 h-4 bg-purple-700 rounded-full"></span>
+              <span>Export JSON</span>
             </Button>
             <Button 
               variant="outline" 
               className="flex items-center justify-center space-x-2 bg-indigo-50 text-indigo-700 border-indigo-300 hover:bg-indigo-100 hover:border-indigo-400"
-              onClick={() => showError('Fonctionnalité en cours', 'La messagerie médecin sera bientôt disponible')}
+              onClick={() => setShowMessaging(true)}
             >
-              <MedicalIcons.Message className="w-4 h-4" />
-              <span>Contacter le médecin</span>
+              <span className="w-4 h-4 bg-indigo-700 rounded-full"></span>
+              <span>Messages</span>
             </Button>
           </div>
         </div>
@@ -1071,7 +1202,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
         action: 'Fiche créée',
         description: 'Votre fiche de consultation a été créée et sauvegardée',
         statut: 'termine',
-        icon: MedicalIcons.Document,
+        icon: 'document',
         color: 'text-blue-600',
         bgColor: 'bg-blue-50',
         borderColor: 'border-blue-200'
@@ -1081,7 +1212,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
         action: 'Fiche soumise',
         description: 'Votre fiche de consultation a été envoyée pour analyse IA',
         statut: 'termine',
-        icon: StatusIcons.Upload,
+        icon: 'upload',
         color: 'text-green-600',
         bgColor: 'bg-green-50',
         borderColor: 'border-green-200'
@@ -1089,9 +1220,9 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       ...(consultation.date_consultation ? [{
         date: consultation.date_consultation,
         action: 'Rendez-vous programmé',
-        description: `Consultation ${consultation.is_patient_distance ? 'à distance' : 'en présentiel'} programmée le ${new Date(consultation.date_consultation).toLocaleDateString('fr-FR')} à ${consultation.heure_debut || '10:00'}`,
+        description: `Consultation ${consultation.is_patient_distance ? 'à distance' : 'en présentiel'} programmée le ${formatDate(consultation.date_consultation)} à ${consultation.heure_debut || '10:00'}`,
         statut: consultation.status === 'valide_medecin' ? 'termine' : 'en_cours',
-        icon: MedicalIcons.Calendar,
+        icon: 'calendar',
         color: 'text-indigo-600',
         bgColor: 'bg-indigo-50',
         borderColor: 'border-indigo-200'
@@ -1101,7 +1232,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
         action: 'Diagnostic médical validé',
         description: `${getMedecinInfo().nom} a validé le diagnostic et prescrit un traitement`,
         statut: 'termine',
-        icon: MedicalIcons.Doctor,
+        icon: 'doctor',
         color: 'text-emerald-600',
         bgColor: 'bg-emerald-50',
         borderColor: 'border-emerald-200'
@@ -1111,7 +1242,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
         action: 'Consultation rejetée',
         description: `Le médecin a rejeté la consultation. Motif: ${consultation.commentaire_rejet || 'Non spécifié'}`,
         statut: 'erreur',
-        icon: StatusIcons.Error,
+        icon: 'error',
         color: 'text-red-600',
         bgColor: 'bg-red-50',
         borderColor: 'border-red-200'
@@ -1126,7 +1257,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           action: 'En attente d\'analyse IA',
           description: 'Votre fiche est en cours d\'analyse par l\'intelligence artificielle',
           statut: 'en_cours',
-          icon: MedicalIcons.Clock,
+          icon: 'clock',
           color: 'text-yellow-600',
           bgColor: 'bg-yellow-50',
           borderColor: 'border-yellow-200'
@@ -1138,7 +1269,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           action: 'Programmation du rendez-vous',
           description: 'Votre rendez-vous de consultation sera bientôt programmé',
           statut: 'en_attente',
-          icon: MedicalIcons.Calendar,
+          icon: 'calendar',
           color: 'text-purple-600',
           bgColor: 'bg-purple-50',
           borderColor: 'border-purple-200'
@@ -1165,8 +1296,25 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
 
         <div className="space-y-4">
           {historique.map((item, index) => {
-            const IconComponent = item.icon;
             const isLast = index === historique.length - 1;
+            
+            // Icône simple basée sur le type
+            const getIconElement = (iconType) => {
+              switch(iconType) {
+                case 'document':
+                  return <div className="w-5 h-5 bg-blue-600 rounded-full"></div>;
+                case 'upload':
+                  return <div className="w-5 h-5 bg-green-600 rounded-full"></div>;
+                case 'calendar':
+                  return <div className="w-5 h-5 bg-indigo-600 rounded-full"></div>;
+                case 'doctor':
+                  return <div className="w-5 h-5 bg-emerald-600 rounded-full"></div>;
+                case 'error':
+                  return <div className="w-5 h-5 bg-red-600 rounded-full"></div>;
+                default:
+                  return <div className="w-5 h-5 bg-gray-600 rounded-full"></div>;
+              }
+            };
             
             return (
               <div key={index} className="relative">
@@ -1178,7 +1326,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
                 <div className={`flex items-start space-x-4 p-4 rounded-lg border-2 ${item.borderColor} ${item.bgColor}`}>
                   {/* Icône */}
                   <div className={`flex-shrink-0 p-2 rounded-full bg-white border-2 ${item.borderColor}`}>
-                    <IconComponent className={`w-5 h-5 ${item.color}`} />
+                    {getIconElement(item.icon)}
                   </div>
                   
                   {/* Contenu */}
@@ -1190,15 +1338,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
                       <div className="flex items-center space-x-2">
                         {item.date && (
                           <span className="text-xs lg:text-sm text-mediai-medium">
-                            {new Date(item.date).toLocaleDateString('fr-FR', {
-                              weekday: 'short',
-                              day: 'numeric',
-                              month: 'short',
-                              year: 'numeric'
-                            })} à {new Date(item.date).toLocaleTimeString('fr-FR', {
-                              hour: '2-digit',
-                              minute: '2-digit'
-                            })}
+                            {formatDateTime(item.date)}
                           </span>
                         )}
                         <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
@@ -1223,6 +1363,52 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
               </div>
             );
           })}
+        </div>
+
+        {/* Section Communication */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <h4 className="text-sm font-semibold text-mediai-dark flex items-center">
+              <MedicalIcons.Message className="w-4 h-4 mr-2 text-blue-600" />
+              Communication avec l'équipe médicale
+            </h4>
+            <Button
+              size="sm"
+              onClick={() => setShowMessaging(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              <MedicalIcons.Message className="w-4 h-4 mr-2" />
+              Ouvrir messagerie
+            </Button>
+          </div>
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+            <div className="flex items-start space-x-3">
+              <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center flex-shrink-0">
+                <MedicalIcons.Message className="w-5 h-5 text-white" />
+              </div>
+              <div className="flex-1">
+                <h5 className="font-medium text-blue-900 mb-2">Messagerie sécurisée</h5>
+                <p className="text-sm text-blue-700 mb-3 leading-relaxed">
+                  Communiquez directement avec votre équipe médicale de manière sécurisée. 
+                  Posez vos questions, partagez vos préoccupations et recevez des réponses personnalisées.
+                </p>
+                <div className="flex items-center space-x-4 text-xs text-blue-600">
+                  <div className="flex items-center space-x-1">
+                    <StatusIcons.Success className="w-3 h-3" />
+                    <span>Messages chiffrés</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <StatusIcons.Clock className="w-3 h-3" />
+                    <span>Réponse sous 24h</span>
+                  </div>
+                  <div className="flex items-center space-x-1">
+                    <MedicalIcons.Doctor className="w-3 h-3" />
+                    <span>Équipe médicale certifiée</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Statistiques de la consultation */}
@@ -1303,8 +1489,21 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
         <div className="bg-white rounded-xl p-1 shadow-sm border border-light mb-4 lg:mb-6">
           <nav className="flex space-x-1">
             {tabs.map((tab) => {
-              const IconComponent = tab.icon;
               const isActive = activeTab === tab.id;
+              
+              // Icône simple basée sur le type
+              const getTabIcon = (iconType) => {
+                switch(iconType) {
+                  case 'document':
+                    return <MedicalIcons.Document className="w-4 h-4" />;
+                  case 'doctor':
+                    return <MedicalIcons.User className="w-4 h-4" />;
+                  case 'history':
+                    return <StatusIcons.Clock className="w-4 h-4" />;
+                  default:
+                    return <MedicalIcons.Document className="w-4 h-4" />;
+                }
+              };
               
               return (
                 <button
@@ -1316,7 +1515,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
                       : 'text-medium hover:text-dark hover:bg-light'
                   }`}
                 >
-                  <IconComponent className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {getTabIcon(tab.icon)}
                   <span className="hidden sm:inline">{tab.label}</span>
                   <span className="sm:hidden text-xs">{tab.label.split(' ')[0]}</span>
                 </button>
@@ -1332,6 +1531,24 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
           {activeTab === 'historique' && renderHistoriqueTab()}
         </div>
       </div>
+      
+      {/* Composant de messagerie */}
+      <ConsultationMessaging
+        ficheId={consultation?.id}
+        isOpen={showMessaging}
+        onClose={() => setShowMessaging(false)}
+        autoRefresh={true}
+        refreshInterval={5000}
+      />
+      
+      {/* Modal de notification patient */}
+      <PatientNotificationModal
+        isOpen={showNotificationModal}
+        onClose={() => setShowNotificationModal(false)}
+        consultationId={consultation?.id}
+        patientPhone={consultation?.telephone}
+        patientName={[consultation?.nom, consultation?.postnom, consultation?.prenom].filter(Boolean).join(' ')}
+      />
     </div>
   );
 };

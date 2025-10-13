@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNotification } from '../contexts/NotificationContext';
 import { whatsappService } from '../services/api';
-import { ActionIcons, MedicalIcons } from './Icons';
+import { ActionIcons, MedicalIcons, StatusIcons } from './Icons';
 import Button from './Button';
 
 /**
@@ -11,6 +11,9 @@ import Button from './Button';
 const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
   const { showSuccess, showError } = useNotification();
   const [loading, setLoading] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingStep, setOnboardingStep] = useState('check'); // check, qr, sms, success
+  const [sandboxStatus, setSandboxStatus] = useState(null);
   const [whatsappOptions, setWhatsappOptions] = useState({
     template_type: 'consultation_validee',
     recipient_phone: '',
@@ -23,6 +26,8 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
   // Préremplir les données quand la fiche change
   useEffect(() => {
     if (fiche && isOpen) {
+      console.log('🔵 WhatsAppModal opened with fiche:', fiche);
+      
       // Récupérer le numéro de téléphone depuis différents champs possibles
       const phoneNumber = fiche.telephone || 
                           fiche.patient?.phone || 
@@ -30,13 +35,18 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
                           fiche.phone || 
                           '';
 
+      console.log('📞 Phone number found:', phoneNumber);
+
       // Déterminer le template par défaut selon le statut
       let defaultTemplate = 'consultation_validee';
       if (fiche.status === 'rejete_medecin' || fiche.status === 'rejete') {
         defaultTemplate = 'consultation_rejetee';
-      } else if (fiche.status === 'en_attente' || fiche.status === 'analyse_terminee') {
+      } else if (fiche.status === 'en_attente') {
         defaultTemplate = 'demande_informations';
       }
+      // 'analyse_terminee' et 'validee' utilisent 'consultation_validee' par défaut
+
+      console.log('📝 Template selected:', defaultTemplate);
 
       setWhatsappOptions(prev => ({
         ...prev,
@@ -51,26 +61,35 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
    * Envoyer la fiche via WhatsApp
    */
   const handleSendWhatsApp = async () => {
+    console.log('🔄 Début envoi WhatsApp');
+    console.log('📋 Fiche:', fiche);
+    console.log('⚙️ Options WhatsApp:', whatsappOptions);
+
     if (!fiche) {
+      console.log('❌ Erreur: Aucune fiche sélectionnée');
       showError('Erreur', 'Aucune fiche sélectionnée');
       return;
     }
 
     // Validation du numéro de téléphone
     if (!whatsappOptions.recipient_phone?.trim()) {
+      console.log('❌ Erreur: Numéro de téléphone manquant');
       showError('Erreur', 'Numéro de téléphone requis');
       return;
     }
 
     // Validation du message personnalisé si template custom
     if (whatsappOptions.template_type === 'custom' && !whatsappOptions.custom_message?.trim()) {
+      console.log('❌ Erreur: Message personnalisé manquant pour template custom');
       showError('Erreur', 'Message personnalisé requis pour le template custom');
       return;
     }
 
     setLoading(true);
     try {
+      console.log('📤 Envoi en cours vers WhatsApp service...');
       const result = await whatsappService.sendFiche(fiche.id, whatsappOptions);
+      console.log('✅ Résultat envoi WhatsApp:', result);
       
       showSuccess('WhatsApp envoyé', 'La fiche a été envoyée avec succès via WhatsApp');
       
@@ -81,11 +100,14 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
       
       onClose();
     } catch (error) {
-      console.error('Erreur lors de l\'envoi WhatsApp:', error);
-      const errorMsg = error.detail || error.recipient_phone?.[0] || 'Erreur lors de l\'envoi WhatsApp';
+      console.error('❌ Erreur lors de l\'envoi WhatsApp:', error);
+      console.error('❌ Erreur détaillée:', error.response?.data || error.message);
+      
+      const errorMsg = error.detail || error.recipient_phone?.[0] || error.message || 'Erreur lors de l\'envoi WhatsApp';
       showError('Erreur', errorMsg);
     } finally {
       setLoading(false);
+      console.log('🏁 Fin du processus d\'envoi WhatsApp');
     }
   };
 
@@ -130,6 +152,9 @@ const WhatsAppModal = ({ fiche, isOpen, onClose, onMessageSent }) => {
     const recommandations = fiche?.recommandations || 
       '[Recommandations à suivre]';
 
+    const examens = fiche?.examens_complementaires || 
+      '[Examens complémentaires si nécessaire]';
+
     const motifRejet = fiche?.commentaire_rejet || 
       fiche?.motif_rejet || 
       '[Motif de rejet à spécifier]';
@@ -144,10 +169,14 @@ Bonjour ${patientName},
 Votre consultation du ${consultationDate} a été validée par ${medecinName}.
 
 📋 *Diagnostic:* ${diagnostic}
-💊 *Traitement:* ${traitement}
-📝 *Recommandations:* ${recommandations}
 
-Pour toute question, contactez notre service au +243 XX XX XX XX.
+💊 *Traitement:* ${traitement}
+
+� *Examens complémentaires:* ${examens}
+
+�📝 *Recommandations:* ${recommandations}
+
+Pour toute question, contactez notre service au +243 997 123 456.
 
 Bonne santé ! 🌟`
       },
@@ -188,6 +217,72 @@ L'équipe médicale`
     return templates[whatsappOptions.template_type] || templates.consultation_validee;
   };
 
+  /**
+   * Vérifier si le numéro est dans le sandbox WhatsApp
+   */
+  const checkSandboxStatus = async (phoneNumber) => {
+    try {
+      setLoading(true);
+      const response = await whatsappService.checkSandboxStatus(phoneNumber);
+      setSandboxStatus(response);
+      return response.is_in_sandbox;
+    } catch (error) {
+      console.error('Erreur lors de la vérification sandbox:', error);
+      setSandboxStatus({ is_in_sandbox: false, error: error.message });
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Démarrer le processus d'onboarding WhatsApp
+   */
+  const startOnboarding = async () => {
+    if (!whatsappOptions.recipient_phone?.trim()) {
+      showError('Erreur', 'Numéro de téléphone requis');
+      return;
+    }
+
+    setShowOnboarding(true);
+    setOnboardingStep('check');
+    
+    const isInSandbox = await checkSandboxStatus(whatsappOptions.recipient_phone);
+    
+    if (isInSandbox) {
+      setOnboardingStep('success');
+      setShowOnboarding(false);
+      showSuccess('WhatsApp prêt', 'Le numéro est déjà configuré pour WhatsApp');
+    } else {
+      setOnboardingStep('qr');
+    }
+  };
+
+  /**
+   * Envoyer les instructions par SMS
+   */
+  const sendSMSInstructions = async () => {
+    try {
+      setLoading(true);
+      await whatsappService.sendOnboardingSMS(whatsappOptions.recipient_phone);
+      setOnboardingStep('sms');
+      showSuccess('SMS envoyé', 'Instructions d\'onboarding envoyées par SMS');
+    } catch (error) {
+      console.error('Erreur SMS:', error);
+      showError('Erreur SMS', 'Impossible d\'envoyer les instructions par SMS');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Générer le QR code WhatsApp
+   */
+  const generateWhatsAppQR = () => {
+    const joinMessage = encodeURIComponent('join tie-for');
+    return `https://wa.me/14155238886?text=${joinMessage}`;
+  };
+
   if (!isOpen || !fiche) return null;
 
   const templatePreview = getTemplatePreview();
@@ -220,6 +315,108 @@ L'équipe médicale`
           </Button>
         </div>
 
+        {/* Interface d'onboarding WhatsApp */}
+        {showOnboarding && (
+          <div className="p-6 bg-blue-50 border-t border-blue-200">
+            <div className="max-w-4xl mx-auto">
+              {onboardingStep === 'check' && (
+                <div className="text-center">
+                  <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full mx-auto mb-4"></div>
+                  <h4 className="text-lg font-semibold text-blue-900 mb-2">Vérification WhatsApp</h4>
+                  <p className="text-blue-700">Vérification si le numéro est configuré pour WhatsApp...</p>
+                </div>
+              )}
+
+              {onboardingStep === 'qr' && (
+                <div className="text-center space-y-6">
+                  <div className="bg-white rounded-xl p-6 shadow-sm">
+                    <h4 className="text-xl font-bold text-gray-900 mb-4">Configuration WhatsApp requise</h4>
+                    <p className="text-gray-700 mb-6">Ce numéro doit d'abord rejoindre notre sandbox WhatsApp.</p>
+                    
+                    {/* QR Code */}
+                    <div className="bg-gray-100 rounded-lg p-6 mb-6">
+                      <div className="w-48 h-48 mx-auto bg-white rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center">
+                        <div className="text-center">
+                          <MedicalIcons.QrCode className="w-16 h-16 text-gray-400 mx-auto mb-2" />
+                          <p className="text-sm text-gray-500">QR Code WhatsApp</p>
+                          <p className="text-xs text-gray-400 mt-1">Scannez pour rejoindre</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Instructions */}
+                    <div className="text-left space-y-4">
+                      <h5 className="font-semibold text-gray-900">Instructions :</h5>
+                      <ol className="list-decimal list-inside space-y-2 text-sm text-gray-700">
+                        <li>Ouvrez WhatsApp sur votre téléphone</li>
+                        <li>Scannez le QR code ci-dessus</li>
+                        <li>Envoyez le message "join tie-for"</li>
+                        <li>Attendez la confirmation</li>
+                      </ol>
+                    </div>
+
+                    {/* Boutons d'action */}
+                    <div className="flex flex-col sm:flex-row gap-3 mt-6">
+                      <Button
+                        variant="outline"
+                        onClick={sendSMSInstructions}
+                        disabled={loading}
+                        className="flex-1"
+                      >
+                        <ActionIcons.Message className="w-4 h-4 mr-2" />
+                        Envoyer par SMS
+                      </Button>
+                      <Button
+                        onClick={() => window.open(generateWhatsAppQR(), '_blank')}
+                        className="flex-1 bg-green-600 hover:bg-green-700"
+                      >
+                        <ActionIcons.Phone className="w-4 h-4 mr-2" />
+                        Ouvrir WhatsApp
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {onboardingStep === 'sms' && (
+                <div className="text-center">
+                  <div className="bg-white rounded-xl p-6 shadow-sm">
+                    <StatusIcons.CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">Instructions SMS envoyées</h4>
+                    <p className="text-gray-700 mb-4">
+                      Les instructions d'activation WhatsApp ont été envoyées par SMS au numéro {whatsappOptions.recipient_phone}
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setShowOnboarding(false)}
+                    >
+                      Fermer
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {onboardingStep === 'success' && (
+                <div className="text-center">
+                  <div className="bg-white rounded-xl p-6 shadow-sm">
+                    <StatusIcons.CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">WhatsApp configuré</h4>
+                    <p className="text-gray-700 mb-4">
+                      Le numéro {whatsappOptions.recipient_phone} est maintenant prêt pour recevoir des messages WhatsApp
+                    </p>
+                    <Button
+                      onClick={() => setShowOnboarding(false)}
+                      className="bg-green-600 hover:bg-green-700"
+                    >
+                      Continuer l'envoi
+                    </Button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-8">
           {/* Configuration */}
           <div className="space-y-6">
@@ -241,6 +438,36 @@ L'équipe médicale`
                 <p className="text-sm text-gray-500 mt-2">
                   Format international requis (ex: +243123456789)
                 </p>
+                
+                {/* Bouton de vérification WhatsApp */}
+                <div className="mt-4">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={startOnboarding}
+                    disabled={!whatsappOptions.recipient_phone?.trim() || loading}
+                    className="text-blue-600 border-blue-300 hover:bg-blue-50"
+                  >
+                    <MedicalIcons.Settings className="w-4 h-4 mr-2" />
+                    Vérifier/Configurer WhatsApp
+                  </Button>
+                  
+                  {sandboxStatus && (
+                    <div className="mt-2 text-sm">
+                      {sandboxStatus.is_in_sandbox ? (
+                        <span className="text-green-600 flex items-center">
+                          <ActionIcons.Check className="w-4 h-4 mr-1" />
+                          WhatsApp configuré
+                        </span>
+                      ) : (
+                        <span className="text-orange-600 flex items-center">
+                          <ActionIcons.Warning className="w-4 h-4 mr-1" />
+                          Configuration WhatsApp requise
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Template */}
@@ -336,10 +563,21 @@ L'équipe médicale`
             <div>
               <h4 className="text-lg font-semibold text-gray-900 mb-6 border-b border-gray-200 pb-2">Aperçu du message</h4>
               
+              {/* Note d'information */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 flex items-start space-x-3">
+                <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                </svg>
+                <div className="text-sm text-blue-800">
+                  <p className="font-medium mb-1">Aperçu du message</p>
+                  <p className="text-blue-700">Le message réel envoyé contiendra toutes les informations détaillées de la consultation (diagnostic complet, traitement avec posologie, examens, recommandations).</p>
+                </div>
+              </div>
+              
               <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
                 <div className="flex items-center mb-4">
                   <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center mr-3">
-                    <ActionIcons.Phone className="w-5 h-5 text-white" />
+                    <div className="w-5 h-5 bg-white rounded-full"></div>
                   </div>
                   <span className="font-semibold text-green-700 text-lg">{templatePreview.title}</span>
                 </div>
@@ -427,7 +665,7 @@ L'équipe médicale`
               </>
             ) : (
               <>
-                <ActionIcons.Phone className="w-5 h-5 mr-2" />
+                <ActionIcons.Send className="w-5 h-5 mr-2 text-white" />
                 Envoyer WhatsApp
               </>
             )}

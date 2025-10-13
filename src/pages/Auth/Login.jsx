@@ -26,7 +26,7 @@ import {
  */
 const Login = () => {
   const { login, isLoading } = useAuth();
-  const { showSuccess, showError, showInfo } = useNotification();
+  const { showSuccess, showError } = useNotification();
   const navigate = useNavigate();
   const location = useLocation();
   

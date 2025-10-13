@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React from 'react';
 
 // Imports Heroicons
@@ -31,6 +32,8 @@ import {
   PaperAirplaneIcon,
   PaperClipIcon,
   MicrophoneIcon,
+  ArrowTopRightOnSquareIcon,
+  PhotoIcon,
   
   // États et notifications
   CheckCircleIcon,
@@ -76,6 +79,7 @@ import {
   Search,
   Filter,
   MoreHorizontal,
+  QrCode,
   Phone,
   Video,
   Send,
@@ -244,24 +248,39 @@ export const MedicalIcons = {
   Phone: Phone,
   Notes: StickyNote,
   Info: InformationCircleIcon,
-  Search: MagnifyingGlassIcon
+  Search: MagnifyingGlassIcon,
+  Shield: Shield,
+  
+  // Icônes supplémentaires pour le dashboard
+  ExternalLink: ArrowTopRightOnSquareIcon,
+  Lab: FlaskConical,
+  Attachment: Paperclip,
+  Image: PhotoIcon,
+  Diagnostic: Target,
+  QrCode: QrCode,
+  Video: Video
 };
 
 // Icônes pour les statuts et états
 export const StatusIcons = {
   Check: Check,
+  CheckCircle: CheckCircleIcon,
   X: X,
+  XCircle: XCircleIcon,
   Clock: Clock,
   Star: Star,
   Eye: Eye,
   Question: MessageCircle,
   Warning: AlertTriangle,
   Info: AlertCircle,
+  InformationCircle: InformationCircleIcon,
+  ExclamationTriangle: ExclamationTriangleIcon,
   Success: Check,
-  Error: X,
+  Error: XCircleIcon,
   Bell: Bell,
   Mail: Mail,
   Upload: Upload,
+  Calendar: CalendarIcon,
 };
 
 // Icônes pour les actions
@@ -271,7 +290,7 @@ export const ActionIcons = {
   Edit: Edit,
   Delete: Trash2,
   Save: Save,
-  Cancel: X,
+  Cancel: XMarkIcon,
   Confirm: Check,
   Search: Search,
   Filter: Filter,
@@ -298,6 +317,8 @@ export const ActionIcons = {
   Menu: Menu,
   Close: X,
   Email: Mail,
+  Warning: AlertTriangle,
+  Check: Check,
 };
 
 // Composant Icon générique

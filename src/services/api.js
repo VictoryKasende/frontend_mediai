@@ -15,15 +15,69 @@ const api = axios.create({
     'Content-Type': 'application/json',
     'Accept': 'application/json',
   },
+  // Activer les cookies pour CSRF
+  withCredentials: true,
 });
 
-// Intercepteur pour ajouter le token d'authentification
+/**
+ * Récupérer le token CSRF depuis les cookies
+ * @returns {string|null} - Token CSRF
+ */
+function getCsrfToken() {
+  const name = 'csrftoken';
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== '') {
+    const cookies = document.cookie.split(';');
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === (name + '=')) {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+}
+
+/**
+ * Récupérer le token CSRF depuis le serveur
+ * @returns {Promise<string>} - Token CSRF
+ */
+async function fetchCSRFToken() {
+  try {
+    const response = await fetch(`${API_CONFIG.BASE_URL}/api/v1/auth/csrf/`, {
+      method: 'GET',
+      credentials: 'include',
+    });
+    
+    if (response.ok) {
+      const data = await response.json();
+      return data.csrfToken;
+    }
+  } catch (error) {
+    console.warn('Impossible de récupérer le token CSRF:', error);
+  }
+  return null;
+}
+
+// Intercepteur pour ajouter le token d'authentification et CSRF
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
+    // Ajouter le token d'authentification
     const token = localStorage.getItem('mediai_access_token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Ajouter le token CSRF pour les requêtes POST/PUT/PATCH/DELETE
+    if (['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
+      // Récupérer le token CSRF depuis les cookies
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        config.headers['X-CSRFToken'] = csrfToken;
+      }
+    }
+    
     return config;
   },
   (error) => Promise.reject(error)
@@ -44,7 +98,7 @@ api.interceptors.response.use(
       const refreshToken = localStorage.getItem('mediai_refresh_token');
       if (refreshToken) {
         try {
-          const response = await axios.post(`${API_CONFIG.API_BASE_URL}/auth/refresh/`, {
+          const response = await axios.post(`${API_CONFIG.API_BASE_URL}/auth/jwt/refresh/`, {
             refresh: refreshToken
           });
           
@@ -105,7 +159,25 @@ export const authService = {
       console.log('Envoi des données d\'inscription:', userData);
       console.log('URL d\'inscription:', '/auth/users/register/');
       
-      const response = await api.post('/auth/users/register/', userData);
+      // Essayer d'abord sans CSRF token
+      let response;
+      try {
+        response = await api.post('/auth/users/register/', userData);
+      } catch (csrfError) {
+        if (csrfError.response?.status === 403) {
+          // Si erreur CSRF, récupérer le token et réessayer
+          console.log('Erreur CSRF détectée lors de l\'inscription, récupération du token...');
+          
+          // Récupérer le token CSRF
+          await fetchCSRFToken();
+          
+          // Réessayer avec le token CSRF
+          response = await api.post('/auth/users/register/', userData);
+        } else {
+          throw csrfError;
+        }
+      }
+      
       console.log('Réponse d\'inscription réussie:', response.data);
       return response.data;
     } catch (error) {
@@ -133,7 +205,25 @@ export const authService = {
    */
   async login(credentials) {
     try {
-      const response = await api.post('/auth/token/', credentials);
+      // Essayer d'abord sans CSRF token
+      let response;
+      try {
+        response = await api.post('/auth/jwt/token/', credentials);
+      } catch (csrfError) {
+        if (csrfError.response?.status === 403) {
+          // Si erreur CSRF, récupérer le token et réessayer
+          console.log('Erreur CSRF détectée, récupération du token...');
+          
+          // Récupérer le token CSRF
+          await fetchCSRFToken();
+          
+          // Réessayer avec le token CSRF
+          response = await api.post('/auth/jwt/token/', credentials);
+        } else {
+          throw csrfError;
+        }
+      }
+      
       const { access, refresh } = response.data;
       
       // Stocker les tokens
@@ -160,7 +250,7 @@ export const authService = {
    */
   async refreshToken(refreshToken) {
     try {
-      const response = await api.post('/auth/refresh/', {
+      const response = await api.post('/auth/jwt/refresh/', {
         refresh: refreshToken
       });
       return response.data;
@@ -178,7 +268,8 @@ export const authService = {
     try {
       await api.post('/auth/verify/', { token });
       return true;
-    } catch (error) {
+    } catch (errorVerify) {
+      console.log('Erreur de vérification de token:', errorVerify);
       return false;
     }
   },
@@ -214,6 +305,21 @@ export const authService = {
   },
 
   /**
+   * Récupérer la liste des patients (pour les médecins)
+   * @returns {Promise<Array>} - Liste des patients
+   */
+  async getPatients() {
+    try {
+      const response = await api.get('/auth/patients/');
+      console.log('Patients récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des patients:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Récupérer la liste de tous les médecins
    * @param {Object} filters - Filtres optionnels
    * @param {boolean} filters.available - Filtrer par disponibilité
@@ -235,11 +341,20 @@ export const authService = {
       const url = queryString ? `/auth/medecins/?${queryString}` : '/auth/medecins/';
       
       const response = await api.get(url);
+      console.log('Médecins récupérés depuis l\'API (backend uniquement):', response.data);
+      
+      // Retourner uniquement les données du backend
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des médecins:', error);
-      // Fallback avec données statiques en cas d'erreur
-      return this.getMedecinsStatic(filters);
+      console.log('Aucun médecin disponible - erreur backend');
+      // Retourner une structure vide en cas d'erreur
+      return {
+        results: [],
+        count: 0,
+        next: null,
+        previous: null
+      };
     }
   },
 
@@ -250,11 +365,20 @@ export const authService = {
   async getAvailableMedecins() {
     try {
       const response = await api.get('/auth/medecins/available/');
+      console.log('Médecins disponibles depuis l\'API (backend uniquement):', response.data);
+      
+      // Retourner uniquement les données du backend
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des médecins disponibles:', error);
-      // Fallback avec données statiques filtrées
-      return this.getMedecinsStatic({ available: true });
+      console.log('Aucun médecin disponible - erreur backend');
+      // Retourner une structure vide en cas d'erreur
+      return {
+        results: [],
+        count: 0,
+        next: null,
+        previous: null
+      };
     }
   },
 
@@ -441,14 +565,7 @@ export const authService = {
             refresh: refreshToken
           });
         } catch (logoutError) {
-          // Si ça échoue, essayer l'endpoint de blacklist
-          try {
-            await api.post('/auth/token/blacklist/', {
-              refresh: refreshToken
-            });
-          } catch (blacklistError) {
-            console.warn('Impossible d\'invalider le token côté serveur:', blacklistError.response?.data || blacklistError.message);
-          }
+          console.warn('Endpoint /auth/logout/ non disponible:', logoutError.response?.data || logoutError.message);
         }
       }
     } catch (error) {
@@ -498,7 +615,7 @@ export const authService = {
       });
       
       switch (status) {
-        case 400:
+        case 400: {
           // Extraire le message d'erreur spécifique si disponible
           let errorMessage = 'Données invalides';
           if (data) {
@@ -525,7 +642,17 @@ export const authService = {
             details: data,
             status: 400
           };
+        }
         case 401:
+          // Gestion spécifique des erreurs de token
+          if (data && (data.code === 'token_not_valid' || data.detail?.includes('token'))) {
+            return {
+              message: 'Session expirée. Veuillez vous reconnecter.',
+              details: data,
+              status: 401,
+              code: 'token_not_valid'
+            };
+          }
           return {
             message: 'Identifiants incorrects',
             details: data,
@@ -613,6 +740,79 @@ export const consultationService = {
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la récupération des consultations:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  // Gestion des rendez-vous
+  async getPatientRendezVous() {
+    try {
+      console.log('Récupération des RDV patient');
+      const response = await api.get('/rendez-vous/patient/');
+      console.log('RDV récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async createRendezVous(rdvData) {
+    try {
+      console.log('Création d\'un RDV:', rdvData);
+      const response = await api.post('/rendez-vous/', rdvData);
+      console.log('RDV créé:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la création du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async updateRendezVous(rdvId, rdvData) {
+    try {
+      console.log('Modification du RDV:', rdvId, rdvData);
+      const response = await api.put(`/rendez-vous/${rdvId}/`, rdvData);
+      console.log('RDV modifié:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la modification du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async cancelRendezVous(rdvId) {
+    try {
+      console.log('Annulation du RDV:', rdvId);
+      const response = await api.patch(`/rendez-vous/${rdvId}/`, { statut: 'annule' });
+      console.log('RDV annulé:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de l\'annulation du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async confirmRendezVous(rdvId) {
+    try {
+      console.log('Confirmation du RDV:', rdvId);
+      const response = await api.patch(`/rendez-vous/${rdvId}/`, { statut: 'confirme' });
+      console.log('RDV confirmé:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la confirmation du RDV:', error);
+      throw this.handleError(error);
+    }
+  },
+
+  async getDoctorRendezVous() {
+    try {
+      console.log('Récupération des RDV médecin');
+      const response = await api.get('/rendez-vous/medecin/');
+      console.log('RDV médecin récupérés:', response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Erreur lors de la récupération des RDV médecin:', error);
       throw this.handleError(error);
     }
   },
@@ -1211,12 +1411,759 @@ export const iaService = {
   }
 };
 
-// ==================== DASHBOARD ====================
+// ==================== LABORATOIRE ====================
 
 /**
- * Service de gestion du tableau de bord
+ * Service de gestion des résultats de laboratoire
+ */
+export const labService = {
+  /**
+   * Lister les résultats de laboratoire
+   * @param {Object} filters - Filtres optionnels
+   * @param {number} filters.fiche_consultation - ID de la fiche de consultation
+   * @param {string} filters.status - Statut des résultats
+   * @returns {Promise<Object>} - Liste paginée des résultats
+   */
+  async getLabResults(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null) {
+          params.append(key, filters[key]);
+        }
+      });
+      
+      const url = `/lab-results/${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Créer un résultat de laboratoire
+   * @param {Object} labData - Données du résultat
+   * @param {number} labData.fiche_consultation - ID de la fiche (obligatoire)
+   * @param {string} labData.name - Nom de l'examen (obligatoire)
+   * @param {string} labData.value - Valeur du résultat (obligatoire)
+   * @param {string} labData.unit - Unité de mesure
+   * @param {string} labData.reference_range - Plage de référence
+   * @param {string} labData.status - Statut (normal, abnormal, critical)
+   * @param {string} labData.date - Date du test
+   * @param {string} labData.notes - Notes complémentaires
+   * @returns {Promise<Object>} - Résultat créé
+   */
+  async createLabResult(labData) {
+    try {
+      const response = await api.post('/lab-results/', labData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Récupérer un résultat de laboratoire
+   * @param {number} id - ID du résultat
+   * @returns {Promise<Object>} - Détails du résultat
+   */
+  async getLabResult(id) {
+    try {
+      const response = await api.get(`/lab-results/${id}/`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Modifier un résultat de laboratoire
+   * @param {number} id - ID du résultat
+   * @param {Object} labData - Données à modifier
+   * @returns {Promise<Object>} - Résultat modifié
+   */
+  async updateLabResult(id, labData) {
+    try {
+      const response = await api.patch(`/lab-results/${id}/`, labData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Supprimer un résultat de laboratoire
+   * @param {number} id - ID du résultat
+   * @returns {Promise<void>}
+   */
+  async deleteLabResult(id) {
+    try {
+      await api.delete(`/lab-results/${id}/`);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+// ==================== PIÈCES JOINTES ====================
+
+/**
+ * Service de gestion des pièces jointes
+ */
+export const attachmentService = {
+  /**
+   * Lister les pièces jointes
+   * @param {Object} filters - Filtres optionnels
+   * @param {number} filters.fiche_consultation - ID de la fiche de consultation
+   * @returns {Promise<Object>} - Liste paginée des pièces jointes
+   */
+  async getAttachments(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null) {
+          params.append(key, filters[key]);
+        }
+      });
+      
+      const url = `/attachments/${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Uploader une pièce jointe
+   * @param {Object} attachmentData - Données de la pièce jointe
+   * @param {File} attachmentData.file - Fichier à uploader (obligatoire)
+   * @param {number} attachmentData.fiche_consultation - ID de la fiche (obligatoire)
+   * @param {string} attachmentData.description - Description du fichier
+   * @param {Function} onProgress - Callback de progression
+   * @returns {Promise<Object>} - Pièce jointe créée
+   */
+  async uploadAttachment(attachmentData, onProgress = null) {
+    try {
+      const formData = new FormData();
+      formData.append('file', attachmentData.file);
+      formData.append('fiche_consultation', attachmentData.fiche_consultation);
+      
+      if (attachmentData.description) {
+        formData.append('description', attachmentData.description);
+      }
+
+      const response = await api.post('/attachments/', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: onProgress ? (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(progress);
+        } : undefined
+      });
+      
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Récupérer une pièce jointe
+   * @param {number} id - ID de la pièce jointe
+   * @returns {Promise<Object>} - Détails de la pièce jointe
+   */
+  async getAttachment(id) {
+    try {
+      const response = await api.get(`/attachments/${id}/`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Télécharger un fichier
+   * @param {number} id - ID de la pièce jointe
+   * @returns {Promise<Blob>} - Fichier en blob
+   */
+  async downloadAttachment(id) {
+    try {
+      const response = await api.get(`/attachments/${id}/download/`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Supprimer une pièce jointe
+   * @param {number} id - ID de la pièce jointe
+   * @returns {Promise<void>}
+   */
+  async deleteAttachment(id) {
+    try {
+      await api.delete(`/attachments/${id}/`);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+// ==================== RENDEZ-VOUS ====================
+
+/**
+ * Service de gestion des rendez-vous
+ */
+export const appointmentService = {
+  /**
+   * Lister les rendez-vous
+   * @param {Object} filters - Filtres optionnels
+   * @param {string} filters.status - Statut du rendez-vous
+   * @param {string} filters.date_start - Date de début
+   * @param {string} filters.date_end - Date de fin
+   * @returns {Promise<Object>} - Liste paginée des rendez-vous
+   */
+  async getAppointments(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null) {
+          params.append(key, filters[key]);
+        }
+      });
+      
+      const url = `/appointments/${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Créer une demande de rendez-vous (patient)
+   * @param {Object} appointmentData - Données du rendez-vous
+   * @param {number} appointmentData.fiche_consultation - ID de la fiche (obligatoire)
+   * @param {string} appointmentData.preferred_date - Date préférée
+   * @param {string} appointmentData.preferred_time - Heure préférée
+   * @param {string} appointmentData.type - Type (presentiel, distance)
+   * @param {string} appointmentData.notes - Notes du patient
+   * @returns {Promise<Object>} - Rendez-vous créé
+   */
+  async createAppointment(appointmentData) {
+    try {
+      const response = await api.post('/appointments/', appointmentData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Récupérer un rendez-vous
+   * @param {number} id - ID du rendez-vous
+   * @returns {Promise<Object>} - Détails du rendez-vous
+   */
+  async getAppointment(id) {
+    try {
+      const response = await api.get(`/appointments/${id}/`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Assigner un médecin (staff ou médecin)
+   * @param {number} id - ID du rendez-vous
+   * @param {number} medecinId - ID du médecin
+   * @returns {Promise<Object>} - Rendez-vous assigné
+   */
+  async assignMedecin(id, medecinId) {
+    try {
+      const response = await api.post(`/appointments/${id}/assign/`, {
+        medecin_id: medecinId
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Confirmer un créneau (médecin)
+   * @param {number} id - ID du rendez-vous
+   * @param {Object} confirmData - Données de confirmation
+   * @param {string} confirmData.confirmed_date - Date confirmée
+   * @param {string} confirmData.confirmed_time - Heure confirmée
+   * @param {string} confirmData.notes - Notes du médecin
+   * @returns {Promise<Object>} - Rendez-vous confirmé
+   */
+  async confirmAppointment(id, confirmData) {
+    try {
+      const response = await api.post(`/appointments/${id}/confirm/`, confirmData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Refuser un rendez-vous (médecin)
+   * @param {number} id - ID du rendez-vous
+   * @param {string} reason - Motif du refus
+   * @returns {Promise<Object>} - Rendez-vous refusé
+   */
+  async declineAppointment(id, reason) {
+    try {
+      const response = await api.post(`/appointments/${id}/decline/`, {
+        reason: reason
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Annuler un rendez-vous (patient ou médecin)
+   * @param {number} id - ID du rendez-vous
+   * @param {string} reason - Motif d'annulation
+   * @returns {Promise<Object>} - Rendez-vous annulé
+   */
+  async cancelAppointment(id, reason) {
+    try {
+      const response = await api.post(`/appointments/${id}/cancel/`, {
+        reason: reason
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Agenda du médecin
+   * @param {Object} filters - Filtres optionnels
+   * @param {string} filters.date_start - Date de début
+   * @param {string} filters.date_end - Date de fin
+   * @returns {Promise<Object>} - Agenda du médecin
+   */
+  async getDoctorAgenda(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null) {
+          params.append(key, filters[key]);
+        }
+      });
+      
+      const url = `/appointments/mon-agenda/${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+// ==================== DISPONIBILITÉS ====================
+
+/**
+ * Service de gestion des disponibilités médecin
+ */
+export const availabilityService = {
+  /**
+   * Lister les disponibilités médecin
+   * @param {Object} filters - Filtres optionnels
+   * @param {number} filters.medecin - ID du médecin
+   * @param {string} filters.date_start - Date de début
+   * @param {string} filters.date_end - Date de fin
+   * @returns {Promise<Object>} - Liste paginée des disponibilités
+   */
+  async getAvailabilities(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null) {
+          params.append(key, filters[key]);
+        }
+      });
+      
+      const url = `/availabilities/${params.toString() ? '?' + params.toString() : ''}`;
+      const response = await api.get(url);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Créer une disponibilité
+   * @param {Object} availabilityData - Données de disponibilité
+   * @returns {Promise<Object>} - Disponibilité créée
+   */
+  async createAvailability(availabilityData) {
+    try {
+      const response = await api.post('/availabilities/', availabilityData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Créneaux disponibles pour période
+   * @param {Object} filters - Filtres
+   * @param {number} filters.medecin - ID du médecin
+   * @param {string} filters.date_start - Date de début
+   * @param {string} filters.date_end - Date de fin
+   * @returns {Promise<Object>} - Créneaux disponibles
+   */
+  async getAvailableSlots(filters) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key] !== undefined && filters[key] !== null) {
+          params.append(key, filters[key]);
+        }
+      });
+      
+      const response = await api.get(`/availabilities/available-slots/?${params}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Générer le calendrier ICS
+   * @param {number} medecinId - ID du médecin
+   * @returns {Promise<Blob>} - Fichier ICS
+   */
+  async getCalendarICS(medecinId) {
+    try {
+      const response = await api.get(`/availabilities/calendar-ics/?medecin=${medecinId}`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+// ==================== EXPORTS ====================
+
+/**
+ * Service de gestion des exports
+ */
+export const exportService = {
+  /**
+   * Export JSON d'une fiche de consultation
+   * @param {number} ficheId - ID de la fiche
+   * @returns {Promise<Object>} - Données JSON de la fiche
+   */
+  async exportFicheJSON(ficheId) {
+    try {
+      const response = await api.get(`/fiche-consultation/${ficheId}/export/json/`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Export PDF d'une fiche de consultation
+   * @param {number} ficheId - ID de la fiche
+   * @returns {Promise<Blob>} - Fichier PDF
+   */
+  async exportFichePDF(ficheId) {
+    try {
+      const response = await api.get(`/fiche-consultation/${ficheId}/export/pdf/`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Créer un export de données
+   * @param {Object} exportData - Paramètres d'export
+   * @param {string} exportData.format - Format (csv, json, parquet, excel)
+   * @param {string} exportData.data_type - Type de données
+   * @param {Object} exportData.filters - Filtres
+   * @returns {Promise<Object>} - Job d'export créé
+   */
+  async createDataExport(exportData) {
+    try {
+      const response = await api.post('/exports/', exportData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Lister les jobs d'export
+   * @returns {Promise<Object>} - Liste des exports
+   */
+  async getExports() {
+    try {
+      const response = await api.get('/exports/');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Récupérer un job d'export
+   * @param {number} id - ID du job
+   * @returns {Promise<Object>} - Détails du job
+   */
+  async getExport(id) {
+    try {
+      const response = await api.get(`/exports/${id}/`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Télécharger un fichier d'export
+   * @param {number} id - ID du job
+   * @returns {Promise<Blob>} - Fichier d'export
+   */
+  async downloadExport(id) {
+    try {
+      const response = await api.get(`/exports/${id}/download/`, {
+        responseType: 'blob'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+// ==================== NOTIFICATIONS ====================
+
+/**
+ * Service de gestion des notifications
+ */
+export const notificationService = {
+  /**
+   * Envoyer notification au patient
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} notificationData - Données de notification
+   * @param {string} notificationData.type - Type (sms, whatsapp, email)
+   * @param {string} notificationData.message - Message personnalisé
+   * @returns {Promise<Object>} - Résultat de l'envoi
+   */
+  async sendNotification(ficheId, notificationData) {
+    try {
+      const response = await api.post(`/fiche-consultation/${ficheId}/send-notification/`, notificationData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+// ==================== RÉFÉRENCES ====================
+
+/**
+ * Service de gestion des références bibliographiques
+ */
+export const referenceService = {
+  /**
+   * Lister les références d'une fiche
+   * @param {number} ficheId - ID de la fiche
+   * @returns {Promise<Array>} - Liste des références
+   */
+  async getFicheReferences(ficheId) {
+    try {
+      const response = await api.get(`/fiche-consultation/${ficheId}/references/`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Ajouter une référence à une fiche
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} referenceData - Données de la référence
+   * @param {string} referenceData.title - Titre de la référence (obligatoire)
+   * @param {string} referenceData.url - URL de la référence
+   * @param {string} referenceData.type - Type de référence
+   * @param {string} referenceData.description - Description
+   * @returns {Promise<Object>} - Référence ajoutée
+   */
+  async addFicheReference(ficheId, referenceData) {
+    try {
+      const response = await api.post(`/fiche-consultation/${ficheId}/references/`, referenceData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Modifier une référence
+   * @param {number} id - ID de la référence
+   * @param {Object} referenceData - Données à modifier
+   * @returns {Promise<Object>} - Référence modifiée
+   */
+  async updateReference(id, referenceData) {
+    try {
+      const response = await api.patch(`/references/${id}/`, referenceData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Supprimer une référence
+   * @param {number} id - ID de la référence
+   * @returns {Promise<void>}
+   */
+  async deleteReference(id) {
+    try {
+      await api.delete(`/references/${id}/`);
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+// ==================== DIAGNOSTIC ÉDITABLE ====================
+
+/**
+ * Service d'édition du diagnostic médecin
+ */
+export const diagnosticService = {
+  /**
+   * Éditer le diagnostic médecin
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} diagnosticData - Données du diagnostic
+   * @param {string} diagnosticData.diagnostic - Diagnostic (obligatoire)
+   * @param {string} diagnosticData.traitement - Traitement
+   * @param {string} diagnosticData.recommandations - Recommandations
+   * @param {string} diagnosticData.examen_complementaire - Examens complémentaires
+   * @param {string} diagnosticData.commentaire_medecin - Commentaire médecin
+   * @param {string} diagnosticData.signature_medecin - Signature
+   * @returns {Promise<Object>} - Diagnostic mis à jour
+   */
+  async editDiagnostic(ficheId, diagnosticData) {
+    try {
+      const response = await api.patch(`/fiche-consultation/${ficheId}/edit-diagnostic/`, diagnosticData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Gestion des erreurs
+   * @param {Object} error - Erreur Axios
+   * @returns {Object} - Erreur formatée
+   */
+  handleError(error) {
+    return authService.handleError(error);
+  }
+};
+
+/**
+ * Service de gestion des résultats de laboratoire
  */
 export const dashboardService = {
+  /**
+   * Récupérer les statistiques du tableau de bord patient
+   * @returns {Promise<Object>} - Statistiques
+   */
+  getStats: async () => {
+    try {
+      const response = await api.get('/dashboard/stats');
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
+
   /**
    * Récupérer les statistiques du médecin
    * @returns {Promise<Object>} - Statistiques médicales
@@ -1385,18 +2332,40 @@ export const ficheMessagingService = {
   },
 
   /**
+   * Envoyer un message à une fiche de consultation (alias pour addMessage)
+   * @param {number} ficheId - ID de la fiche
+   * @param {Object} messageData - Données du message
+   * @param {string} messageData.content - Contenu du message
+   * @param {string} messageData.sender_role - Rôle de l'expéditeur
+   * @returns {Promise<Object>} - Message créé
+   */
+  async sendMessage(ficheId, messageData) {
+    try {
+      const response = await api.post(`/fiche-consultation/${ficheId}/messages/`, {
+        content: messageData.content,
+        sender_role: messageData.sender_role || 'patient'
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
    * Gestion des erreurs pour le service de messagerie
    * @param {Object} error - Erreur axios
    * @returns {Object} - Erreur formatée
    */
   handleError(error) {
+    console.error('Erreur dans ficheMessagingService:', error);
+    
     if (error.response?.data) {
-      // Retourner directement les données d'erreur pour préserver la structure
-      return error.response.data;
+      // Retourner l'erreur au lieu de la relancer
+      const errorData = error.response.data;
+      throw new Error(errorData.detail || errorData.message || 'Erreur de messagerie');
     }
-    return {
-      detail: error.message || 'Erreur lors de l\'opération de messagerie'
-    };
+    
+    throw new Error(error.message || 'Erreur lors de l\'opération de messagerie');
   }
 };
 
@@ -1504,6 +2473,67 @@ export const whatsappService = {
   },
 
   /**
+   * Vérifier si un numéro est dans le sandbox WhatsApp
+   * @param {string} phoneNumber - Numéro de téléphone
+   * @returns {Promise<Object>} - Statut sandbox
+   */
+  async checkSandboxStatus(phoneNumber) {
+    try {
+      const response = await api.get(`/whatsapp/sandbox-status/?phone=${encodeURIComponent(phoneNumber)}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Envoyer les instructions d'onboarding par SMS
+   * @param {string} phoneNumber - Numéro de téléphone
+   * @returns {Promise<Object>} - Résultat envoi SMS
+   */
+  async sendOnboardingSMS(phoneNumber) {
+    try {
+      const response = await api.post('/whatsapp/onboarding-sms/', {
+        phone_number: phoneNumber
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Générer un QR code pour l'onboarding WhatsApp
+   * @returns {Promise<Object>} - URL du QR code
+   */
+  async generateOnboardingQR() {
+    try {
+      const response = await api.get('/whatsapp/onboarding-qr/');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  },
+
+  /**
+   * Obtenir les instructions d'onboarding
+   * @returns {Object} - Instructions d'onboarding
+   */
+  getOnboardingInstructions() {
+    return {
+      sandbox_number: '+14155238886',
+      join_message: 'join tie-for',
+      qr_url: 'https://wa.me/14155238886?text=join%20tie-for',
+      steps: [
+        'Ouvrez WhatsApp sur votre téléphone',
+        'Scannez le QR code ou cliquez sur le lien',
+        'Envoyez le message "join tie-for"',
+        'Attendez la confirmation d\'activation'
+      ]
+    };
+  },
+
+  /**
    * Gestion des erreurs pour le service WhatsApp
    * @param {Object} error - Erreur axios
    * @returns {Object} - Erreur formatée
@@ -1517,6 +2547,9 @@ export const whatsappService = {
     };
   }
 };
+
+// Alias pour la compatibilité avec les anciens noms
+export const labResultService = labService;
 
 // Export de l'instance axios configurée
 export default api;

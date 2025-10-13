@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Icons';
 import Logo from '../../components/Logo';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PhoneInput from '../../components/PhoneInput';
+import Switch from '../../components/Switch';
 import { consultationService, authService } from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -156,7 +157,12 @@ const FicheConsultationForm = ({ onBack }) => {
     preoccupations: '',
     comprehension: '',
     attentes: '',
-    engagement: ''
+    engagement: '',
+    
+    // Hypothèse et analyses proposées (nouveaux champs P0)
+    hypothese_patient: '',
+    analyses_proposees: '',
+    observations_importantes: ''
   });
 
   const steps = [
@@ -169,7 +175,8 @@ const FicheConsultationForm = ({ onBack }) => {
     { id: 7, title: 'Symptômes', icon: MedicalIcons.Symptoms },
     { id: 8, title: 'Antécédents', icon: MedicalIcons.History },
     { id: 9, title: 'Examen clinique', icon: MedicalIcons.Stethoscope },
-    { id: 10, title: 'Finalisation', icon: MedicalIcons.Check }
+    { id: 10, title: 'Hypothèse & Analyses', icon: MedicalIcons.Search },
+    { id: 11, title: 'Finalisation', icon: MedicalIcons.Check }
   ];
 
   // Pré-remplir les informations du patient connecté
@@ -193,12 +200,7 @@ const FicheConsultationForm = ({ onBack }) => {
     }
   }, [user]);
 
-  // Charger les médecins au démarrage
-  useEffect(() => {
-    loadMedecins();
-  }, []);
-
-  const loadMedecins = async () => {
+  const loadMedecins = useCallback(async () => {
     try {
       setLoadingMedecins(true);
       
@@ -214,7 +216,12 @@ const FicheConsultationForm = ({ onBack }) => {
     } finally {
       setLoadingMedecins(false);
     }
-  };
+  }, [showError]);
+
+  // Charger les médecins au démarrage
+  useEffect(() => {
+    loadMedecins();
+  }, [loadMedecins]);
 
   // Validation par étape
   const validateStep = (step) => {
@@ -317,6 +324,19 @@ const FicheConsultationForm = ({ onBack }) => {
   const handleSubmit = async () => {
     try {
       setIsSubmitting(true);
+      
+      // Vérification préventive du token d'authentification
+      const accessToken = localStorage.getItem('mediai_access_token');
+      if (!accessToken) {
+        showError(
+          'Session expirée',
+          'Votre session a expiré. Veuillez vous reconnecter.'
+        );
+        setTimeout(() => {
+          window.location.href = '/auth/login';
+        }, 2000);
+        return;
+      }
       
       // Validation complète des champs obligatoires
       const requiredFields = {
@@ -505,7 +525,12 @@ const FicheConsultationForm = ({ onBack }) => {
         preoccupations: formData.preoccupations || '',
         comprehension: formData.comprehension || '',
         attentes: formData.attentes || '',
-        engagement: formData.engagement || ''
+        engagement: formData.engagement || '',
+        
+        // Hypothèse et analyses proposées (nouveaux champs P0)
+        hypothese_patient: formData.hypothese_patient || '',
+        analyses_proposees: formData.analyses_proposees || '',
+        observations_importantes: formData.observations_importantes || ''
       };
       
       // Note: L'ID du patient connecté est probablement géré automatiquement 
@@ -531,8 +556,28 @@ const FicheConsultationForm = ({ onBack }) => {
     } catch (error) {
       console.error('Erreur lors de la création de la consultation:', error);
       console.error('Détails de l\'erreur:', error.details);
+      console.error('Response:', error.response);
       
       let errorMessage = 'Une erreur est survenue lors de la création de la consultation.';
+      
+      // Gestion spécifique des erreurs d'authentification
+      if (error.response?.status === 401 || 
+          (error.code === 'token_not_valid') ||
+          (error.detail && error.detail.includes('token'))) {
+        errorMessage = 'Session expirée. Veuillez vous reconnecter.';
+        showError('Session expirée', errorMessage);
+        
+        // Redirection vers la page de connexion après 2 secondes
+        setTimeout(() => {
+          // Nettoyer les tokens locaux
+          localStorage.removeItem('mediai_access_token');
+          localStorage.removeItem('mediai_refresh_token');
+          localStorage.removeItem('mediai_user');
+          window.location.href = '/auth/login';
+        }, 2000);
+        
+        return;
+      }
       
       // Gestion spécifique des erreurs API
       if (error.details && typeof error.details === 'object') {
@@ -547,6 +592,18 @@ const FicheConsultationForm = ({ onBack }) => {
         });
         if (fieldErrors.length > 0) {
           errorMessage = fieldErrors.join('\n');
+        }
+      } else if (error.response?.data) {
+        // Erreur avec réponse du serveur
+        const errorData = error.response.data;
+        if (errorData.detail) {
+          errorMessage = errorData.detail;
+        } else if (errorData.message) {
+          errorMessage = errorData.message;
+        } else if (errorData.non_field_errors?.length > 0) {
+          errorMessage = errorData.non_field_errors[0];
+        } else if (typeof errorData === 'string') {
+          errorMessage = errorData;
         }
       } else if (error.message && typeof error.message === 'string') {
         errorMessage = error.message;
@@ -584,6 +641,8 @@ const FicheConsultationForm = ({ onBack }) => {
       case 9:
         return renderExamenClinique();
       case 10:
+        return renderHypotheseAnalyses();
+      case 11:
         return renderFinalisation();
       default:
         return null;
@@ -1312,77 +1371,65 @@ const FicheConsultationForm = ({ onBack }) => {
 
   const renderSymptomes = () => (
     <div className="space-y-4 lg:space-y-6">
-      <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Symptômes actuels</h3>
-        <p className="text-medical-body text-sm lg:text-base mb-4">
-          Cochez les symptômes que vous ressentez actuellement :
+      <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 lg:p-6 shadow-sm border border-red-200">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark flex items-center">
+          <MedicalIcons.Symptoms className="w-5 h-5 mr-2 text-red-500" />
+          Symptômes actuels
+        </h3>
+        <p className="text-medical-body text-sm lg:text-base mb-6 text-mediai-medium">
+          Indiquez les symptômes que vous ressentez actuellement :
         </p>
         
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+        <div className="grid grid-cols-1 gap-4 lg:gap-5">
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Céphalées"
+              description="Maux de tête, migraines"
               checked={formData.cephalees}
-              onChange={(e) => handleInputChange('cephalees', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('cephalees', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Céphalées</span>
-              <p className="text-xs lg:text-sm text-medium">Maux de tête</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Vertiges"
+              description="Sensation de rotation, déséquilibre"
               checked={formData.vertiges}
-              onChange={(e) => handleInputChange('vertiges', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('vertiges', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Vertiges</span>
-              <p className="text-xs lg:text-sm text-medium">Sensation de rotation</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Palpitations"
+              description="Battements cardiaques rapides ou irréguliers"
               checked={formData.palpitations}
-              onChange={(e) => handleInputChange('palpitations', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('palpitations', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Palpitations</span>
-              <p className="text-xs lg:text-sm text-medium">Battements cardiaques rapides</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Troubles visuels"
+              description="Vision floue, double vision, éblouissements"
               checked={formData.troubles_visuels}
-              onChange={(e) => handleInputChange('troubles_visuels', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('troubles_visuels', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Troubles visuels</span>
-              <p className="text-xs lg:text-sm text-medium">Vision floue, double...</p>
-            </div>
-          </label>
+          </div>
           
-          <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer sm:col-span-2">
-            <input
-              type="checkbox"
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Nycturie"
+              description="Besoin d'uriner fréquemment la nuit"
               checked={formData.nycturie}
-              onChange={(e) => handleInputChange('nycturie', e.target.checked)}
-              className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
+              onChange={(value) => handleInputChange('nycturie', value)}
+              size="md"
             />
-            <div>
-              <span className="text-dark font-medium text-sm lg:text-base">Nycturie</span>
-              <p className="text-xs lg:text-sm text-medium">Urination nocturne fréquente</p>
-            </div>
-          </label>
+          </div>
         </div>
       </div>
     </div>
@@ -1784,6 +1831,73 @@ const FicheConsultationForm = ({ onBack }) => {
     </div>
   );
 
+  const renderHypotheseAnalyses = () => (
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 lg:p-6 shadow-sm border border-blue-200">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark flex items-center">
+          <MedicalIcons.Search className="w-5 h-5 mr-2 text-mediai-primary" />
+          Hypothèse et Analyses proposées
+        </h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6 text-mediai-medium">
+          Partagez vos impressions sur votre état de santé et les examens que vous pensez nécessaires.
+        </p>
+        
+        <div className="space-y-4 lg:space-y-6">
+          {/* Hypothèse du patient */}
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Votre hypothèse sur votre état
+            </label>
+            <textarea
+              value={formData.hypothese_patient}
+              onChange={(e) => handleInputChange('hypothese_patient', e.target.value)}
+              placeholder="Selon vous, de quoi pourriez-vous souffrir ? Avez-vous une idée sur l'origine de vos symptômes ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
+            />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Vos impressions peuvent aider le médecin dans son diagnostic
+            </p>
+          </div>
+
+          {/* Analyses proposées */}
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Examens ou analyses que vous pensez nécessaires
+            </label>
+            <textarea
+              value={formData.analyses_proposees}
+              onChange={(e) => handleInputChange('analyses_proposees', e.target.value)}
+              placeholder="Pensez-vous qu'il faut faire une prise de sang, une radiographie, un scanner, etc. ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
+            />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Suggestions d'examens complémentaires
+            </p>
+          </div>
+
+          {/* Observations importantes */}
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Observations importantes à signaler
+            </label>
+            <textarea
+              value={formData.observations_importantes}
+              onChange={(e) => handleInputChange('observations_importantes', e.target.value)}
+              placeholder="Y a-t-il quelque chose d'important que vous n'avez pas encore mentionné ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
+            />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Toute information que vous jugez pertinente
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
   const renderFinalisation = () => (
     <div className="space-y-6">
       <div className="bg-light rounded-lg p-4 mb-6">
@@ -1890,7 +2004,7 @@ const FicheConsultationForm = ({ onBack }) => {
         {/* Progress Bar */}
         <div className="mb-4 lg:mb-6">
           <div className="hidden sm:flex items-center justify-between mb-4">
-            {steps.map((step, index) => {
+            {steps.map((step) => {
               const IconComponent = step.icon;
               const isActive = currentStep === step.id;
               const isCompleted = currentStep > step.id;
@@ -1958,47 +2072,47 @@ const FicheConsultationForm = ({ onBack }) => {
             </h2>
             
             {renderStepContent()}
-          </div>
-          
-          {/* Navigation Buttons */}
-          <div className="flex flex-col sm:flex-row sm:justify-between gap-3 sm:gap-0 mt-6 lg:mt-8 pt-4 lg:pt-6 border-t border-mediai-light">
-            <Button
-              variant="outline"
-              onClick={handlePrevious}
-              disabled={currentStep === 1}
-              className="flex items-center justify-center space-x-2 w-full sm:w-auto border-2 border-mediai-medium hover:border-mediai-primary hover:bg-mediai-light transition-all duration-300"
-            >
-              <NavigationIcons.ArrowLeft className="w-4 h-4" />
-              <span>Précédent</span>
-            </Button>
             
-            {currentStep === steps.length ? (
+            {/* Navigation Buttons */}
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-4 mt-8 pt-6 border-t border-gray-200">
               <Button
-                onClick={handleSubmit}
-                disabled={isSubmitting}
-                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                variant="outline"
+                onClick={handlePrevious}
+                disabled={currentStep === 1}
+                className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 py-3 border-2 border-gray-300 hover:border-mediai-primary hover:bg-mediai-light transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {isSubmitting ? (
-                  <>
-                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                    <span>Création en cours...</span>
-                  </>
-                ) : (
-                  <>
-                    <MedicalIcons.Check className="w-4 h-4" />
-                    <span>Soumettre la fiche</span>
-                  </>
-                )}
+                <NavigationIcons.ArrowLeft className="w-4 h-4" />
+                <span>Précédent</span>
               </Button>
-            ) : (
-              <Button
-                onClick={handleNext}
-                className="flex items-center justify-center space-x-2 w-full sm:w-auto gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg"
-              >
-                <span>Suivant</span>
-                <NavigationIcons.ArrowRight className="w-4 h-4" />
-              </Button>
-            )}
+              
+              {currentStep === steps.length ? (
+                <Button
+                  onClick={handleSubmit}
+                  disabled={isSubmitting}
+                  className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 py-3 gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      <span>Création en cours...</span>
+                    </>
+                  ) : (
+                    <>
+                      <MedicalIcons.Check className="w-4 h-4" />
+                      <span>Soumettre la fiche</span>
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleNext}
+                  className="flex items-center justify-center space-x-2 w-full sm:w-auto px-6 py-3 gradient-primary hover:shadow-xl transform hover:scale-105 transition-all duration-300 shadow-lg"
+                >
+                  <span>Suivant</span>
+                  <NavigationIcons.ArrowRight className="w-4 h-4" />
+                </Button>
+              )}
+            </div>
           </div>
         </div>
       </div>
