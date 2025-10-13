@@ -125,8 +125,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
     capacite_psychologique: 'Top',
     capacite_psychologique_score: '',
     febrile: 'Non',
-    coloration_bulbaire: 'Normale',
-    coloration_palpebrale: 'Normale',
+    coloration_bulbaire: 'normale',
+    coloration_palpebrale: 'normale',
     tegument: 'Normal',
     
     // Régions examinées
@@ -319,7 +319,6 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
         is_patient_distance: false,
         
         // Assigner le médecin connecté automatiquement
-        medecin_id: user?.id || user?.medecin_profile?.id || user?.doctor_id || null,
         assigned_medecin: user?.id || user?.medecin_profile?.id || user?.doctor_id || null,
         
         // Adresse
@@ -419,8 +418,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
         capacite_psychologique: formData.capacite_psychologique || 'Top',
         capacite_psychologique_score: formData.capacite_psychologique_score || '',
         febrile: formData.febrile || 'Non',
-        coloration_bulbaire: formData.coloration_bulbaire || 'Normale',
-        coloration_palpebrale: formData.coloration_palpebrale || 'Normale',
+        coloration_bulbaire: formData.coloration_bulbaire || 'normale',
+        coloration_palpebrale: formData.coloration_palpebrale || 'normale',
         tegument: formData.tegument || 'Normal',
         
         // Régions examinées
@@ -442,6 +441,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
         attentes: formData.attentes || '',
         engagement: formData.engagement || ''
       };
+      
+      console.log('📤 Données envoyées au backend:', JSON.stringify(consultationData, null, 2));
       
       const result = await consultationService.createConsultation(consultationData);
       
@@ -1085,7 +1086,6 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
             >
               <option value="Conservé">Conservé</option>
               <option value="Altéré">Altéré</option>
-              <option value="Critique">Critique</option>
             </select>
           </div>
           <div>
@@ -1099,8 +1099,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
               required
             >
               <option value="Top">Top</option>
-              <option value="Moyenne">Moyenne</option>
-              <option value="Faible">Faible</option>
+              <option value="Moyen">Moyen</option>
+              <option value="Bas">Bas</option>
             </select>
           </div>
           <div>
@@ -1114,8 +1114,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
               required
             >
               <option value="Top">Top</option>
-              <option value="Moyenne">Moyenne</option>
-              <option value="Faible">Faible</option>
+              <option value="Moyen">Moyen</option>
+              <option value="Bas">Bas</option>
             </select>
           </div>
           <div>
@@ -1142,9 +1142,9 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
               className="w-full px-4 py-2 border rounded-lg"
               required
             >
-              <option value="Normale">Normale</option>
-              <option value="Pâle">Pâle</option>
-              <option value="Ictérique">Ictérique</option>
+              <option value="normale">Normale</option>
+              <option value="jaunatre">Jaunâtre</option>
+              <option value="rougeatre">Rougeâtre</option>
             </select>
           </div>
           <div>
@@ -1157,9 +1157,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
               className="w-full px-4 py-2 border rounded-lg"
               required
             >
-              <option value="Normale">Normale</option>
-              <option value="Pâle">Pâle</option>
-              <option value="Cyanosée">Cyanosée</option>
+              <option value="normale">Normale</option>
+              <option value="pale">Pâle</option>
             </select>
           </div>
           <div>
@@ -1173,9 +1172,7 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
               required
             >
               <option value="Normal">Normal</option>
-              <option value="Sec">Sec</option>
-              <option value="Humide">Humide</option>
-              <option value="Lésions">Lésions</option>
+              <option value="Anormal">Anormal</option>
             </select>
           </div>
         </div>

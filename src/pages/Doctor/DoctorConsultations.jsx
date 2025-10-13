@@ -495,7 +495,7 @@ const DoctorConsultations = ({ onNewConsultation }) => {
 
   // Fonctions pour WhatsApp
   const openWhatsAppModal = (consultation) => {
-    setSelectedConsultation(consultation);
+    setSelectedFicheForAction(consultation);
     setShowWhatsAppModal(true);
     setWhatsappData({
       message_template: 'default',
