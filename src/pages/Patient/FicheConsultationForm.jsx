@@ -169,13 +169,13 @@ const FicheConsultationForm = ({ onBack }) => {
     { id: 1, title: 'Informations personnelles', icon: MedicalIcons.Profile },
     { id: 2, title: 'Contact & Adresse', icon: MedicalIcons.Location },
     { id: 3, title: 'Choix du médecin', icon: MedicalIcons.Doctor },
-    { id: 4, title: 'Signes vitaux', icon: MedicalIcons.Heart },
-    { id: 5, title: 'Motif de consultation', icon: MedicalIcons.Document },
-    { id: 6, title: 'Médicaments', icon: MedicalIcons.Pills },
-    { id: 7, title: 'Symptômes', icon: MedicalIcons.Symptoms },
-    { id: 8, title: 'Antécédents', icon: MedicalIcons.History },
-    { id: 9, title: 'Examen clinique', icon: MedicalIcons.Stethoscope },
-    { id: 10, title: 'Hypothèse & Analyses', icon: MedicalIcons.Search },
+    { id: 4, title: 'Mesures de santé', icon: MedicalIcons.Heart },
+    { id: 5, title: 'Raison de la visite', icon: MedicalIcons.Document },
+    { id: 6, title: 'Vos médicaments', icon: MedicalIcons.Pills },
+    { id: 7, title: 'Ce que vous ressentez', icon: MedicalIcons.Symptoms },
+    { id: 8, title: 'Votre historique médical', icon: MedicalIcons.History },
+    { id: 9, title: 'Observations', icon: MedicalIcons.Stethoscope },
+    { id: 10, title: 'Votre avis & Examens', icon: MedicalIcons.Search },
     { id: 11, title: 'Finalisation', icon: MedicalIcons.Check }
   ];
 
@@ -1102,9 +1102,9 @@ const FicheConsultationForm = ({ onBack }) => {
   const renderSignesVitaux = () => (
     <div className="space-y-4 lg:space-y-6">
       <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Signes vitaux</h3>
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Vos mesures de santé</h3>
         <p className="text-medical-body text-sm lg:text-base mb-4">
-          Remplissez les signes vitaux que vous connaissez. Laissez vide si vous ne connaissez pas la valeur.
+          Indiquez les mesures que vous connaissez. Ce n'est pas grave si vous n'avez pas toutes les informations.
         </p>
         
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
@@ -1119,7 +1119,7 @@ const FicheConsultationForm = ({ onBack }) => {
             max="45"
           />
           <Input
-            label="SpO2 (%)"
+            label="Oxygène dans le sang (%)"
             type="number"
             value={formData.spo2}
             onChange={(e) => handleInputChange('spo2', e.target.value)}
@@ -1138,13 +1138,13 @@ const FicheConsultationForm = ({ onBack }) => {
             max="300"
           />
           <Input
-            label="Tension artérielle"
+            label="Tension (ex: 120/80)"
             value={formData.tension_arterielle}
             onChange={(e) => handleInputChange('tension_arterielle', e.target.value)}
             placeholder="120/80"
           />
           <Input
-            label="Pouls (bpm)"
+            label="Rythme cardiaque (battements/min)"
             type="number"
             value={formData.pouls}
             onChange={(e) => handleInputChange('pouls', e.target.value)}
@@ -1153,7 +1153,7 @@ const FicheConsultationForm = ({ onBack }) => {
             max="300"
           />
           <Input
-            label="Fréquence respiratoire"
+            label="Rythme respiratoire (/min)"
             type="number"
             value={formData.frequence_respiratoire}
             onChange={(e) => handleInputChange('frequence_respiratoire', e.target.value)}
@@ -1165,7 +1165,7 @@ const FicheConsultationForm = ({ onBack }) => {
       </div>
 
       <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Personnes présentes lors de la consultation</h3>
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Qui sera présent lors de la consultation ?</h3>
         <div className="space-y-3 lg:space-y-4">
           <label className="flex items-center space-x-3 cursor-pointer">
             <input
@@ -1260,16 +1260,16 @@ const FicheConsultationForm = ({ onBack }) => {
   const renderMotifConsultation = () => (
     <div className="space-y-4 lg:space-y-6">
       <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Motif de la consultation</h3>
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Pourquoi consultez-vous ?</h3>
         <div className="space-y-4">
           <div>
             <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
-              Motif principal de consultation *
+              Raison principale de votre visite *
             </label>
             <textarea
               value={formData.motif_consultation}
               onChange={(e) => handleInputChange('motif_consultation', e.target.value)}
-              placeholder="Décrivez brièvement pourquoi vous consultez aujourd'hui..."
+              placeholder="Expliquez en quelques mots pourquoi vous venez consulter..."
               rows={4}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 resize-none text-xs lg:text-sm"
               required
@@ -1278,12 +1278,12 @@ const FicheConsultationForm = ({ onBack }) => {
 
           <div>
             <label className="block text-xs lg:text-sm font-medium text-dark mb-2">
-              Histoire de la maladie actuelle
+              Depuis quand et comment ça a commencé ?
             </label>
             <textarea
               value={formData.histoire_maladie}
               onChange={(e) => handleInputChange('histoire_maladie', e.target.value)}
-              placeholder="Décrivez l'évolution de vos symptômes : quand ont-ils commencé, comment ont-ils évolué, qu'est-ce qui les améliore ou les aggrave..."
+              placeholder="Racontez : depuis quand vous ressentez ces symptômes ? Est-ce que ça s'améliore ou ça empire ? Y a-t-il quelque chose qui soulage ou aggrave ?"
               rows={6}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary focus:ring-1 focus:ring-primary transition-all duration-200 resize-none text-xs lg:text-sm"
             />
@@ -1296,7 +1296,7 @@ const FicheConsultationForm = ({ onBack }) => {
   const renderMedicaments = () => (
     <div className="space-y-4 lg:space-y-6">
       <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Prise de médicaments</h3>
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Vos médicaments</h3>
         <p className="text-medical-body text-sm lg:text-base mb-4">
           Indiquez où vous prenez habituellement vos médicaments :
         </p>
@@ -1374,10 +1374,10 @@ const FicheConsultationForm = ({ onBack }) => {
       <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-4 lg:p-6 shadow-sm border border-red-200">
         <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark flex items-center">
           <MedicalIcons.Symptoms className="w-5 h-5 mr-2 text-red-500" />
-          Symptômes actuels
+          Ce que vous ressentez en ce moment
         </h3>
         <p className="text-medical-body text-sm lg:text-base mb-6 text-mediai-medium">
-          Indiquez les symptômes que vous ressentez actuellement :
+          Cochez ce que vous ressentez actuellement :
         </p>
         
         <div className="grid grid-cols-1 gap-4 lg:gap-5">
@@ -1438,7 +1438,10 @@ const FicheConsultationForm = ({ onBack }) => {
   const renderAntecedents = () => (
     <div className="space-y-4 lg:space-y-6">
       <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Antécédents médicaux personnels</h3>
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Votre historique médical</h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4 text-mediai-medium">
+          Avez-vous déjà eu l'une de ces maladies ?
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 lg:gap-4">
           <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
             <input
@@ -1447,7 +1450,7 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('hypertendu', e.target.checked)}
               className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark text-sm lg:text-base">Hypertension artérielle</span>
+            <span className="text-dark text-sm lg:text-base">Tension élevée (Hypertension)</span>
           </label>
           
           <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
@@ -1457,7 +1460,7 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('diabetique', e.target.checked)}
               className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark text-sm lg:text-base">Diabète</span>
+            <span className="text-dark text-sm lg:text-base">Diabète (Sucre)</span>
           </label>
           
           <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
@@ -1467,7 +1470,7 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('epileptique', e.target.checked)}
               className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark text-sm lg:text-base">Épilepsie</span>
+            <span className="text-dark text-sm lg:text-base">Épilepsie (Crises)</span>
           </label>
           
           <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
@@ -1477,7 +1480,7 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('trouble_comportement', e.target.checked)}
               className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark text-sm lg:text-base">Troubles du comportement</span>
+            <span className="text-dark text-sm lg:text-base">Problèmes psychologiques</span>
           </label>
           
           <label className="flex items-center space-x-3 p-3 lg:p-4 border border-medium rounded-lg hover:bg-white transition-colors cursor-pointer">
@@ -1487,13 +1490,13 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('gastritique', e.target.checked)}
               className="w-4 h-4 text-primary border-medium focus:ring-primary focus:ring-2 rounded cursor-pointer"
             />
-            <span className="text-dark text-sm lg:text-base">Gastrite</span>
+            <span className="text-dark text-sm lg:text-base">Gastrite (Maux d'estomac)</span>
           </label>
         </div>
       </div>
 
       <div className="bg-light rounded-lg p-4 lg:p-6">
-        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Habitudes de vie</h3>
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4">Vos habitudes</h3>
         <div className="space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
             <div>
@@ -1591,7 +1594,7 @@ const FicheConsultationForm = ({ onBack }) => {
       </div>
 
       <div className="bg-light rounded-lg p-4">
-        <h3 className="text-medical-subtitle text-lg mb-4">Allergies</h3>
+        <h3 className="text-medical-subtitle text-lg mb-4">Allergies aux médicaments</h3>
         <div className="space-y-4">
           <label className="flex items-center space-x-3">
             <input
@@ -1600,15 +1603,15 @@ const FicheConsultationForm = ({ onBack }) => {
               onChange={(e) => handleInputChange('allergie_medicamenteuse', e.target.checked)}
               className="text-primary"
             />
-            <span className="text-dark">Allergie médicamenteuse</span>
+            <span className="text-dark">J'ai des allergies à certains médicaments</span>
           </label>
           
           {formData.allergie_medicamenteuse && (
             <Input
-              label="Médicament(s) allergène(s)"
+              label="Quels médicaments ?"
               value={formData.medicament_allergique}
               onChange={(e) => handleInputChange('medicament_allergique', e.target.value)}
-              placeholder="Précisez les médicaments qui causent des allergies..."
+              placeholder="Indiquez les médicaments qui vous causent des réactions..."
               className="ml-6"
             />
           )}
@@ -1620,11 +1623,11 @@ const FicheConsultationForm = ({ onBack }) => {
   const renderExamenClinique = () => (
     <div className="space-y-6">
       <div className="bg-light rounded-lg p-4 mb-6">
-        <h3 className="text-medical-subtitle text-lg mb-4">État général</h3>
+        <h3 className="text-medical-subtitle text-lg mb-4">Comment vous sentez-vous ?</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium text-dark mb-2">
-              État général <span className="text-red-500">*</span>
+              Votre état général <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.etat}
@@ -1632,14 +1635,14 @@ const FicheConsultationForm = ({ onBack }) => {
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors"
               required
             >
-              <option value="Conservé">Conservé</option>
-              <option value="Altéré">Altéré</option>
+              <option value="Conservé">Normal</option>
+              <option value="Altéré">Affaibli</option>
             </select>
           </div>
           
           <div>
             <label className="block text-sm font-medium text-dark mb-2">
-              Fébrile <span className="text-red-500">*</span>
+              Avez-vous de la fièvre ? <span className="text-red-500">*</span>
             </label>
             <select
               value={formData.febrile}
