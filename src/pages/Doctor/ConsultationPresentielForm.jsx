@@ -3,6 +3,7 @@ import { MedicalIcons, NavigationIcons, StatusIcons } from '../../components/Ico
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PhoneInput from '../../components/PhoneInput';
+import Switch from '../../components/Switch';
 import { consultationService } from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -146,7 +147,11 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
     preoccupations: '',
     comprehension: '',
     attentes: '',
-    engagement: ''
+    engagement: '',
+    
+    // Hypothèse et analyses proposées
+    hypothese_patient_medecin: '',
+    analyses_proposees: ''
   });
 
   const steps = [
@@ -439,7 +444,11 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
         preoccupations: formData.preoccupations || '',
         comprehension: formData.comprehension || '',
         attentes: formData.attentes || '',
-        engagement: formData.engagement || ''
+        engagement: formData.engagement || '',
+        
+        // Hypothèse et analyses proposées
+        hypothese_patient_medecin: formData.hypothese_patient_medecin || '',
+        analyses_proposees: formData.analyses_proposees || ''
       };
       
       console.log('📤 Données envoyées au backend:', JSON.stringify(consultationData, null, 2));
@@ -448,7 +457,7 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
       
       showSuccess(
         'Consultation créée avec succès !',
-        'La fiche de consultation a été enregistrée et l\'analyse IA va commencer.'
+        'La fiche de consultation a été enregistrée et l\'analyse va commencer.'
       );
       
       // Callback de succès
@@ -694,8 +703,11 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
 
   const renderSignesVitaux = () => (
     <div className="space-y-6">
-      <div className="bg-light rounded-lg p-6">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Signes vitaux</h3>
+      <div className="bg-gradient-to-br from-pink-50 to-rose-50 rounded-xl p-6 border border-pink-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.Heart className="w-5 h-5 mr-2 text-pink-500" />
+          Signes vitaux
+        </h3>
         <p className="text-sm text-mediai-medium mb-6">
           Mesurez et renseignez les signes vitaux du patient.
         </p>
@@ -757,8 +769,11 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
         </div>
       </div>
 
-      <div className="bg-light rounded-lg p-6">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Personnes présentes</h3>
+      <div className="bg-gradient-to-br from-slate-50 to-gray-50 rounded-xl p-6 border border-slate-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.Users className="w-5 h-5 mr-2 text-slate-500" />
+          Personnes présentes
+        </h3>
         <div className="space-y-4">
           <label className="flex items-center space-x-3">
             <input
@@ -856,8 +871,11 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
 
   const renderMotifConsultation = () => (
     <div className="space-y-6">
-      <div className="bg-light rounded-lg p-6">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Motif de consultation</h3>
+      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 rounded-xl p-6 border border-amber-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.Document className="w-5 h-5 mr-2 text-amber-500" />
+          Motif de consultation
+        </h3>
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-dark mb-2">
@@ -890,8 +908,11 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
 
   const renderMedicaments = () => (
     <div className="space-y-6">
-      <div className="bg-light rounded-lg p-6">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Médicaments</h3>
+      <div className="bg-gradient-to-br from-teal-50 to-cyan-50 rounded-xl p-6 border border-teal-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.Pill className="w-5 h-5 mr-2 text-teal-500" />
+          Médicaments
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
           <label className="flex items-center space-x-3">
             <input
@@ -952,29 +973,65 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
 
   const renderSymptomes = () => (
     <div className="space-y-6">
-      <div className="bg-light rounded-lg p-6">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Symptômes actuels</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {[
-            { key: 'cephalees', label: 'Céphalées', desc: 'Maux de tête' },
-            { key: 'vertiges', label: 'Vertiges', desc: 'Sensation de rotation' },
-            { key: 'palpitations', label: 'Palpitations', desc: 'Battements cardiaques rapides' },
-            { key: 'troubles_visuels', label: 'Troubles visuels', desc: 'Vision floue' },
-            { key: 'nycturie', label: 'Nycturie', desc: 'Urination nocturne' }
-          ].map(symptom => (
-            <label key={symptom.key} className="flex items-start space-x-3 p-4 border border-medium rounded-lg hover:bg-white">
-              <input
-                type="checkbox"
-                checked={formData[symptom.key]}
-                onChange={(e) => handleInputChange(symptom.key, e.target.checked)}
-                className="w-4 h-4 text-primary rounded mt-1"
-              />
-              <div>
-                <span className="font-medium">{symptom.label}</span>
-                <p className="text-sm text-medium">{symptom.desc}</p>
-              </div>
-            </label>
-          ))}
+      <div className="bg-gradient-to-br from-red-50 to-orange-50 rounded-xl p-6 shadow-sm border border-red-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.Symptoms className="w-5 h-5 mr-2 text-red-500" />
+          Symptômes actuels
+        </h3>
+        <p className="text-sm text-mediai-medium mb-6">
+          Indiquez les symptômes que le patient ressent actuellement :
+        </p>
+        
+        <div className="grid grid-cols-1 gap-5">
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Céphalées"
+              description="Maux de tête, migraines"
+              checked={formData.cephalees}
+              onChange={(value) => handleInputChange('cephalees', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Vertiges"
+              description="Sensation de rotation, déséquilibre"
+              checked={formData.vertiges}
+              onChange={(value) => handleInputChange('vertiges', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Palpitations"
+              description="Battements cardiaques rapides ou irréguliers"
+              checked={formData.palpitations}
+              onChange={(value) => handleInputChange('palpitations', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Troubles visuels"
+              description="Vision floue, double vision, éblouissements"
+              checked={formData.troubles_visuels}
+              onChange={(value) => handleInputChange('troubles_visuels', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-red-100">
+            <Switch
+              label="Nycturie"
+              description="Besoin d'uriner fréquemment la nuit"
+              checked={formData.nycturie}
+              onChange={(value) => handleInputChange('nycturie', value)}
+              size="md"
+            />
+          </div>
         </div>
       </div>
     </div>
@@ -982,29 +1039,73 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
 
   const renderAntecedents = () => (
     <div className="space-y-6">
-      <div className="bg-light rounded-lg p-6">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Antécédents médicaux</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-          {[
-            { key: 'hypertendu', label: 'Hypertension' },
-            { key: 'diabetique', label: 'Diabète' },
-            { key: 'epileptique', label: 'Épilepsie' },
-            { key: 'trouble_comportement', label: 'Troubles comportement' },
-            { key: 'gastritique', label: 'Gastrite' }
-          ].map(ant => (
-            <label key={ant.key} className="flex items-center space-x-3">
-              <input
-                type="checkbox"
-                checked={formData[ant.key]}
-                onChange={(e) => handleInputChange(ant.key, e.target.checked)}
-                className="w-4 h-4 text-primary rounded"
-              />
-              <span>{ant.label}</span>
-            </label>
-          ))}
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-6 shadow-sm border border-purple-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.History className="w-5 h-5 mr-2 text-purple-500" />
+          Antécédents médicaux personnels
+        </h3>
+        <p className="text-sm text-mediai-medium mb-6">
+          Indiquez les antécédents médicaux du patient :
+        </p>
+        
+        <div className="grid grid-cols-1 gap-5">
+          <div className="bg-white rounded-lg p-4 border border-purple-100">
+            <Switch
+              label="Hypertension artérielle"
+              description="Tension artérielle élevée"
+              checked={formData.hypertendu}
+              onChange={(value) => handleInputChange('hypertendu', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-purple-100">
+            <Switch
+              label="Diabète"
+              description="Trouble de la régulation du glucose"
+              checked={formData.diabetique}
+              onChange={(value) => handleInputChange('diabetique', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-purple-100">
+            <Switch
+              label="Épilepsie"
+              description="Troubles neurologiques avec crises"
+              checked={formData.epileptique}
+              onChange={(value) => handleInputChange('epileptique', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-purple-100">
+            <Switch
+              label="Troubles du comportement"
+              description="Problèmes psychologiques ou comportementaux"
+              checked={formData.trouble_comportement}
+              onChange={(value) => handleInputChange('trouble_comportement', value)}
+              size="md"
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg p-4 border border-purple-100">
+            <Switch
+              label="Gastrite"
+              description="Inflammation de la muqueuse gastrique"
+              checked={formData.gastritique}
+              onChange={(value) => handleInputChange('gastritique', value)}
+              size="md"
+            />
+          </div>
         </div>
+      </div>
 
-        <h4 className="font-bold text-mediai-dark mb-3">Habitudes</h4>
+      <div className="bg-gradient-to-br from-blue-50 to-cyan-50 rounded-xl p-6 shadow-sm border border-blue-200">
+        <h4 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.Activity className="w-5 h-5 mr-2 text-blue-500" />
+          Habitudes de vie
+        </h4>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
           <div>
             <label className="block text-sm font-medium mb-2">Tabac</label>
@@ -1071,8 +1172,11 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
 
   const renderExamenClinique = () => (
     <div className="space-y-6">
-      <div className="bg-light rounded-lg p-6">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Examen clinique</h3>
+      <div className="bg-gradient-to-br from-indigo-50 to-blue-50 rounded-xl p-6 border border-indigo-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4 flex items-center">
+          <MedicalIcons.Stethoscope className="w-5 h-5 mr-2 text-indigo-500" />
+          Examen clinique
+        </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="block text-sm font-medium mb-2">
@@ -1218,10 +1322,46 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
               <p className="font-medium mb-1">Prochaines étapes :</p>
               <ul className="list-disc list-inside space-y-1">
                 <li>La fiche sera enregistrée dans le système</li>
-                <li>L'analyse IA démarrera automatiquement</li>
+                <li>L'analyse démarrera automatiquement</li>
                 <li>Vous pourrez compléter le diagnostic et le traitement après validation</li>
               </ul>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Hypothèse et analyses proposées (optionnel) */}
+      <div className="bg-white rounded-xl p-6 border border-gray-200">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4">Hypothèse diagnostique et analyses (Optionnel)</h3>
+        <p className="text-sm text-mediai-medium mb-4">
+          Vous pouvez ajouter votre hypothèse diagnostique et les analyses que vous proposez
+        </p>
+        
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Hypothèse diagnostique
+            </label>
+            <textarea
+              value={formData.hypothese_patient_medecin}
+              onChange={(e) => handleInputChange('hypothese_patient_medecin', e.target.value)}
+              placeholder="Votre hypothèse diagnostique..."
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-blue-100 resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium mb-2">
+              Analyses paracliniques proposées
+            </label>
+            <textarea
+              value={formData.analyses_proposees}
+              onChange={(e) => handleInputChange('analyses_proposees', e.target.value)}
+              placeholder="Ex: Numération formule sanguine, Glycémie à jeun, etc."
+              rows={4}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-blue-100 resize-none"
+            />
           </div>
         </div>
       </div>

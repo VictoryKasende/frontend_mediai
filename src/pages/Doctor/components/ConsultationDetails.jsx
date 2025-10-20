@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import Icons from '../../../components/Icons';
+import MarkdownRenderer from '../../../components/MarkdownRenderer';
 
 const { StatusIcons, NavigationIcons, MedicalIcons, ActionIcons, Icon } = Icons;
 
@@ -484,6 +485,54 @@ const ConsultationDetails = ({
               </div>
             </div>
           </div>
+
+          {/* Analyse et hypothèses - Nouveaux champs */}
+          {(consultation.diagnostic_ia || consultation.analyses_proposees || consultation.hypothese_patient_medecin) && (
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl p-4 lg:p-6 shadow-sm border border-purple-200">
+              <h3 className="text-lg lg:text-xl font-bold text-mediai-dark font-heading mb-4 flex items-center">
+                <Icon icon={Icons.Brain} size="w-5 h-5" className="mr-2 text-purple-600" />
+                Analyse et hypothèses diagnostiques
+              </h3>
+              <div className="space-y-4">
+                {consultation.diagnostic_ia && (
+                  <div>
+                    <label className="block text-xs lg:text-sm font-medium text-purple-700 mb-2">
+                      Diagnostic d'analyse
+                    </label>
+                    <div className="bg-white p-4 rounded-lg border border-purple-100">
+                      <MarkdownRenderer content={consultation.diagnostic_ia} />
+                    </div>
+                  </div>
+                )}
+                
+                {consultation.hypothese_patient_medecin && (
+                  <div>
+                    <label className="block text-xs lg:text-sm font-medium text-indigo-700 mb-2">
+                      Hypothèse diagnostique du médecin
+                    </label>
+                    <div className="bg-white p-4 rounded-lg border border-indigo-100">
+                      <p className="text-mediai-dark text-sm lg:text-base whitespace-pre-wrap">
+                        {consultation.hypothese_patient_medecin}
+                      </p>
+                    </div>
+                  </div>
+                )}
+                
+                {consultation.analyses_proposees && (
+                  <div>
+                    <label className="block text-xs lg:text-sm font-medium text-blue-700 mb-2">
+                      Analyses proposées
+                    </label>
+                    <div className="bg-white p-4 rounded-lg border border-blue-100">
+                      <p className="text-mediai-dark text-sm lg:text-base whitespace-pre-wrap">
+                        {consultation.analyses_proposees}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Examen clinique */}
           <div className="bg-white rounded-xl p-4 lg:p-6 shadow-sm border border-gray-200">

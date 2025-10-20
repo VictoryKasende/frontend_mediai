@@ -179,7 +179,7 @@ const ConsultationsList = ({ onViewDetails }) => {
   const getStatusLabel = (statut) => {
     switch (statut) {
       case 'en_analyse':
-        return 'En analyse IA';
+        return 'En analyse';
       case 'analyse_terminee':
         return 'Analyse terminée';
       case 'valide_medecin':
@@ -315,7 +315,7 @@ const ConsultationsList = ({ onViewDetails }) => {
                   className="w-full appearance-none bg-white px-4 py-3 pr-10 border-2 border-mediai-medium rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-blue-100 transition-all duration-300 text-xs lg:text-sm cursor-pointer hover:border-mediai-primary"
                 >
                   <option value="all">Tous les statuts</option>
-                  <option value="en_analyse">En analyse IA</option>
+                  <option value="en_analyse">En analyse</option>
                   <option value="analyse_terminee">Analyse terminée</option>
                   <option value="valide_medecin">Validée par médecin</option>
                   <option value="rejete_medecin">Rejetée par médecin</option>

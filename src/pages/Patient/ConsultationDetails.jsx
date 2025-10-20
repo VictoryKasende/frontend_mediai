@@ -331,7 +331,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
   const getStatusLabel = (statut) => {
     switch (statut) {
       case 'en_analyse':
-        return 'En analyse IA';
+        return 'En analyse';
       case 'analyse_terminee':
         return 'Analyse terminée';
       case 'valide_medecin':
@@ -1109,14 +1109,14 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
 
     return (
       <div className="space-y-4 lg:space-y-6">
-        {/* Composant d'affichage structuré de l'analyse IA */}
+        {/* Composant d'affichage structuré de l'analyse */}
         {/* <AIAnalysisDisplay 
           analysisData={analysisData}
           isEditable={false} // Pas d'édition pour les patients
           showReferences={true}
         /> */}
         <div className="bg-blue-50 p-4 rounded-lg">
-          <p>Analyse IA temporairement désactivée pour debug</p>
+          <p>Analyse temporairement désactivée pour debug</p>
         </div>
 
         {/* Commentaire de rejet si applicable */}
@@ -1210,7 +1210,7 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       ...(consultation.date_soumission ? [{
         date: consultation.date_soumission,
         action: 'Fiche soumise',
-        description: 'Votre fiche de consultation a été envoyée pour analyse IA',
+        description: 'Votre fiche de consultation a été envoyée pour analyse',
         statut: 'termine',
         icon: 'upload',
         color: 'text-green-600',
@@ -1254,8 +1254,8 @@ const ConsultationDetails = ({ consultationId, onBack, onEdit }) => {
       if (consultation.status === 'en_analyse') {
         return {
           date: null,
-          action: 'En attente d\'analyse IA',
-          description: 'Votre fiche est en cours d\'analyse par l\'intelligence artificielle',
+          action: 'En attente d\'analyse',
+          description: 'Votre fiche est en cours d\'analyse',
           statut: 'en_cours',
           icon: 'clock',
           color: 'text-yellow-600',

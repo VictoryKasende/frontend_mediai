@@ -414,8 +414,8 @@ const FicheConsultationForm = ({ onBack }) => {
         contact_telephone: formData.contact_telephone || '',
         contact_adresse: formData.contact_adresse || '',
         
-        // Médecin (si sélectionné)
-        medecin_id: formData.medecin_id ? parseInt(formData.medecin_id) : null,
+        // Médecin assigné (si sélectionné pour consultation à distance)
+        assigned_medecin: formData.medecin_id ? parseInt(formData.medecin_id) : null,
         
         // Signes vitaux
         temperature: formData.temperature ? parseFloat(formData.temperature) : null,
@@ -545,7 +545,7 @@ const FicheConsultationForm = ({ onBack }) => {
       
       showSuccess(
         'Consultation créée avec succès !',
-        'L\'analyse IA va commencer automatiquement.'
+        'L\'analyse va commencer automatiquement.'
       );
       
       // Retour à la page précédente après succès
@@ -1089,7 +1089,7 @@ const FicheConsultationForm = ({ onBack }) => {
                 <p className="font-medium mb-1">Information importante :</p>
                 <p>
                   La sélection d'un médecin est optionnelle. Si vous n'en choisissez pas, 
-                  un médecin sera automatiquement assigné selon votre cas après l'analyse IA.
+                  un médecin sera automatiquement assigné selon votre cas après l'analyse.
                 </p>
               </div>
             </div>
