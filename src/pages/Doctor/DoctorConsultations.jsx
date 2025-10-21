@@ -4,6 +4,8 @@ import { useNotification } from '../../contexts/NotificationContext';
 import { MedicalIcons, NavigationIcons, StatusIcons, ActionIcons, Icon, MedicalIcon } from '../../components/Icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
+import ConfirmModal from '../../components/ConfirmModal';
 import { exportToPDF, printConsultation } from '../../services/MedicalPDFService';
 import { consultationService } from '../../services/api';
 import ConsultationMessaging from '../../components/ConsultationMessaging';
@@ -53,11 +55,14 @@ const DoctorConsultations = ({ onNewConsultation }) => {
   // États pour validation/rejet rapide
   const [showQuickValidateModal, setShowQuickValidateModal] = useState(false);
   const [showQuickRejectModal, setShowQuickRejectModal] = useState(false);
+  const [showConfirmCompleteModal, setShowConfirmCompleteModal] = useState(false);
   const [quickValidationData, setQuickValidationData] = useState({
     diagnostic: '',
     traitement: '',
     examen_complementaire: '',
-    recommandations: ''
+    recommandations: '',
+    signature_medecin: null,
+    signature_preview: null
   });
   const [quickRejectReason, setQuickRejectReason] = useState('');
 
@@ -561,10 +566,12 @@ const DoctorConsultations = ({ onNewConsultation }) => {
   const openQuickValidateModal = (consultation) => {
     setSelectedConsultation(consultation);
     setQuickValidationData({
-      diagnostic: '',
-      traitement: '',
-      examen_complementaire: '',
-      recommandations: ''
+      diagnostic: consultation.diagnostic || '',
+      traitement: consultation.traitement || '',
+      examen_complementaire: consultation.examen_complementaire || '',
+      recommandations: consultation.recommandations || '',
+      signature_medecin: null,
+      signature_preview: consultation.signature_medecin || null
     });
     setShowQuickValidateModal(true);
   };
@@ -581,32 +588,45 @@ const DoctorConsultations = ({ onNewConsultation }) => {
       return;
     }
 
+    if (!quickValidationData.signature_medecin && !selectedConsultation?.signature_medecin) {
+      showError('Erreur', 'La signature numérique est obligatoire pour valider une consultation');
+      return;
+    }
+
     try {
-      const validationData = {
+      let signatureUrl = selectedConsultation?.signature_medecin;
+
+      // Étape 1: Envoyer UNIQUEMENT la signature si nouvelle (requête séparée)
+      if (quickValidationData.signature_medecin) {
+        const signatureFormData = new FormData();
+        signatureFormData.append('signature_medecin', quickValidationData.signature_medecin);
+        
+        const signatureResponse = await consultationService.updateConsultation(selectedConsultation.id, signatureFormData);
+        signatureUrl = signatureResponse.signature_medecin || signatureUrl;
+      }
+
+      // Étape 2: Mettre à jour les champs texte (sans la signature)
+      const textData = {
         diagnostic: quickValidationData.diagnostic,
         traitement: quickValidationData.traitement,
-        examen_complementaire: quickValidationData.examen_complementaire,
-        recommandations: quickValidationData.recommandations
+        examen_complementaire: quickValidationData.examen_complementaire || '',
+        recommandations: quickValidationData.recommandations || ''
       };
-
-      const response = await consultationService.validateConsultation(selectedConsultation.id, validationData);
+      
+      await consultationService.updateConsultation(selectedConsultation.id, textData);
+      
+      // Étape 3: Valider la consultation
+      const validationPayload = {
+        diagnostic: quickValidationData.diagnostic,
+        traitement: quickValidationData.traitement,
+        examen_complementaire: quickValidationData.examen_complementaire || '',
+        recommandations: quickValidationData.recommandations || ''
+      };
+      
+      const response = await consultationService.validateConsultation(selectedConsultation.id, validationPayload);
       
       if (response) {
         showSuccess('Succès', 'Consultation validée avec succès');
-        
-        // Après validation réussie, sauvegarder les données avec un PUT
-        try {
-          const updateData = {
-            diagnostic: quickValidationData.diagnostic,
-            traitement: quickValidationData.traitement,
-            examen_complementaire: quickValidationData.examen_complementaire,
-            recommandations: quickValidationData.recommandations
-          };
-          
-          await consultationService.updateConsultation(selectedConsultation.id, updateData);
-        } catch (updateError) {
-          console.error('Erreur lors de la sauvegarde des données:', updateError);
-        }
         
         // Mise à jour locale avec les données saisies
         const updatedConsultations = consultations.map(c => 
@@ -616,6 +636,7 @@ const DoctorConsultations = ({ onNewConsultation }) => {
             traitement: quickValidationData.traitement,
             examen_complementaire: quickValidationData.examen_complementaire,
             recommandations: quickValidationData.recommandations,
+            signature_medecin: signatureUrl || c.signature_medecin,
             ...response,
             status: 'valide_medecin',
             status_display: 'Validée par médecin',
@@ -707,7 +728,9 @@ const DoctorConsultations = ({ onNewConsultation }) => {
       recommandations: consultation.recommandations || '',
       traitement: consultation.traitement || '',
       examen_complementaire: consultation.examen_complementaire || '',
-      commentaire_rejet: consultation.commentaire_rejet || ''
+      commentaire_rejet: consultation.commentaire_rejet || '',
+      signature_medecin: null,
+      signature_preview: null
     });
     setActiveView('form');
   };
@@ -769,10 +792,8 @@ const DoctorConsultations = ({ onNewConsultation }) => {
       
       const result = await exportToPDF(consultationData);
       if (result.success) {
-        console.log('PDF généré avec succès:', result.fileName);
         showSuccess('Succès', 'PDF généré avec succès');
       } else {
-        console.error('Erreur lors de la génération du PDF:', result.error);
         showError('Erreur', 'Erreur lors de la génération du PDF');
       }
     } catch (error) {
@@ -996,15 +1017,48 @@ const DoctorConsultations = ({ onNewConsultation }) => {
       }));
     };
 
-    const handleSubmit = (e) => {
-      e.preventDefault();
-      const updatedConsultation = {
-        ...selectedConsultation,
-        ...formData,
-        statut: 'termine',
-        dateCompletee: new Date().toISOString()
-      };
-      saveConsultation(updatedConsultation);
+    const submitConsultation = async () => {
+      try {
+        let signatureUrl = selectedConsultation?.signature_medecin;
+
+        // Étape 1: Upload de la signature seule si nouvelle
+        if (formData.signature_medecin) {
+          const signatureFormData = new FormData();
+          signatureFormData.append('signature_medecin', formData.signature_medecin);
+          
+          const signatureResponse = await consultationService.updateConsultation(selectedConsultation.id, signatureFormData);
+          signatureUrl = signatureResponse.signature_medecin || signatureUrl;
+        }
+
+        // Étape 2: Mettre à jour les champs texte
+        const textData = {
+          diagnostic: formData.diagnostic,
+          recommandations: formData.recommandations,
+          traitement: formData.traitement,
+          examen_complementaire: formData.examen_complementaire || '',
+          statut: 'termine'
+        };
+        
+        await consultationService.updateConsultation(selectedConsultation.id, textData);
+        
+        // Mettre à jour localement
+        const updatedConsultation = {
+          ...selectedConsultation,
+          diagnostic: formData.diagnostic,
+          recommandations: formData.recommandations,
+          traitement: formData.traitement,
+          examen_complementaire: formData.examen_complementaire,
+          signature_medecin: signatureUrl || selectedConsultation.signature_medecin,
+          statut: 'termine',
+          dateCompletee: new Date().toISOString()
+        };
+        
+        saveConsultation(updatedConsultation);
+        showSuccess('Succès', 'Consultation complétée avec succès');
+      } catch (error) {
+        console.error('Erreur lors de la sauvegarde:', error);
+        showError('Erreur', 'Impossible de sauvegarder la consultation');
+      }
     };
 
     return (
@@ -1030,7 +1084,27 @@ const DoctorConsultations = ({ onNewConsultation }) => {
         </div>
 
         {/* Formulaire de diagnostic */}
-        <form onSubmit={handleSubmit} className="space-y-4 lg:space-y-6">
+        <form onSubmit={(e) => {
+          e.preventDefault();
+          setShowConfirmCompleteModal(true);
+        }} className="space-y-4 lg:space-y-6">
+          {/* Affichage du diagnostic IA si disponible */}
+          {selectedConsultation?.diagnostic_ia && (
+            <div className="bg-gradient-to-br from-purple-50 to-indigo-50 rounded-xl lg:rounded-2xl shadow-sm border border-purple-200 p-4 lg:p-6">
+              <h3 className="text-base lg:text-lg font-bold text-purple-800 mb-4 flex items-center">
+                <MedicalIcon icon={MedicalIcons.Brain} size="w-5 h-5" className="mr-2" />
+                Diagnostic d'analyse disponible
+              </h3>
+              <div className="bg-white rounded-lg p-4 lg:p-5 border border-purple-100 max-h-96 overflow-y-auto">
+                <MarkdownRenderer content={selectedConsultation.diagnostic_ia} />
+              </div>
+              <p className="text-xs lg:text-sm text-purple-700 mt-3 italic flex items-start">
+                <span className="mr-1">💡</span>
+                <span>Vous pouvez vous baser sur cette analyse pour compléter le diagnostic, le traitement et les recommandations ci-dessous.</span>
+              </p>
+            </div>
+          )}
+
           <div className="bg-white rounded-xl lg:rounded-2xl shadow-xl border border-border-light p-4 lg:p-6">
             <h3 className="text-base lg:text-lg font-bold text-mediai-dark font-heading mb-4 lg:mb-6 flex items-center">
               <MedicalIcon icon={MedicalIcons.Document} size="w-4 h-4 lg:w-5 lg:h-5" className="mr-2" />
@@ -1095,6 +1169,55 @@ const DoctorConsultations = ({ onNewConsultation }) => {
                   className="w-full p-3 lg:p-4 border border-border-light rounded-lg lg:rounded-xl focus:ring-2 focus:ring-mediai-primary focus:border-mediai-primary bg-light text-mediai-dark placeholder-mediai-medium font-body resize-none text-sm lg:text-base"
                   rows={3}
                 />
+              </div>
+
+              {/* Signature numérique */}
+              <div>
+                <label className="block text-sm font-medium text-mediai-dark mb-2 font-body">
+                  Signature numérique <span className="text-danger">*</span>
+                </label>
+                <div className="space-y-3">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files[0];
+                      if (file) {
+                        // Convertir en base64 pour prévisualisation
+                        const reader = new FileReader();
+                        reader.onloadend = () => {
+                          handleInputChange('signature_medecin', file);
+                          handleInputChange('signature_preview', reader.result);
+                        };
+                        reader.readAsDataURL(file);
+                      }
+                    }}
+                    className="block w-full text-sm text-mediai-dark file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-mediai-primary file:text-white hover:file:bg-mediai-secondary cursor-pointer"
+                  />
+                  {formData.signature_preview && (
+                    <div className="border border-border-light rounded-lg p-4 bg-gray-50">
+                      <p className="text-xs text-mediai-medium mb-2">Prévisualisation :</p>
+                      <img 
+                        src={formData.signature_preview} 
+                        alt="Signature" 
+                        className="max-h-32 border border-gray-300 bg-white p-2 rounded"
+                      />
+                    </div>
+                  )}
+                  {selectedConsultation?.signature_medecin && !formData.signature_preview && (
+                    <div className="border border-green-200 rounded-lg p-4 bg-green-50">
+                      <p className="text-xs text-green-700 mb-2">Signature existante :</p>
+                      <img 
+                        src={selectedConsultation.signature_medecin} 
+                        alt="Signature actuelle" 
+                        className="max-h-32 border border-gray-300 bg-white p-2 rounded"
+                      />
+                    </div>
+                  )}
+                  <p className="text-xs text-mediai-medium">
+                    Format accepté : PNG, JPG, JPEG. La signature sera incluse dans le PDF de la consultation.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -1169,6 +1292,14 @@ const DoctorConsultations = ({ onNewConsultation }) => {
           onDelete={handleDeleteConsultation}
           onValidate={() => {
             setConsultationToValidate(selectedConsultation);
+            setQuickValidationData({
+              diagnostic: selectedConsultation.diagnostic || '',
+              traitement: selectedConsultation.traitement || '',
+              examen_complementaire: selectedConsultation.examen_complementaire || '',
+              recommandations: selectedConsultation.recommandations || '',
+              signature_medecin: null,
+              signature_preview: selectedConsultation.signature_medecin || null
+            });
             setShowQuickValidateModal(true);
           }}
           onReject={() => {
@@ -1205,6 +1336,67 @@ const DoctorConsultations = ({ onNewConsultation }) => {
         isOpen={showWhatsAppModal}
         onClose={closeAllModals}
         onMessageSent={handleWhatsAppSent}
+      />
+
+      {/* Modal de confirmation pour compléter la consultation */}
+      <ConfirmModal
+        isOpen={showConfirmCompleteModal}
+        onClose={() => setShowConfirmCompleteModal(false)}
+        onConfirm={async () => {
+          setShowConfirmCompleteModal(false);
+          try {
+            let signatureUrl = selectedConsultation?.signature_medecin;
+
+            // Étape 1: Upload de la signature seule si nouvelle
+            if (formData.signature_medecin) {
+              const signatureFormData = new FormData();
+              signatureFormData.append('signature_medecin', formData.signature_medecin);
+              
+              const signatureResponse = await consultationService.updateConsultation(selectedConsultation.id, signatureFormData);
+              signatureUrl = signatureResponse.signature_medecin || signatureUrl;
+            }
+
+            // Étape 2: Mettre à jour les champs texte
+            const textData = {
+              diagnostic: formData.diagnostic,
+              recommandations: formData.recommandations,
+              traitement: formData.traitement,
+              examen_complementaire: formData.examen_complementaire || '',
+              statut: 'termine'
+            };
+            
+            await consultationService.updateConsultation(selectedConsultation.id, textData);
+            
+            // Mettre à jour localement
+            const updatedConsultation = {
+              ...selectedConsultation,
+              diagnostic: formData.diagnostic,
+              recommandations: formData.recommandations,
+              traitement: formData.traitement,
+              examen_complementaire: formData.examen_complementaire,
+              signature_medecin: signatureUrl || selectedConsultation.signature_medecin,
+              statut: 'termine',
+              dateCompletee: new Date().toISOString()
+            };
+
+            const updatedConsultations = consultations.map(c => 
+              c.id === selectedConsultation.id ? updatedConsultation : c
+            );
+            setConsultations(updatedConsultations);
+            setSelectedConsultation(updatedConsultation);
+
+            showSuccess('Succès', 'Consultation complétée avec succès');
+            setActiveView('list');
+          } catch (error) {
+            console.error('Erreur lors de la complétion de la consultation:', error);
+            showError('Erreur', error.message || 'Impossible de compléter la consultation');
+          }
+        }}
+        title="Confirmer la complétion"
+        message="Êtes-vous sûr de vouloir finaliser et sauvegarder cette consultation ? Vérifiez que toutes les informations sont correctes."
+        confirmText="Oui, sauvegarder"
+        cancelText="Annuler"
+        type="success"
       />
     </div>
   );

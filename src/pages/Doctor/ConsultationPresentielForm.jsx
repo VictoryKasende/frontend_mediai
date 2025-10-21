@@ -4,6 +4,7 @@ import Button from '../../components/Button';
 import Input from '../../components/Input';
 import PhoneInput from '../../components/PhoneInput';
 import Switch from '../../components/Switch';
+import ConfirmModal from '../../components/ConfirmModal';
 import { consultationService } from '../../services/api';
 import { useNotification } from '../../contexts/NotificationContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -15,6 +16,7 @@ import { useAuth } from '../../contexts/AuthContext';
 const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
   
   const { showSuccess, showError } = useNotification();
   const { user } = useAuth();
@@ -1285,10 +1287,15 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Input label="Tête" value={formData.tete} onChange={(e) => handleInputChange('tete', e.target.value)} placeholder="Observations..." />
           <Input label="Cou" value={formData.cou} onChange={(e) => handleInputChange('cou', e.target.value)} placeholder="Observations..." />
+          <Input label="Paroi thoracique" value={formData.paroi_thoracique} onChange={(e) => handleInputChange('paroi_thoracique', e.target.value)} placeholder="Observations..." />
           <Input label="Poumons" value={formData.poumons} onChange={(e) => handleInputChange('poumons', e.target.value)} placeholder="Observations..." />
           <Input label="Cœur" value={formData.coeur} onChange={(e) => handleInputChange('coeur', e.target.value)} placeholder="Observations..." />
-          <Input label="Abdomen" value={formData.epigastre_hypochondres} onChange={(e) => handleInputChange('epigastre_hypochondres', e.target.value)} placeholder="Observations..." />
+          <Input label="Épigastre / Hypochondres" value={formData.epigastre_hypochondres} onChange={(e) => handleInputChange('epigastre_hypochondres', e.target.value)} placeholder="Observations..." />
+          <Input label="Péri-ombilical / Flancs" value={formData.peri_ombilical_flancs} onChange={(e) => handleInputChange('peri_ombilical_flancs', e.target.value)} placeholder="Observations..." />
+          <Input label="Hypogastre / Fosses iliaques" value={formData.hypogastre_fosses_iliaques} onChange={(e) => handleInputChange('hypogastre_fosses_iliaques', e.target.value)} placeholder="Observations..." />
           <Input label="Membres" value={formData.membres} onChange={(e) => handleInputChange('membres', e.target.value)} placeholder="Observations..." />
+          <Input label="Colonne vertébrale / Bassin" value={formData.colonne_bassin} onChange={(e) => handleInputChange('colonne_bassin', e.target.value)} placeholder="Observations..." />
+          <Input label="Examen gynécologique" value={formData.examen_gynecologique} onChange={(e) => handleInputChange('examen_gynecologique', e.target.value)} placeholder="Observations (si applicable)..." />
         </div>
       </div>
     </div>
@@ -1455,7 +1462,7 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
             </Button>
           ) : (
             <Button
-              onClick={handleSubmit}
+              onClick={() => setShowConfirmModal(true)}
               disabled={isSubmitting}
               className="bg-green-600 hover:bg-green-700"
             >
@@ -1474,6 +1481,21 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
           )}
         </div>
       </div>
+
+      {/* Modal de confirmation */}
+      <ConfirmModal
+        isOpen={showConfirmModal}
+        onClose={() => setShowConfirmModal(false)}
+        onConfirm={() => {
+          setShowConfirmModal(false);
+          handleSubmit();
+        }}
+        title="Confirmer l'enregistrement"
+        message="Êtes-vous sûr de vouloir enregistrer cette consultation en présentiel ? Vérifiez que toutes les informations sont correctes."
+        confirmText="Oui, enregistrer"
+        cancelText="Annuler"
+        type="success"
+      />
     </div>
   );
 };

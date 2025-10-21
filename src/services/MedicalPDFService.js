@@ -3,6 +3,43 @@ import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import html2canvas from 'html2canvas';
 
+/**
+ * Convertir une URL d'image en base64 en utilisant un canvas
+ * @param {string} url - URL de l'image
+ * @returns {Promise<string>} - Image en base64
+ */
+const imageUrlToBase64 = (url) => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous'; // Pour gérer les CORS
+    
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        const dataURL = canvas.toDataURL('image/png');
+        resolve(dataURL);
+      } catch (error) {
+        console.error('Erreur lors de la conversion canvas:', error);
+        reject(error);
+      }
+    };
+    
+    img.onerror = (error) => {
+      console.error('Erreur lors du chargement de l\'image:', error);
+      reject(error);
+    };
+    
+    // Ajouter un timestamp pour éviter le cache
+    img.src = url.includes('?') ? `${url}&t=${Date.now()}` : `${url}?t=${Date.now()}`;
+  });
+};
+
 // Export PDF avancé avec capture HTML
 export const exportAdvancedPDF = async (elementId, consultation, options = {}) => {
   try {
@@ -52,9 +89,21 @@ export const exportAdvancedPDF = async (elementId, consultation, options = {}) =
 
 // Export PDF professionnel de la consultation avec le même design que l'impression
 export const exportToPDF = async (consultationData) => {
-  console.log('Export PDF de la consultation:', consultationData);
-  
   try {
+    // Précharger la signature en base64 si elle existe
+    let signatureBase64 = null;
+    if (consultationData.signature_medecin) {
+      if (consultationData.signature_medecin.startsWith('http')) {
+        try {
+          signatureBase64 = await imageUrlToBase64(consultationData.signature_medecin);
+        } catch (error) {
+          console.error('Erreur conversion signature:', error);
+        }
+      } else if (consultationData.signature_medecin.startsWith('data:image')) {
+        signatureBase64 = consultationData.signature_medecin;
+      }
+    }
+    
     // Utiliser jsPDF avec un design amélioré similaire à l'impression
     const pdf = new jsPDF('p', 'mm', 'a4');
     const pageWidth = pdf.internal.pageSize.getWidth();
@@ -443,16 +492,17 @@ const exportToPDFFallback = async (consultationData) => {
     pdf.rect(signatureX - 5, currentY, 60, 25);
     pdf.setFontSize(8);
     pdf.setTextColor(...mediumGray);
-    pdf.text('Signature et cachet', signatureX, currentY + 30);
     
     // Intégrer la signature numérique si elle existe
-    if (consultationData.signature_medecin) {
+    if (signatureBase64) {
       try {
-        const signatureImg = consultationData.signature_medecin;
-        pdf.addImage(signatureImg, 'PNG', signatureX - 3, currentY + 2, 56, 21);
+        pdf.addImage(signatureBase64, 'PNG', signatureX - 3, currentY + 2, 56, 21);
       } catch (error) {
-        console.log('Erreur lors de l\'ajout de la signature:', error);
+        console.error('Erreur lors de l\'ajout de la signature au PDF:', error);
+        pdf.text('Signature numérique', signatureX, currentY + 15);
       }
+    } else {
+      pdf.text('Signature et cachet', signatureX, currentY + 15);
     }
     
     // Pied de page

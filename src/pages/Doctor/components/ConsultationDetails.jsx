@@ -165,15 +165,13 @@ const ConsultationDetails = ({
             
             {/* Actions desktop */}
             <div className="hidden lg:flex items-center space-x-3">
-              {/* Compléter/Éditer - Seulement si pas encore validée */}
-              {!isConsultationValidated(consultation) && (
-                <button
-                  onClick={() => onEdit(consultation)}
-                  className="px-4 py-2 bg-mediai-primary text-white rounded-lg hover:bg-mediai-secondary transition-colors font-body"
-                >
-                  Compléter
-                </button>
-              )}
+              {/* Compléter/Modifier - Toujours disponible */}
+              <button
+                onClick={() => onEdit(consultation)}
+                className="px-4 py-2 bg-mediai-primary text-white rounded-lg hover:bg-mediai-secondary transition-colors font-body"
+              >
+                {isConsultationValidated(consultation) ? 'Modifier' : 'Compléter'}
+              </button>
               
               {/* Messages - Seulement si validée */}
               {isConsultationValidated(consultation) && (
@@ -233,15 +231,13 @@ const ConsultationDetails = ({
             {/* Actions mobile */}
             <div className="lg:hidden space-y-3">
               <div className="flex space-x-2">
-                {/* Compléter - Seulement si pas encore validée */}
-                {!isConsultationValidated(consultation) && (
-                  <button
-                    onClick={() => onEdit(consultation)}
-                    className="flex-1 px-3 py-2 bg-mediai-primary text-white rounded-lg text-sm font-body"
-                  >
-                    Compléter
-                  </button>
-                )}
+                {/* Compléter/Modifier - Toujours disponible */}
+                <button
+                  onClick={() => onEdit(consultation)}
+                  className="flex-1 px-3 py-2 bg-mediai-primary text-white rounded-lg text-sm font-body"
+                >
+                  {isConsultationValidated(consultation) ? 'Modifier' : 'Compléter'}
+                </button>
                 
                 {/* Messages - Seulement si validée */}
                 {isConsultationValidated(consultation) && (

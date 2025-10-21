@@ -1787,6 +1787,17 @@ const FicheConsultationForm = ({ onBack }) => {
           </div>
           
           <div>
+            <label className="block text-sm font-medium text-dark mb-2">Paroi thoracique</label>
+            <textarea
+              value={formData.paroi_thoracique}
+              onChange={(e) => handleInputChange('paroi_thoracique', e.target.value)}
+              placeholder="Observations sur la paroi thoracique..."
+              rows={2}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
             <label className="block text-sm font-medium text-dark mb-2">Poumons</label>
             <textarea
               value={formData.poumons}
@@ -1809,6 +1820,39 @@ const FicheConsultationForm = ({ onBack }) => {
           </div>
           
           <div>
+            <label className="block text-sm font-medium text-dark mb-2">Épigastre / Hypochondres</label>
+            <textarea
+              value={formData.epigastre_hypochondres}
+              onChange={(e) => handleInputChange('epigastre_hypochondres', e.target.value)}
+              placeholder="Observations sur l'épigastre et les hypochondres..."
+              rows={2}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">Péri-ombilical / Flancs</label>
+            <textarea
+              value={formData.peri_ombilical_flancs}
+              onChange={(e) => handleInputChange('peri_ombilical_flancs', e.target.value)}
+              placeholder="Observations sur la région péri-ombilicale et les flancs..."
+              rows={2}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">Hypogastre / Fosses iliaques</label>
+            <textarea
+              value={formData.hypogastre_fosses_iliaques}
+              onChange={(e) => handleInputChange('hypogastre_fosses_iliaques', e.target.value)}
+              placeholder="Observations sur l'hypogastre et les fosses iliaques..."
+              rows={2}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
             <label className="block text-sm font-medium text-dark mb-2">Membres</label>
             <textarea
               value={formData.membres}
@@ -1820,11 +1864,22 @@ const FicheConsultationForm = ({ onBack }) => {
           </div>
           
           <div>
-            <label className="block text-sm font-medium text-dark mb-2">Colonne/Bassin</label>
+            <label className="block text-sm font-medium text-dark mb-2">Colonne vertébrale / Bassin</label>
             <textarea
               value={formData.colonne_bassin}
               onChange={(e) => handleInputChange('colonne_bassin', e.target.value)}
               placeholder="Observations sur la colonne vertébrale et le bassin..."
+              rows={2}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">Examen gynécologique</label>
+            <textarea
+              value={formData.examen_gynecologique}
+              onChange={(e) => handleInputChange('examen_gynecologique', e.target.value)}
+              placeholder="Observations gynécologiques (si applicable)..."
               rows={2}
               className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
             />

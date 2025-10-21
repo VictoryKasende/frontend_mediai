@@ -69,6 +69,11 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
+    // Si c'est du FormData, laisser le navigateur définir le Content-Type (inclut boundary)
+    if (config.data instanceof FormData) {
+      delete config.headers['Content-Type'];
+    }
+    
     // Ajouter le token CSRF pour les requêtes POST/PUT/PATCH/DELETE
     if (['post', 'put', 'patch', 'delete'].includes(config.method.toLowerCase())) {
       // Récupérer le token CSRF depuis les cookies
@@ -854,16 +859,13 @@ export const consultationService = {
 
   /**
    * Modifier une consultation existante
-   * ⚠️ Note: Le champ status est en lecture seule
    * @param {number} id - ID de la consultation
    * @param {Object} consultationData - Données à modifier
    * @returns {Promise<Object>} - Consultation modifiée
    */
   async updateConsultation(id, consultationData) {
     try {
-      console.log('Modification de la consultation:', id, consultationData);
       const response = await api.patch(`/fiche-consultation/${id}/`, consultationData);
-      console.log('Consultation modifiée:', response.data);
       return response.data;
     } catch (error) {
       console.error('Erreur lors de la modification de la consultation:', error);
@@ -878,9 +880,7 @@ export const consultationService = {
    */
   async deleteConsultation(id) {
     try {
-      console.log('Suppression de la consultation:', id);
       await api.delete(`/fiche-consultation/${id}/`);
-      console.log('Consultation supprimée avec succès');
     } catch (error) {
       console.error('Erreur lors de la suppression de la consultation:', error);
       throw this.handleError(error);
