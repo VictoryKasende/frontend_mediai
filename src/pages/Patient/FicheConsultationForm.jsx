@@ -41,7 +41,8 @@ const FicheConsultationForm = ({ onBack }) => {
     avenue: '',
     quartier: '',
     commune: '',
-    
+    nom_hopital: '',
+
     // Personne à contacter
     contact_nom: '',
     contact_telephone: '',
@@ -408,6 +409,7 @@ const FicheConsultationForm = ({ onBack }) => {
         avenue: formData.avenue || '',
         quartier: formData.quartier || '',
         commune: formData.commune || '',
+        nom_hopital: formData.nom_hopital || '',
         
         // Personne à contacter
         contact_nom: formData.contact_nom || '',
@@ -810,6 +812,19 @@ const FicheConsultationForm = ({ onBack }) => {
             required
           />
         </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark">Hôpital / Centre de santé (optionnel)</h3>
+        <Input
+          label="Nom de l'hôpital ou centre de santé"
+          value={formData.nom_hopital}
+          onChange={(e) => handleInputChange('nom_hopital', e.target.value)}
+          placeholder="Ex: Hôpital Général de Kinshasa, Clinique Ngaliema..."
+        />
+        <p className="text-xs text-mediai-medium mt-2">
+          Si vous êtes suivi dans un hôpital ou centre de santé, indiquez son nom ici.
+        </p>
       </div>
 
       <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all duration-300">

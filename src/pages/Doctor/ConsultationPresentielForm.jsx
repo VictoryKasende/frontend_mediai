@@ -37,7 +37,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
     avenue: '',
     quartier: '',
     commune: '',
-    
+    nom_hopital: '',
+
     // Personne à contacter
     contact_nom: '',
     contact_telephone: '',
@@ -153,7 +154,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
     
     // Hypothèse et analyses proposées
     hypothese_patient_medecin: '',
-    analyses_proposees: ''
+    analyses_proposees: '',
+    observations_importantes: ''
   });
 
   const steps = [
@@ -165,7 +167,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
     { id: 6, title: 'Symptômes', icon: MedicalIcons.Symptoms },
     { id: 7, title: 'Antécédents', icon: MedicalIcons.History },
     { id: 8, title: 'Examen clinique', icon: MedicalIcons.Stethoscope },
-    { id: 9, title: 'Finalisation', icon: MedicalIcons.Check }
+    { id: 9, title: 'Hypothèse & Analyses', icon: MedicalIcons.Search },
+    { id: 10, title: 'Finalisation', icon: MedicalIcons.Check }
   ];
 
   // Validation par étape
@@ -332,6 +335,7 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
         avenue: formData.avenue || '',
         quartier: formData.quartier || '',
         commune: formData.commune || '',
+        nom_hopital: formData.nom_hopital || '',
         
         // Personne à contacter
         contact_nom: formData.contact_nom || '',
@@ -515,6 +519,8 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
       case 8:
         return renderExamenClinique();
       case 9:
+        return renderHypotheseAnalyses();
+      case 10:
         return renderFinalisation();
       default:
         return null;
@@ -666,6 +672,19 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
             required
           />
         </div>
+      </div>
+
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4">Hôpital / Centre de santé (optionnel)</h3>
+        <Input
+          label="Nom de l'hôpital ou centre de santé"
+          value={formData.nom_hopital}
+          onChange={(e) => handleInputChange('nom_hopital', e.target.value)}
+          placeholder="Ex: Hôpital Général de Kinshasa, Clinique Ngaliema..."
+        />
+        <p className="text-xs text-mediai-medium mt-2">
+          Si le patient est suivi dans un hôpital ou centre de santé, indiquez son nom ici.
+        </p>
       </div>
 
       <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-6 shadow-sm border border-gray-100">
@@ -1301,74 +1320,161 @@ const ConsultationPresentielForm = ({ onBack, onSuccess }) => {
     </div>
   );
 
-  const renderFinalisation = () => (
-    <div className="space-y-6">
-      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
-        <div className="flex items-center space-x-3 mb-4">
-          <MedicalIcons.Check className="w-8 h-8 text-green-600" />
-          <h3 className="text-lg font-bold text-green-800">Consultation prête à être enregistrée</h3>
-        </div>
-        <p className="text-green-700 mb-4">
-          Vérifiez les informations saisies avant de finaliser la création de la fiche de consultation.
+  const renderHypotheseAnalyses = () => (
+    <div className="space-y-4 lg:space-y-6">
+      <div className="bg-gradient-to-br from-blue-50 to-indigo-50 rounded-xl p-4 lg:p-6 shadow-sm border border-blue-200">
+        <h3 className="text-medical-subtitle text-base lg:text-lg mb-4 font-bold text-mediai-dark flex items-center">
+          <MedicalIcons.Search className="w-5 h-5 mr-2 text-mediai-primary" />
+          Hypothèse et Analyses proposées
+        </h3>
+        <p className="text-medical-body text-sm lg:text-base mb-4 lg:mb-6 text-mediai-medium">
+          Partagez vos impressions sur l'état de santé du patient et les examens que vous pensez nécessaires.
         </p>
         
-        <div className="bg-white rounded-lg p-4 mb-4">
-          <h4 className="font-semibold text-mediai-dark mb-2">Résumé</h4>
-          <div className="space-y-2 text-sm">
-            <p><span className="font-medium">Patient :</span> {formData.nom} {formData.postnom} {formData.prenom}</p>
-            <p><span className="font-medium">Âge :</span> {formData.age} ans</p>
-            <p><span className="font-medium">Téléphone :</span> {formData.telephone}</p>
-            <p><span className="font-medium">Type :</span> Consultation en présentiel</p>
-          </div>
-        </div>
-
-        <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-          <div className="flex items-start space-x-2">
-            <StatusIcons.Info className="w-5 h-5 text-blue-600 mt-0.5" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">Prochaines étapes :</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>La fiche sera enregistrée dans le système</li>
-                <li>L'analyse démarrera automatiquement</li>
-                <li>Vous pourrez compléter le diagnostic et le traitement après validation</li>
-              </ul>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Hypothèse et analyses proposées (optionnel) */}
-      <div className="bg-white rounded-xl p-6 border border-gray-200">
-        <h3 className="text-lg font-bold text-mediai-dark mb-4">Hypothèse diagnostique et analyses (Optionnel)</h3>
-        <p className="text-sm text-mediai-medium mb-4">
-          Vous pouvez ajouter votre hypothèse diagnostique et les analyses que vous proposez
-        </p>
-        
-        <div className="space-y-4">
+        <div className="space-y-4 lg:space-y-6">
+          {/* Hypothèse diagnostique */}
           <div>
-            <label className="block text-sm font-medium mb-2">
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
               Hypothèse diagnostique
             </label>
             <textarea
               value={formData.hypothese_patient_medecin}
               onChange={(e) => handleInputChange('hypothese_patient_medecin', e.target.value)}
-              placeholder="Votre hypothèse diagnostique..."
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-blue-100 resize-none"
+              placeholder="Selon vous, de quoi le patient pourrait-il souffrir ? Quelle est votre hypothèse diagnostique ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
             />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Votre hypothèse diagnostique initiale
+            </p>
           </div>
 
+          {/* Analyses proposées */}
           <div>
-            <label className="block text-sm font-medium mb-2">
-              Analyses paracliniques proposées
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Examens ou analyses paracliniques proposés
             </label>
             <textarea
               value={formData.analyses_proposees}
               onChange={(e) => handleInputChange('analyses_proposees', e.target.value)}
-              placeholder="Ex: Numération formule sanguine, Glycémie à jeun, etc."
-              rows={4}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-blue-100 resize-none"
+              placeholder="Ex: Numération formule sanguine, Glycémie à jeun, Radiographie thoracique, etc."
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
             />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Suggestions d'examens complémentaires
+            </p>
+          </div>
+
+          {/* Observations importantes */}
+          <div>
+            <label className="block text-xs lg:text-sm font-medium text-mediai-dark mb-2">
+              Observations importantes à signaler
+            </label>
+            <textarea
+              value={formData.observations_importantes || ''}
+              onChange={(e) => handleInputChange('observations_importantes', e.target.value)}
+              placeholder="Y a-t-il quelque chose d'important à signaler concernant ce patient ?"
+              rows={3}
+              className="w-full px-3 lg:px-4 py-3 border border-border-light rounded-lg focus:border-mediai-primary focus:ring-2 focus:ring-mediai-primary focus:ring-opacity-20 transition-all resize-none text-sm lg:text-base"
+            />
+            <p className="text-xs text-mediai-medium mt-1">
+              Optionnel - Toute information que vous jugez pertinente
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderFinalisation = () => (
+    <div className="space-y-6">
+      {/* Section préoccupations et attentes */}
+      <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl p-4 lg:p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-bold text-mediai-dark mb-4">Préoccupations et attentes du patient</h3>
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Principales préoccupations
+            </label>
+            <textarea
+              value={formData.preoccupations}
+              onChange={(e) => handleInputChange('preoccupations', e.target.value)}
+              placeholder="Quelles sont les principales inquiétudes du patient concernant sa santé ?"
+              rows={3}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Attentes de cette consultation
+            </label>
+            <textarea
+              value={formData.attentes}
+              onChange={(e) => handleInputChange('attentes', e.target.value)}
+              placeholder="Qu'attend le patient de cette consultation ?"
+              rows={3}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Compréhension de l'état
+            </label>
+            <textarea
+              value={formData.comprehension}
+              onChange={(e) => handleInputChange('comprehension', e.target.value)}
+              placeholder="Comment le patient comprend-il son état de santé actuel ?"
+              rows={3}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-dark mb-2">
+              Engagement dans le traitement
+            </label>
+            <textarea
+              value={formData.engagement}
+              onChange={(e) => handleInputChange('engagement', e.target.value)}
+              placeholder="Comment le patient envisage-t-il de suivre les recommandations médicales ?"
+              rows={3}
+              className="w-full px-4 py-3 border border-medium rounded-lg focus:border-primary transition-colors resize-none"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Récapitulatif */}
+      <div className="bg-gradient-to-br from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+        <div className="flex items-center space-x-3 mb-4">
+          <MedicalIcons.Check className="w-8 h-8 text-green-600" />
+          <h3 className="text-lg font-bold text-green-800">Récapitulatif</h3>
+        </div>
+        <div className="text-green-700 space-y-2">
+          <p><strong>Patient :</strong> {formData.prenom} {formData.nom} {formData.postnom}</p>
+          <p><strong>Âge :</strong> {formData.age} ans</p>
+          <p><strong>Téléphone :</strong> {formData.telephone}</p>
+          <p><strong>Type :</strong> Consultation en présentiel</p>
+          <p><strong>Motif :</strong> {formData.motif_consultation || 'Non spécifié'}</p>
+          <p className="text-sm text-green-600 mt-4">
+            ✓ Fiche prête à être soumise. La consultation sera enregistrée dans le système.
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <div className="flex items-start space-x-2">
+          <StatusIcons.Info className="w-5 h-5 text-blue-600 mt-0.5" />
+          <div className="text-sm text-blue-800">
+            <p className="font-medium mb-1">Prochaines étapes :</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>La fiche sera enregistrée dans le système</li>
+              <li>L'analyse démarrera automatiquement</li>
+              <li>Vous pourrez compléter le diagnostic et le traitement après validation</li>
+            </ul>
           </div>
         </div>
       </div>
